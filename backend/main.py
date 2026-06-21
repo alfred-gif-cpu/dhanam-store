@@ -11,6 +11,7 @@ from database import (
 from auth import generate_otp, verify_otp, create_token, get_current_user
 from routes_customer import router as customer_router
 from routes_orders import router as orders_router
+from routes_admin import router as admin_router
 
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
@@ -33,6 +34,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(customer_router, tags=["Customers"])
 app.include_router(orders_router, tags=["Orders V2"])
+app.include_router(admin_router)
 
 
 # ─── Auth ─────────────────────────────────────────────────
@@ -205,10 +207,15 @@ async def get_categories(request: Request):
     base_url = str(request.base_url).rstrip("/")
     categories = await products_collection.distinct("category")
     result = []
+    cat_dir = STATIC_DIR / "images" / "categories"
     for cat in sorted(categories):
-        slug = re.sub(r"[^a-z0-9]+", "-", cat.lower()).strip("-")
-        cat_image = f"{base_url}/static/images/categories/{slug}.svg"
-        result.append({"name": cat, "image": cat_image})
+        s = re.sub(r"[^a-z0-9]+", "-", cat.lower()).strip("-")
+        img = f"{s}.svg"
+        for ext in (".jpg", ".jpeg", ".png", ".webp"):
+            if (cat_dir / f"{s}{ext}").exists():
+                img = f"{s}{ext}"
+                break
+        result.append({"name": cat, "image": f"{base_url}/static/images/categories/{img}"})
     return {"categories": result}
 
 
