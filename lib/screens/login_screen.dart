@@ -22,9 +22,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_valid) return;
     setState(() { _sending = true; _error = null; });
     try {
-      await AuthService().sendOtp('+91$_phone');
+      final otp = await AuthService().sendOtp('+91$_phone');
       if (mounted) {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => OtpScreen(phone: '+91$_phone')));
+        Navigator.push(context, MaterialPageRoute(builder: (_) => OtpScreen(phone: '+91$_phone', devOtp: otp)));
       }
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

@@ -53,7 +53,7 @@ async def send_otp(phone: str = Body(..., embed=True)):
         raise HTTPException(status_code=400, detail="Invalid phone number")
     otp = generate_otp(phone)
     print(f"[OTP] {phone}: {otp}")
-    return {"status": "sent", "message": "OTP sent successfully"}
+    return {"status": "sent", "message": "OTP sent successfully", "otp": otp}
 
 
 @app.post("/auth/verify-otp")
