@@ -9,6 +9,7 @@ import 'services/notification_service.dart';
 import 'services/recently_viewed_service.dart';
 import 'services/search_history_service.dart';
 import 'services/wishlist_service.dart';
+import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,10 +34,7 @@ class DhanamStoreApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Dhanam Store',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        scaffoldBackgroundColor: Colors.grey[50],
-      ),
+      theme: appTheme(),
       home: const LoginScreen(),
     );
   }
