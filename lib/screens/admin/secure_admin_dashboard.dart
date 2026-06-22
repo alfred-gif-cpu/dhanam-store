@@ -3,7 +3,9 @@ import '../../services/admin_auth_service.dart';
 import 'admin_login_screen.dart';
 import 'admin_inventory_screen.dart';
 import 'admin_audit_logs_screen.dart';
+import 'admin_orders_screen.dart';
 import 'secure_products_screen.dart';
+import 'staff_screen.dart';
 
 class SecureAdminDashboard extends StatefulWidget {
   const SecureAdminDashboard({super.key});
@@ -141,10 +143,14 @@ class _State extends State<SecureAdminDashboard> {
       // Quick actions
       const Text('Manage', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
+      _action(Icons.receipt_long, 'Orders', 'View orders, mark packed for delivery', Colors.orange,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersScreen()))),
       _action(Icons.shopping_bag, 'Products', 'Add, edit, delete, set prices', Colors.blue,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SecureProductsScreen()))),
       _action(Icons.inventory, 'Inventory', 'Stock levels and alerts', Colors.teal,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminInventoryScreen()))),
+      _action(Icons.delivery_dining, 'Delivery Staff', 'Add or remove delivery employees', Colors.indigo,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffScreen()))),
       _action(Icons.history, 'Audit Logs', 'Track all admin actions', Colors.grey,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminAuditLogsScreen()))),
     ]);

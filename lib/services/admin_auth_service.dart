@@ -22,6 +22,9 @@ class AdminAuthService extends ChangeNotifier {
   String? get token => _token;
   String get email => _admin?['email'] ?? '';
   String get name => _admin?['name'] ?? 'Admin';
+  String get role => _admin?['role'] ?? 'owner';
+  bool get isOwner => role == 'owner';
+  bool get isDelivery => role == 'delivery';
   bool get mustChangePassword => _admin?['must_change_password'] == true;
 
   Future<void> load() async {
@@ -70,13 +73,29 @@ class AdminAuthService extends ChangeNotifier {
   Future<bool> login(String email, String password) async {
     final result = await _post('/admin/login', {'email': email, 'password': password});
     _token = result['token'];
-    _admin = {'email': result['email'], 'name': result['name'], 'must_change_password': result['must_change_password']};
+    _admin = {
+      'email': result['email'],
+      'name': result['name'],
+      'role': result['role'] ?? 'owner',
+      'must_change_password': result['must_change_password'],
+    };
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, _token!);
     await prefs.setString(_dataKey, jsonEncode(_admin));
     notifyListeners();
     return result['must_change_password'] == true;
   }
+
+  // ─── Staff management (owner) ───
+  Future<Map<String, dynamic>> getStaff() => _get('/admin/staff');
+  Future<void> createStaff({required String name, required String email, String phone = '', required String password}) =>
+      _post('/admin/staff', {'name': name, 'email': email, 'phone': phone, 'password': password});
+  Future<void> deleteStaff(String id) => deleteAdmin('/admin/staff/$id');
+
+  // ─── Delivery (staff) ───
+  Future<Map<String, dynamic>> getDeliveryOrders() => _get('/admin/delivery/orders');
+  Future<void> pickupOrder(String orderId) => _put('/admin/delivery/orders/$orderId/pickup', {});
+  Future<void> markDelivered(String orderId) => _put('/admin/delivery/orders/$orderId/delivered', {});
 
   Future<void> changePassword(String currentPassword, String newPassword) async {
     await _put('/admin/change-password', {'current_password': currentPassword, 'new_password': newPassword});
