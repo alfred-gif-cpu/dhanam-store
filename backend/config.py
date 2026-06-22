@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     jwt_expiry_hours: int = 720
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
+    sms_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
