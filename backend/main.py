@@ -9,6 +9,8 @@ from database import (
     addresses_collection, wishlists_collection, users_collection,
 )
 from auth import generate_otp, verify_otp, create_token, get_current_user
+from sms_service import send_otp_sms
+from config import settings
 from routes_customer import router as customer_router
 from routes_orders import router as orders_router
 from routes_admin import router as admin_router
@@ -55,7 +57,12 @@ async def send_otp(phone: str = Body(..., embed=True)):
         raise HTTPException(status_code=400, detail="Invalid phone number")
     otp = generate_otp(phone)
     print(f"[OTP] {phone}: {otp}")
-    return {"status": "sent", "message": "OTP sent successfully", "otp": otp}
+    send_otp_sms(phone, otp)
+    response = {"status": "sent", "message": "OTP sent successfully"}
+    # Only expose OTP in response when SMS is not configured (dev mode)
+    if not settings.sms_api_key:
+        response["otp"] = otp
+    return response
 
 
 @app.post("/auth/verify-otp")
