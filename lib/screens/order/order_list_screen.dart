@@ -51,7 +51,7 @@ class _State extends State<OrderListScreen> with SingleTickerProviderStateMixin 
     'confirmed' => Colors.blue,
     'packed' => Colors.orange,
     'out for delivery' => Colors.purple,
-    'delivered' => Colors.green,
+    'delivered' => Colors.blue,
     'cancelled' => Colors.red,
     _ => Colors.grey,
   };
@@ -63,8 +63,8 @@ class _State extends State<OrderListScreen> with SingleTickerProviderStateMixin 
       appBar: AppBar(
         title: const Text('My Orders'), centerTitle: true, elevation: 0,
         bottom: TabBar(controller: _tab, isScrollable: true,
-          labelColor: Colors.green, unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.green, indicatorWeight: 3,
+          labelColor: Colors.blue, unselectedLabelColor: Colors.grey,
+          indicatorColor: Colors.blue, indicatorWeight: 3,
           tabs: _tabs.map((t) => Tab(text: t)).toList()),
       ),
       body: _loading
@@ -115,7 +115,7 @@ class _State extends State<OrderListScreen> with SingleTickerProviderStateMixin 
                           const Divider(height: 24),
                           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                             Text((o['created_at'] ?? '').toString().split('T').first, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                            Text('₹${total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.green)),
+                            Text('₹${total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.blue)),
                           ]),
                         ]),
                       ),

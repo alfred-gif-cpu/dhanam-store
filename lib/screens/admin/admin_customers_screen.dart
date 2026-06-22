@@ -105,8 +105,8 @@ class _State extends State<AdminCustomersScreen> {
                           title: Row(children: [
                             Expanded(child: Text(name.isNotEmpty ? name : 'Unnamed', style: const TextStyle(fontWeight: FontWeight.w600))),
                             Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: (active ? Colors.green : Colors.red).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                              child: Text(active ? 'Active' : 'Blocked', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: active ? Colors.green : Colors.red))),
+                              decoration: BoxDecoration(color: (active ? Colors.blue : Colors.red).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                              child: Text(active ? 'Active' : 'Blocked', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: active ? Colors.blue : Colors.red))),
                           ]),
                           subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text('${c['phone'] ?? ''} • ${c['customer_id'] ?? ''}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
@@ -123,7 +123,7 @@ class _State extends State<AdminCustomersScreen> {
                             },
                             itemBuilder: (_) => [
                               if (active) const PopupMenuItem(value: 'block', child: Text('Block', style: TextStyle(color: Colors.red)))
-                              else const PopupMenuItem(value: 'activate', child: Text('Activate', style: TextStyle(color: Colors.green))),
+                              else const PopupMenuItem(value: 'activate', child: Text('Activate', style: TextStyle(color: Colors.blue))),
                             ],
                           ),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

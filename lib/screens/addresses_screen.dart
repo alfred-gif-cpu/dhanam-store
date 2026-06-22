@@ -67,7 +67,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
             },
             icon: const Icon(Icons.map, size: 18),
             label: const Text('Pick on Map'),
-            style: OutlinedButton.styleFrom(foregroundColor: Colors.green, side: const BorderSide(color: Colors.green),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.blue, side: const BorderSide(color: Colors.blue),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
           )),
           const SizedBox(height: 12),
@@ -89,7 +89,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
               if (ctx.mounted) Navigator.pop(ctx);
               _load();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
             child: const Text('Save Address', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           )),
         ])),
@@ -104,7 +104,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       appBar: AppBar(title: const Text('My Addresses'), centerTitle: true, elevation: 0),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddDialog,
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.blue,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Add New', style: TextStyle(color: Colors.white)),
       ),
@@ -126,7 +126,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
                       child: Row(children: [
-                        Icon(addr.label == 'Work' ? Icons.work_outline : Icons.home_outlined, color: Colors.green[700]),
+                        Icon(addr.label == 'Work' ? Icons.work_outline : Icons.home_outlined, color: Colors.blue[700]),
                         const SizedBox(width: 12),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(addr.label, style: const TextStyle(fontWeight: FontWeight.bold)),

@@ -35,7 +35,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       'confirmed' => Colors.blue,
       'packed' => Colors.orange,
       'shipped' => Colors.purple,
-      'delivered' => Colors.green,
+      'delivered' => Colors.blue,
       'cancelled' => Colors.red,
       _ => Colors.grey,
     };
@@ -83,7 +83,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           const Divider(height: 20),
                           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                             Text(order.createdAt.split('T').first, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                            Text('₹${order.grandTotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                            Text('₹${order.grandTotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
                           ]),
                         ]),
                       );

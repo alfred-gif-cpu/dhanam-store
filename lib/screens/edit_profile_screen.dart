@@ -34,7 +34,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       await _auth.updateProfile(name: _nameController.text.trim(), email: _emailController.text.trim());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Profile updated'), behavior: SnackBarBehavior.floating, backgroundColor: Colors.green));
+          content: Text('Profile updated'), behavior: SnackBarBehavior.floating, backgroundColor: Colors.blue));
         Navigator.pop(context);
       }
     } catch (e) {
@@ -53,8 +53,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         // Avatar
         Center(child: CircleAvatar(
           radius: 48,
-          backgroundColor: Colors.green[100],
-          child: Icon(Icons.person, size: 48, color: Colors.green[700]),
+          backgroundColor: Colors.blue[100],
+          child: Icon(Icons.person, size: 48, color: Colors.blue[700]),
         )),
         const SizedBox(height: 8),
         Center(child: Text(_auth.phone, style: TextStyle(fontSize: 14, color: Colors.grey[600]))),
@@ -83,7 +83,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: ElevatedButton(
             onPressed: _saving ? null : _save,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green, foregroundColor: Colors.white,
+              backgroundColor: Colors.blue, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
             child: _saving
                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -101,6 +101,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     filled: true,
     fillColor: Colors.white,
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.green, width: 2)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.blue, width: 2)),
   );
 }

@@ -132,7 +132,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
               child: Row(
                 children: [
                   Text('₹${product.price.toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.green)),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
                   if (product.hasDiscount) ...[
                     const SizedBox(width: 4),
                     Text('₹${product.originalPrice.toStringAsFixed(0)}',

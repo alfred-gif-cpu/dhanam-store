@@ -50,7 +50,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: Colors.green[50],
+                  color: Colors.blue[50],
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: banner.image.isNotEmpty
@@ -72,7 +72,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  color: _current == i ? Colors.green : Colors.grey[300],
+                  color: _current == i ? Colors.blue : Colors.grey[300],
                 ),
               )),
             ),
@@ -83,8 +83,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
 
   Widget _placeholder(String title) {
     return Container(
-      color: Colors.green[100],
-      child: Center(child: Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green[800]))),
+      color: Colors.blue[100],
+      child: Center(child: Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue[800]))),
     );
   }
 }

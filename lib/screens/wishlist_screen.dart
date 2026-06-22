@@ -76,7 +76,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 icon: const Icon(Icons.shopping_bag_outlined),
                 label: const Text('Explore Products', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
@@ -204,7 +204,7 @@ class _WishlistItemCard extends StatelessWidget {
                   Row(
                     children: [
                       Text('₹${product.price.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
                       if (product.hasDiscount) ...[
                         const SizedBox(width: 6),
                         Text('₹${product.originalPrice.toStringAsFixed(0)}',
@@ -224,7 +224,7 @@ class _WishlistItemCard extends StatelessWidget {
                             icon: const Icon(Icons.shopping_cart_outlined, size: 16),
                             label: Text(product.inStock ? 'Add to Cart' : 'Out of Stock', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
                               disabledBackgroundColor: Colors.grey[200],
                               disabledForegroundColor: Colors.grey[500],

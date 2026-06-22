@@ -46,9 +46,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             child: Row(children: [
               CircleAvatar(
                 radius: 36,
-                backgroundColor: Colors.green[100],
+                backgroundColor: Colors.blue[100],
                 backgroundImage: _cs.profileImage.isNotEmpty ? NetworkImage(_cs.profileImage) : null,
-                child: _cs.profileImage.isEmpty ? Icon(Icons.person, size: 36, color: Colors.green[700]) : null,
+                child: _cs.profileImage.isEmpty ? Icon(Icons.person, size: 36, color: Colors.blue[700]) : null,
               ),
               const SizedBox(width: 16),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -110,7 +110,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
       child: ListTile(
-        leading: Icon(icon, color: Colors.green[700]),
+        leading: Icon(icon, color: Colors.blue[700]),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(sub, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         trailing: const Icon(Icons.chevron_right),

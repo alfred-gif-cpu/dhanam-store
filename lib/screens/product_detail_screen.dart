@@ -128,7 +128,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(ctx, true),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
@@ -156,7 +156,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         _loadReviews();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Review submitted!'), backgroundColor: Colors.green),
+            const SnackBar(content: Text('Review submitted!'), backgroundColor: Colors.blue),
           );
         }
       } catch (e) {
@@ -286,8 +286,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(20)),
-                    child: Text(product.category, style: TextStyle(fontSize: 12, color: Colors.green[700], fontWeight: FontWeight.w600)),
+                    decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(20)),
+                    child: Text(product.category, style: TextStyle(fontSize: 12, color: Colors.blue[700], fontWeight: FontWeight.w600)),
                   ),
                   if (product.brand.isNotEmpty) ...[
                     const SizedBox(width: 8),
@@ -310,7 +310,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text('₹${product.price.toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.green)),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.blue)),
                   if (product.hasDiscount) ...[
                     const SizedBox(width: 10),
                     Padding(
@@ -323,9 +323,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(6)),
+                        decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(6)),
                         child: Text('Save ₹${(product.originalPrice - product.price).toStringAsFixed(0)}',
-                            style: TextStyle(fontSize: 12, color: Colors.green[700], fontWeight: FontWeight.w600)),
+                            style: TextStyle(fontSize: 12, color: Colors.blue[700], fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ],
@@ -338,7 +338,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 children: [
                   _infoPill(
                     icon: product.inStock ? Icons.check_circle : Icons.cancel,
-                    color: product.inStock ? Colors.green : Colors.red,
+                    color: product.inStock ? Colors.blue : Colors.red,
                     text: product.inStock ? '${product.stock} in stock' : 'Out of stock',
                   ),
                   const SizedBox(width: 12),
@@ -381,7 +381,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               const SizedBox(width: 16),
               Text('₹${(product.price * _quantity).toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
             ],
           ),
         ),
@@ -549,7 +549,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Center(
                 child: TextButton(
                   onPressed: () {},
-                  child: Text('View all $totalReviews reviews', style: TextStyle(color: Colors.green[700])),
+                  child: Text('View all $totalReviews reviews', style: TextStyle(color: Colors.blue[700])),
                 ),
               ),
           ],
@@ -592,9 +592,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             children: [
               Container(
                 width: 36, height: 36,
-                decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
+                decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle),
                 child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'C',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[700]))),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[700]))),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -609,7 +609,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: rating >= 4 ? Colors.green : rating >= 3 ? Colors.amber : Colors.red,
+                  color: rating >= 4 ? Colors.blue : rating >= 3 ? Colors.amber : Colors.red,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -667,8 +667,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 icon: const Icon(Icons.shopping_cart_outlined, size: 20),
                 label: const Text('Add to Cart', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.green,
-                  side: const BorderSide(color: Colors.green, width: 1.5),
+                  foregroundColor: Colors.blue,
+                  side: const BorderSide(color: Colors.blue, width: 1.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
@@ -684,7 +684,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 icon: const Icon(Icons.bolt, size: 20),
                 label: const Text('Buy Now', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey[300],
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -769,7 +769,7 @@ class _RelatedCard extends StatelessWidget {
             Row(
               children: [
                 Text('₹${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue)),
                 if (product.hasDiscount) ...[
                   const SizedBox(width: 4),
                   Text('₹${product.originalPrice.toStringAsFixed(0)}',

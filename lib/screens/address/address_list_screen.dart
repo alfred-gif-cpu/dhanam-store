@@ -71,7 +71,7 @@ class _State extends State<AddressListScreen> {
           await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressFormScreen()));
           _load();
         },
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.blue,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Add Address', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
@@ -96,8 +96,8 @@ class _State extends State<AddressListScreen> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           width: 100, height: 100,
-          decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
-          child: Icon(Icons.location_off, size: 48, color: Colors.green[300]),
+          decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle),
+          child: Icon(Icons.location_off, size: 48, color: Colors.blue[300]),
         ),
         const SizedBox(height: 24),
         const Text('No saved addresses', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
@@ -114,7 +114,7 @@ class _State extends State<AddressListScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: Colors.white, borderRadius: BorderRadius.circular(16),
-          border: addr.isDefault ? Border.all(color: Colors.green, width: 2) : null,
+          border: addr.isDefault ? Border.all(color: Colors.blue, width: 2) : null,
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
         ),
         child: Column(children: [
@@ -125,9 +125,9 @@ class _State extends State<AddressListScreen> {
               Container(
                 width: 44, height: 44,
                 decoration: BoxDecoration(
-                  color: addr.isDefault ? Colors.green[50] : Colors.grey[100],
+                  color: addr.isDefault ? Colors.blue[50] : Colors.grey[100],
                   borderRadius: BorderRadius.circular(12)),
-                child: Icon(_labelIcon(addr.label), color: addr.isDefault ? Colors.green[700] : Colors.grey[600]),
+                child: Icon(_labelIcon(addr.label), color: addr.isDefault ? Colors.blue[700] : Colors.grey[600]),
               ),
               const SizedBox(width: 12),
 
@@ -139,8 +139,8 @@ class _State extends State<AddressListScreen> {
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(8)),
-                      child: Text('Default', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green[700])),
+                      decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(8)),
+                      child: Text('Default', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue[700])),
                     ),
                   ],
                 ]),
@@ -155,9 +155,9 @@ class _State extends State<AddressListScreen> {
                   Text(addr.phone, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                   if (addr.hasCoordinates) ...[
                     const SizedBox(width: 12),
-                    Icon(Icons.gps_fixed, size: 14, color: Colors.green[400]),
+                    Icon(Icons.gps_fixed, size: 14, color: Colors.blue[400]),
                     const SizedBox(width: 4),
-                    Text('GPS saved', style: TextStyle(fontSize: 12, color: Colors.green[500])),
+                    Text('GPS saved', style: TextStyle(fontSize: 12, color: Colors.blue[500])),
                   ],
                 ]),
               ])),

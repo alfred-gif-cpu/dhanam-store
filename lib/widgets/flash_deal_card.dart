@@ -121,7 +121,7 @@ class _FlashCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
             child: Row(children: [
-              Text('₹${product.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
+              Text('₹${product.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue)),
               if (product.hasDiscount) ...[
                 const SizedBox(width: 4),
                 Text('₹${product.originalPrice.toStringAsFixed(0)}', style: TextStyle(fontSize: 10, color: Colors.grey[400], decoration: TextDecoration.lineThrough)),
@@ -139,9 +139,9 @@ class _FlashCard extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
               padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.green[300]!)),
+              decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue[300]!)),
               child: Text('ADD', textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green[700])),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue[700])),
             ),
           ),
         ]),

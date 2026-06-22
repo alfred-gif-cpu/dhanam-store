@@ -84,15 +84,15 @@ class _State extends State<CustomerWalletScreen> {
                           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
                           child: Row(children: [
                             Container(padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(color: (isCredit ? Colors.green : Colors.red).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                              child: Icon(isCredit ? Icons.arrow_downward : Icons.arrow_upward, color: isCredit ? Colors.green : Colors.red, size: 20)),
+                              decoration: BoxDecoration(color: (isCredit ? Colors.blue : Colors.red).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                              child: Icon(isCredit ? Icons.arrow_downward : Icons.arrow_upward, color: isCredit ? Colors.blue : Colors.red, size: 20)),
                             const SizedBox(width: 12),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(t['reason'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
                               Text((t['created_at'] ?? '').toString().split('T').first, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                             ])),
                             Text('${isCredit ? '+' : '-'}₹${(t['amount'] ?? 0).toStringAsFixed(0)}',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isCredit ? Colors.green : Colors.red)),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isCredit ? Colors.blue : Colors.red)),
                           ]),
                         );
                       }),

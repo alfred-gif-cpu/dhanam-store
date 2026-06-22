@@ -77,7 +77,7 @@ class _State extends State<SecureProductsScreen> {
             _load();
             if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(isEdit ? 'Product updated' : 'Product added'),
-              backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+              backgroundColor: Colors.blue, behavior: SnackBarBehavior.floating));
           } catch (e) {
             if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
           }
@@ -165,7 +165,7 @@ class _State extends State<SecureProductsScreen> {
                       itemBuilder: (_, i) {
                         final p = _products[i] as Map<String, dynamic>;
                         final stockVal = p['stock'] ?? 0;
-                        final stockColor = stockVal == 0 ? Colors.red : (stockVal as int) < 10 ? Colors.orange : Colors.green;
+                        final stockColor = stockVal == 0 ? Colors.red : (stockVal as int) < 10 ? Colors.orange : Colors.blue;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -199,7 +199,7 @@ class _State extends State<SecureProductsScreen> {
                                   const SizedBox(height: 4),
                                   Row(children: [
                                     Text('₹${(p['price'] ?? 0).toStringAsFixed(0)}',
-                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
                                     if ((p['original_price'] ?? 0) > (p['price'] ?? 0)) ...[
                                       const SizedBox(width: 6),
                                       Text('₹${p['original_price'].toStringAsFixed(0)}',

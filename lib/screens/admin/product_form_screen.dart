@@ -80,7 +80,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(_isEditing ? 'Product updated' : 'Product created'),
-          backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+          backgroundColor: Colors.blue, behavior: SnackBarBehavior.floating));
         Navigator.pop(context);
       }
     } catch (e) {

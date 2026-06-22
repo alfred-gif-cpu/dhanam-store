@@ -38,7 +38,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     'confirmed' => Colors.blue,
     'packed' => Colors.orange,
     'shipped' => Colors.purple,
-    'delivered' => Colors.green,
+    'delivered' => Colors.blue,
     'cancelled' => Colors.red,
     _ => Colors.grey,
   };
@@ -59,7 +59,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
             Container(width: 12, height: 12, decoration: BoxDecoration(color: _statusColor(s), shape: BoxShape.circle)),
             const SizedBox(width: 12),
             Text(s.toUpperCase(), style: TextStyle(fontWeight: order['status'] == s ? FontWeight.bold : FontWeight.normal)),
-            if (order['status'] == s) ...[const Spacer(), const Icon(Icons.check, size: 18, color: Colors.green)],
+            if (order['status'] == s) ...[const Spacer(), const Icon(Icons.check, size: 18, color: Colors.blue)],
           ]),
         )).toList(),
       ),

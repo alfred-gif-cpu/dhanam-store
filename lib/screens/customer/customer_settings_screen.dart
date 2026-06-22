@@ -64,10 +64,10 @@ class _State extends State<CustomerSettingsScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
       child: SwitchListTile(
-        secondary: Icon(icon, color: Colors.green[700]),
+        secondary: Icon(icon, color: Colors.blue[700]),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(sub, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-        value: value, onChanged: onChanged, activeColor: Colors.green,
+        value: value, onChanged: onChanged, activeColor: Colors.blue,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
@@ -78,7 +78,7 @@ class _State extends State<CustomerSettingsScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
       child: ListTile(
-        leading: Icon(icon, color: Colors.green[700]),
+        leading: Icon(icon, color: Colors.blue[700]),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         trailing: const Icon(Icons.chevron_right),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -92,7 +92,7 @@ class _State extends State<CustomerSettingsScreen> {
       context: context,
       applicationName: 'Dhanam Store',
       applicationVersion: '2.0.0',
-      applicationIcon: Icon(Icons.storefront, size: 48, color: Colors.green[700]),
+      applicationIcon: Icon(Icons.storefront, size: 48, color: Colors.blue[700]),
       children: [const Text('Your neighbourhood grocery store, delivering fresh products in 10 minutes.')],
     );
   }

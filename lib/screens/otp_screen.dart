@@ -136,11 +136,11 @@ class _OtpScreenState extends State<OtpScreen> {
                   decoration: InputDecoration(
                     counterText: '',
                     filled: true,
-                    fillColor: _focusNodes[i].hasFocus ? Colors.green[50] : Colors.grey[100],
+                    fillColor: _focusNodes[i].hasFocus ? Colors.blue[50] : Colors.grey[100],
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Colors.green, width: 2)),
+                        borderSide: const BorderSide(color: Colors.blue, width: 2)),
                     errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: const BorderSide(color: Colors.red, width: 2)),
@@ -168,7 +168,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   ? Text('Resend OTP in ${_resendSeconds}s', style: TextStyle(fontSize: 14, color: Colors.grey[500]))
                   : GestureDetector(
                       onTap: _resend,
-                      child: Text('Resend OTP', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.green[700])),
+                      child: Text('Resend OTP', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.blue[700])),
                     ),
             ),
 

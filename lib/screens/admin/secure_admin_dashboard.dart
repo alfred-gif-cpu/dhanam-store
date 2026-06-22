@@ -95,7 +95,7 @@ class _State extends State<SecureAdminDashboard> {
 
       // Revenue
       Row(children: [
-        Expanded(child: _revenueCard('Today', s['revenue_today'] ?? 0, Colors.green)),
+        Expanded(child: _revenueCard('Today', s['revenue_today'] ?? 0, Colors.blue)),
         const SizedBox(width: 12),
         Expanded(child: _revenueCard('This Month', s['revenue_this_month'] ?? 0, Colors.blue)),
       ]),
@@ -200,6 +200,6 @@ class _State extends State<SecureAdminDashboard> {
 
   Color _statusColor(String s) => switch (s.toLowerCase()) {
     'confirmed' => Colors.blue, 'packed' => Colors.orange, 'out for delivery' => Colors.purple,
-    'delivered' => Colors.green, 'cancelled' => Colors.red, 'pending' => Colors.grey, _ => Colors.grey,
+    'delivered' => Colors.blue, 'cancelled' => Colors.red, 'pending' => Colors.grey, _ => Colors.grey,
   };
 }

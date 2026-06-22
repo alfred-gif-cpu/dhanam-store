@@ -28,7 +28,7 @@ class CategoryCarousel extends StatelessWidget {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: Colors.green[50],
+                      color: Colors.blue[50],
                       borderRadius: BorderRadius.circular(16),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -51,6 +51,6 @@ class CategoryCarousel extends StatelessWidget {
   }
 
   Widget _fallbackIcon(String name) {
-    return Center(child: Icon(Icons.category, size: 28, color: Colors.green[700]));
+    return Center(child: Icon(Icons.category, size: 28, color: Colors.blue[700]));
   }
 }

@@ -26,7 +26,7 @@ class _State extends State<CustomerOrdersScreen> {
 
   Color _statusColor(String s) => switch (s) {
     'confirmed' => Colors.blue, 'packed' => Colors.orange, 'shipped' => Colors.purple,
-    'delivered' => Colors.green, 'cancelled' => Colors.red, _ => Colors.grey,
+    'delivered' => Colors.blue, 'cancelled' => Colors.red, _ => Colors.grey,
   };
 
   @override
@@ -67,7 +67,7 @@ class _State extends State<CustomerOrdersScreen> {
                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                           Text((o['created_at'] ?? '').toString().split('T').first, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                           Text('₹${(o['grand_total'] ?? 0).toStringAsFixed(2)}',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
                         ]),
                       ]),
                     );

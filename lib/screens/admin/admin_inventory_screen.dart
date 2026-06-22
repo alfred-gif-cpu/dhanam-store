@@ -68,12 +68,12 @@ class _State extends State<AdminInventoryScreen> {
           if (qty > 0) await _auth.receiveStock(item['id'], qty);
           if (ctx.mounted) Navigator.pop(ctx);
           _load();
-        }, child: const Text('Receive', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
+        }, child: const Text('Receive', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue))),
       ],
     ));
   }
 
-  Color _stockColor(int stock) => stock == 0 ? Colors.red : stock < 10 ? Colors.orange : Colors.green;
+  Color _stockColor(int stock) => stock == 0 ? Colors.red : stock < 10 ? Colors.orange : Colors.blue;
 
   @override
   Widget build(BuildContext context) {

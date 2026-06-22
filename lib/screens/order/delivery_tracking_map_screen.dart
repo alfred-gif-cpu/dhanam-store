@@ -124,13 +124,13 @@ class _State extends State<DeliveryTrackingMapScreen> {
               PolylineLayer(polylines: [
                 Polyline(points: [_storeLocation, _driverLocation], color: Colors.blue, strokeWidth: 4,
                     pattern: const StrokePattern.dashed(segments: [10, 6])),
-                Polyline(points: [_driverLocation, _deliveryLocation], color: Colors.green, strokeWidth: 4),
+                Polyline(points: [_driverLocation, _deliveryLocation], color: Colors.blue, strokeWidth: 4),
               ]),
               MarkerLayer(markers: [
                 Marker(point: _storeLocation, width: 40, height: 40,
                     child: const Icon(Icons.store, size: 36, color: Colors.orange)),
                 Marker(point: _deliveryLocation, width: 44, height: 44,
-                    child: const Icon(Icons.location_pin, size: 44, color: Colors.green)),
+                    child: const Icon(Icons.location_pin, size: 44, color: Colors.blue)),
                 Marker(point: _driverLocation, width: 44, height: 44,
                     child: Container(
                       decoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle,
@@ -160,7 +160,7 @@ class _State extends State<DeliveryTrackingMapScreen> {
                 const SizedBox(height: 4),
                 _legend(Colors.blue, 'Driver'),
                 const SizedBox(height: 4),
-                _legend(Colors.green, 'You'),
+                _legend(Colors.blue, 'You'),
               ]),
             ),
           ),
@@ -180,7 +180,7 @@ class _State extends State<DeliveryTrackingMapScreen> {
                 Container(
                   width: double.infinity, padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [Colors.green[700]!, Colors.green[400]!]),
+                    gradient: LinearGradient(colors: [Colors.blue[700]!, Colors.blue[400]!]),
                     borderRadius: BorderRadius.circular(16)),
                   child: Row(children: [
                     const Icon(Icons.schedule, color: Colors.white, size: 28),
@@ -207,15 +207,15 @@ class _State extends State<DeliveryTrackingMapScreen> {
                     const Text('Delivery Partner', style: TextStyle(fontSize: 12, color: Colors.grey)),
                     Text(_partner.isNotEmpty ? _partner : 'Assigning...', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ])),
-                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
-                    child: Icon(Icons.phone, color: Colors.green[700], size: 22)),
+                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle),
+                    child: Icon(Icons.phone, color: Colors.blue[700], size: 22)),
                 ]),
                 const SizedBox(height: 12),
 
                 // Progress
                 ClipRRect(borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(value: _progress.clamp(0.0, 1.0), minHeight: 6,
-                    backgroundColor: Colors.grey[200], valueColor: AlwaysStoppedAnimation(Colors.green[600]!))),
+                    backgroundColor: Colors.grey[200], valueColor: AlwaysStoppedAnimation(Colors.blue[600]!))),
                 const SizedBox(height: 6),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('Dhanam Store', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
