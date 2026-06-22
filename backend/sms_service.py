@@ -37,25 +37,30 @@ def send_sms(phone: str, message: str) -> bool:
 
 
 def send_otp_sms(phone: str, otp: str) -> bool:
-    if settings.sms_api_key:
-        number = _clean_phone(phone)
-        try:
-            headers = {"authorization": settings.sms_api_key}
-            params = {
-                "route": "otp",
-                "variables_values": otp,
-                "flash": 0,
-                "numbers": number,
-            }
-            resp = httpx.get(FAST2SMS_URL, params=params, headers=headers, timeout=15)
-            ok = resp.status_code == 200 and resp.json().get("return") is True
-            if not ok:
-                print(f"[SMS] OTP failed to {number}: {resp.text}")
-            return ok
-        except Exception as e:
-            print(f"[SMS] OTP error to {number}: {e}")
-            return False
     message = f"Your Dhanam Store OTP is {otp}. Valid for 5 minutes."
+    if not settings.sms_api_key:
+        print(f"[SMS] (no API key) to {_clean_phone(phone)}:\n{message}")
+        return False
+
+    number = _clean_phone(phone)
+    headers = {"authorization": settings.sms_api_key}
+
+    # Try the dedicated OTP route first (needs DLT-approved account)
+    try:
+        params = {
+            "route": "otp",
+            "variables_values": otp,
+            "flash": 0,
+            "numbers": number,
+        }
+        resp = httpx.get(FAST2SMS_URL, params=params, headers=headers, timeout=15)
+        if resp.status_code == 200 and resp.json().get("return") is True:
+            return True
+        print(f"[SMS] OTP route failed to {number}, falling back to quick route: {resp.text}")
+    except Exception as e:
+        print(f"[SMS] OTP route error to {number}, falling back to quick route: {e}")
+
+    # Fallback to the quick (q) route which works without DLT setup
     return send_sms(phone, message)
 
 
