@@ -428,11 +428,17 @@ async def delivery_orders(admin: dict = Depends(get_current_admin)):
     return {"orders": orders, "total": len(orders)}
 
 
+def _order_match(order_id: str) -> dict:
+    if ObjectId.is_valid(order_id):
+        return {"$or": [{"order_id": order_id}, {"_id": ObjectId(order_id)}]}
+    return {"order_id": order_id}
+
+
 @router.put("/delivery/orders/{order_id}/pickup")
 async def delivery_pickup(order_id: str, admin: dict = Depends(get_current_admin)):
     now = _now()
-    await orders_collection.update_one(
-        {"order_id": order_id},
+    res = await orders_collection.update_one(
+        _order_match(order_id),
         {
             "$set": {
                 "order_status": "Out For Delivery",
@@ -443,6 +449,8 @@ async def delivery_pickup(order_id: str, admin: dict = Depends(get_current_admin
             "$push": {"status_history": {"status": "Out For Delivery", "timestamp": now}},
         },
     )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
     await _log(admin["email"], "order_pickup", f"Picked up order {order_id}")
     return {"status": "Out For Delivery"}
 
@@ -450,13 +458,15 @@ async def delivery_pickup(order_id: str, admin: dict = Depends(get_current_admin
 @router.put("/delivery/orders/{order_id}/delivered")
 async def delivery_delivered(order_id: str, admin: dict = Depends(get_current_admin)):
     now = _now()
-    await orders_collection.update_one(
-        {"order_id": order_id},
+    res = await orders_collection.update_one(
+        _order_match(order_id),
         {
             "$set": {"order_status": "Delivered", "status": "delivered", "updated_at": now},
             "$push": {"status_history": {"status": "Delivered", "timestamp": now}},
         },
     )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
     await _log(admin["email"], "order_delivered", f"Delivered order {order_id}")
     return {"status": "Delivered"}
 
