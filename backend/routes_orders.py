@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Query, HTTPException, Body
 from fastapi.responses import StreamingResponse
 from bson import ObjectId
-from database import orders_collection, products_collection, customers_collection
+from database import orders_collection, products_collection, customers_collection, users_collection
+from sms_service import send_order_receipt_sms
 
 router = APIRouter()
 
@@ -77,6 +78,27 @@ async def create_order(data: dict = Body(...)):
     }
 
     result = await orders_collection.insert_one(order)
+
+    # Send bill receipt via SMS to the order's phone number
+    phone = ""
+    addr = order.get("delivery_address", {})
+    if isinstance(addr, dict):
+        phone = addr.get("phone", "")
+    if not phone:
+        customer_id = data.get("customer_id", data.get("user_id", ""))
+        if customer_id:
+            try:
+                user = await users_collection.find_one({"_id": ObjectId(customer_id)})
+                if user:
+                    phone = user.get("phone", "")
+            except Exception:
+                pass
+    if phone:
+        try:
+            send_order_receipt_sms(phone, order)
+        except Exception as e:
+            print(f"[SMS] Receipt send failed: {e}")
+
     return {
         "id": str(result.inserted_id),
         "order_id": order_id,
