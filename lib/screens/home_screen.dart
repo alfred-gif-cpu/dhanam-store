@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../services/cart_service.dart';
 import '../services/recently_viewed_service.dart';
 import '../services/wishlist_service.dart';
+import '../theme.dart';
 import '../widgets/banner_carousel.dart';
 import '../widgets/category_carousel.dart';
 import '../widgets/flash_deal_card.dart';
@@ -66,8 +67,8 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _navIndex,
         onTap: (i) => setState(() => _navIndex = i),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textHint,
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
           const BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), activeIcon: Icon(Icons.grid_view), label: 'Browse'),
@@ -100,10 +101,13 @@ class _HomeTab extends StatefulWidget {
   State<_HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin {
+class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   final ApiService _api = ApiService();
   final CartService _cart = CartService();
   final RecentlyViewedService _recentService = RecentlyViewedService();
+  late AnimationController _greetController;
+  late Animation<double> _greetFade;
+  late Animation<Offset> _greetSlide;
 
   List<HomeBanner> _banners = [];
   List<Category> _categories = [];
@@ -120,6 +124,9 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin {
   @override
   void initState() {
     super.initState();
+    _greetController = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _greetFade = CurvedAnimation(parent: _greetController, curve: Curves.easeOut);
+    _greetSlide = Tween(begin: const Offset(-0.15, 0), end: Offset.zero).animate(CurvedAnimation(parent: _greetController, curve: Curves.easeOutCubic));
     _cart.addListener(_refresh);
     _recentService.addListener(_loadRecentlyViewed);
     _loadAll();
@@ -127,10 +134,19 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin {
 
   @override
   void dispose() {
+    _greetController.dispose();
     _cart.removeListener(_refresh);
     _recentService.removeListener(_loadRecentlyViewed);
     super.dispose();
   }
+
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
 
   void _refresh() => setState(() {});
 
@@ -155,8 +171,10 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin {
         _loading = false;
       });
       _loadRecentlyViewed();
+      _greetController.forward();
     } catch (e) {
       setState(() => _loading = false);
+      _greetController.forward();
     }
   }
 
@@ -180,27 +198,44 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin {
             snap: true,
             elevation: 0,
             backgroundColor: Colors.white,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Dhanam Store', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                Row(children: [
-                  Icon(Icons.bolt, size: 14, color: Colors.green[700]),
-                  const SizedBox(width: 2),
-                  Text('Delivery in 10 mins', style: TextStyle(fontSize: 12, color: Colors.green[700])),
-                ]),
-              ],
+            title: FadeTransition(
+              opacity: _greetFade,
+              child: SlideTransition(
+                position: _greetSlide,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$_greeting!', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    const SizedBox(height: 1),
+                    Row(
+                      children: [
+                        const Text('Dhanam Store', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: AppColors.accentLight, borderRadius: BorderRadius.circular(12)),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.bolt, size: 12, color: AppColors.accent),
+                            const SizedBox(width: 2),
+                            Text('10 min', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.accent)),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.search, color: Colors.black87),
+                icon: const Icon(Icons.search_rounded, color: AppColors.textPrimary),
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
               ),
               Stack(
                 alignment: Alignment.center,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black87),
+                    icon: const Icon(Icons.shopping_cart_outlined, color: AppColors.textPrimary),
                     onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
                   ),
                   if (_cart.itemCount > 0)
@@ -208,7 +243,7 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin {
                       top: 6, right: 4,
                       child: Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
                         child: Text('${_cart.itemCount}',
                             style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
@@ -225,6 +260,43 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin {
                 child: ListView(
                   children: [
                     const SizedBox(height: 8),
+
+                    // Welcome card
+                    FadeTransition(
+                      opacity: _greetFade,
+                      child: Container(
+                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppColors.primary, Color(0xFF2E7D32)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('$_greeting!', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+                                  const SizedBox(height: 4),
+                                  Text('What would you like to order today?', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 52, height: 52,
+                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
+                              child: const Icon(Icons.local_grocery_store_rounded, color: Colors.white, size: 28),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
 
                     // Banners
                     BannerCarousel(banners: _banners),
@@ -255,7 +327,7 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                         child: Row(children: [
-                          Icon(Icons.trending_up, size: 22, color: Colors.orange[700]),
+                          const Icon(Icons.trending_up, size: 22, color: AppColors.accent),
                           const SizedBox(width: 6),
                           const Text('Trending Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         ]),
