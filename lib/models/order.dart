@@ -20,15 +20,18 @@ class Order {
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
+    final rawAddr = json['delivery_address'] ?? json['address'];
     return Order(
-      id: json['id'] ?? '',
-      status: json['status'] ?? '',
+      id: json['order_id'] ?? json['id'] ?? '',
+      status: json['order_status'] ?? json['status'] ?? '',
       subtotal: (json['subtotal'] ?? 0).toDouble(),
       gst: (json['gst'] ?? 0).toDouble(),
-      grandTotal: (json['grand_total'] ?? 0).toDouble(),
-      items: (json['items'] as List? ?? []).map((e) => OrderItem.fromJson(e)).toList(),
+      grandTotal: (json['grand_total'] ?? json['total_amount'] ?? 0).toDouble(),
+      items: (json['items'] as List? ?? [])
+          .map((e) => OrderItem.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
       createdAt: json['created_at'] ?? '',
-      address: json['address'] ?? {},
+      address: rawAddr is Map ? Map<String, dynamic>.from(rawAddr) : <String, dynamic>{},
     );
   }
 }
