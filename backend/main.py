@@ -16,6 +16,7 @@ from routes_addresses import router as addresses_router
 from routes_cart import router as cart_router
 from routes_payments import router as payments_router
 from routes_notifications import router as notifications_router
+from routes_reviews import router as reviews_router
 
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
@@ -43,6 +44,7 @@ app.include_router(addresses_router)
 app.include_router(cart_router)
 app.include_router(payments_router)
 app.include_router(notifications_router)
+app.include_router(reviews_router)
 
 
 # ─── Auth ─────────────────────────────────────────────────

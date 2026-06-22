@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../services/cart_service.dart';
 import '../services/recently_viewed_service.dart';
+import '../services/review_service.dart';
 import '../services/wishlist_service.dart';
 import '../widgets/product_image.dart';
 import 'checkout_screen.dart';
@@ -21,7 +23,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final WishlistService _wishlist = WishlistService();
   final CartService _cart = CartService();
   final ApiService _api = ApiService();
+  final ReviewService _reviewService = ReviewService();
   List<Product> _related = [];
+  List<dynamic> _reviews = [];
+  Map<String, dynamic> _reviewStats = {};
+  bool _reviewsLoading = true;
 
   Product get product => widget.product;
 
@@ -32,6 +38,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     _cart.addListener(_refresh);
     RecentlyViewedService().add(product.id);
     _loadRelated();
+    _loadReviews();
   }
 
   @override
@@ -42,6 +49,127 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   void _refresh() => setState(() {});
+
+  Future<void> _loadReviews() async {
+    try {
+      final data = await _reviewService.getProductReviews(product.id);
+      if (mounted) {
+        setState(() {
+          _reviews = data['reviews'] ?? [];
+          _reviewStats = data['stats'] ?? {};
+          _reviewsLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _reviewsLoading = false);
+    }
+  }
+
+  Future<void> _showWriteReviewDialog() async {
+    int selectedRating = 5;
+    final titleCtrl = TextEditingController();
+    final commentCtrl = TextEditingController();
+
+    final submitted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 16),
+              const Text('Write a Review', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              const Text('Rating', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Row(
+                children: List.generate(5, (i) => GestureDetector(
+                  onTap: () => setSheetState(() => selectedRating = i + 1),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(
+                      i < selectedRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      size: 36,
+                      color: i < selectedRating ? Colors.amber : Colors.grey[300],
+                    ),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: titleCtrl,
+                decoration: InputDecoration(
+                  hintText: 'Review title (optional)',
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: commentCtrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Share your experience...',
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Submit Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (submitted == true) {
+      try {
+        final auth = AuthService();
+        await _reviewService.submitReview(
+          productId: product.id,
+          userId: auth.userId,
+          userName: auth.phone,
+          rating: selectedRating,
+          title: titleCtrl.text.trim(),
+          comment: commentCtrl.text.trim(),
+        );
+        _loadReviews();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Review submitted!'), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to submit: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+    titleCtrl.dispose();
+    commentCtrl.dispose();
+  }
 
   Future<void> _loadRelated() async {
     try {
@@ -284,6 +412,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
 
+        // Ratings & Reviews
+        _buildReviewsSection(),
+
         // Related products
         if (_related.isNotEmpty) ...[
           const Padding(
@@ -310,6 +441,211 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
         const SizedBox(height: 120),
       ],
+    );
+  }
+
+  Widget _buildReviewsSection() {
+    final avgRating = (_reviewStats['avg_rating'] ?? 0).toDouble();
+    final totalReviews = (_reviewStats['count'] ?? 0) as int;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Ratings & Reviews', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              TextButton.icon(
+                onPressed: _showWriteReviewDialog,
+                icon: const Icon(Icons.rate_review_outlined, size: 18),
+                label: const Text('Write'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (_reviewsLoading)
+            const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2)))
+          else if (totalReviews == 0)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  children: [
+                    Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 8),
+                    Text('No reviews yet', style: TextStyle(fontSize: 15, color: Colors.grey[500])),
+                    const SizedBox(height: 4),
+                    Text('Be the first to review this product', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+                  ],
+                ),
+              ),
+            )
+          else ...[
+            // Summary row
+            Row(
+              children: [
+                Column(
+                  children: [
+                    Text(avgRating.toStringAsFixed(1), style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold)),
+                    Row(
+                      children: List.generate(5, (i) => Icon(
+                        i < avgRating.round() ? Icons.star_rounded : Icons.star_outline_rounded,
+                        size: 18, color: Colors.amber,
+                      )),
+                    ),
+                    const SizedBox(height: 4),
+                    Text('$totalReviews reviews', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                  ],
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    children: List.generate(5, (i) {
+                      final star = 5 - i;
+                      final count = (_reviewStats['r$star'] ?? 0) as int;
+                      final pct = totalReviews > 0 ? count / totalReviews : 0.0;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Text('$star', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: pct,
+                                  backgroundColor: Colors.grey[200],
+                                  color: Colors.amber,
+                                  minHeight: 8,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(width: 24, child: Text('$count', style: TextStyle(fontSize: 11, color: Colors.grey[500]))),
+                          ],
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 28),
+
+            // Review list
+            ...(_reviews.take(3).map((r) => _buildReviewCard(r))),
+            if (_reviews.length > 3)
+              Center(
+                child: TextButton(
+                  onPressed: () {},
+                  child: Text('View all $totalReviews reviews', style: TextStyle(color: Colors.green[700])),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewCard(Map<String, dynamic> review) {
+    final rating = (review['rating'] ?? 0) as int;
+    final name = review['user_name'] ?? 'Customer';
+    final title = review['title'] ?? '';
+    final comment = review['comment'] ?? '';
+    final date = review['created_at'] ?? '';
+    final helpful = (review['helpful_count'] ?? 0) as int;
+
+    String displayDate = '';
+    if (date.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(date);
+        final diff = DateTime.now().difference(dt);
+        if (diff.inDays == 0) {
+          displayDate = 'Today';
+        } else if (diff.inDays == 1) {
+          displayDate = 'Yesterday';
+        } else if (diff.inDays < 30) {
+          displayDate = '${diff.inDays} days ago';
+        } else {
+          displayDate = '${dt.day}/${dt.month}/${dt.year}';
+        }
+      } catch (_) {}
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
+                child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'C',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[700]))),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text(displayDate, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: rating >= 4 ? Colors.green : rating >= 3 ? Colors.amber : Colors.red,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$rating', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const Icon(Icons.star_rounded, size: 14, color: Colors.white),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (title.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          ],
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(comment, style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.4)),
+          ],
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () async {
+              await _reviewService.markHelpful(review['id']);
+              _loadReviews();
+            },
+            child: Row(
+              children: [
+                Icon(Icons.thumb_up_outlined, size: 14, color: Colors.grey[400]),
+                const SizedBox(width: 4),
+                Text('Helpful${helpful > 0 ? ' ($helpful)' : ''}', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
