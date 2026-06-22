@@ -115,7 +115,8 @@ def serialize_product(product: dict, base_url: str = "") -> dict:
     product["id"] = str(product.pop("_id"))
     image = product.get("image_url") or product.get("image") or ""
     if image and not image.startswith("http"):
-        image = f"{base_url}/static/images/{image}"
+        url = f"{base_url}/static/images/{image}"
+        image = url.replace("http://", "https://", 1) if "railway.app" in url else url
     product["image"] = image
     return product
 
