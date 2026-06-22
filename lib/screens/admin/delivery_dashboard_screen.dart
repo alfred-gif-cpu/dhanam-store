@@ -109,7 +109,7 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
                   child: ListView.builder(
                     padding: const EdgeInsets.all(12),
                     itemCount: _orders.length,
-                    itemBuilder: (_, i) => _orderCard(_orders[i] as Map<String, dynamic>),
+                    itemBuilder: (_, i) => _orderCard(Map<String, dynamic>.from(_orders[i] as Map)),
                   ),
                 ),
     );
@@ -118,7 +118,7 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
   Widget _orderCard(Map<String, dynamic> o) {
     final orderId = o['order_id'] ?? '';
     final status = o['order_status'] ?? '';
-    final addr = (o['delivery_address'] ?? {}) as Map<String, dynamic>;
+    final addr = Map<String, dynamic>.from((o['delivery_address'] ?? {}) as Map);
     final items = (o['items'] ?? []) as List;
     final total = (o['grand_total'] ?? o['total_amount'] ?? 0).toDouble();
     final phone = addr['phone']?.toString() ?? '';

@@ -78,7 +78,7 @@ class _State extends State<OrderDetailScreen> {
     final o = _order!;
     final items = o['items'] as List? ?? [];
     final status = o['order_status'] ?? '';
-    final addr = o['delivery_address'] as Map<String, dynamic>? ?? {};
+    final addr = o['delivery_address'] != null ? Map<String, dynamic>.from(o['delivery_address'] as Map) : <String, dynamic>{};
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
