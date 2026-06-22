@@ -73,8 +73,9 @@ class AuthService extends ChangeNotifier {
     return jsonDecode(data) as Map<String, dynamic>;
   }
 
-  Future<void> sendOtp(String phone) async {
-    await _post('/auth/send-otp', {'phone': phone});
+  Future<String?> sendOtp(String phone) async {
+    final result = await _post('/auth/send-otp', {'phone': phone});
+    return result['otp']?.toString();
   }
 
   Future<bool> verifyOtp(String phone, String otp) async {

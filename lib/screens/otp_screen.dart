@@ -6,7 +6,8 @@ import 'home_screen.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
-  const OtpScreen({super.key, required this.phone});
+  final String? devOtp;
+  const OtpScreen({super.key, required this.phone, this.devOtp});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -78,14 +79,17 @@ class _OtpScreenState extends State<OtpScreen> {
     }
   }
 
+  String? _currentOtp;
+
   Future<void> _resend() async {
     if (_resendSeconds > 0) return;
     try {
-      await AuthService().sendOtp(widget.phone);
+      final otp = await AuthService().sendOtp(widget.phone);
       _startTimer();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('OTP sent again'), behavior: SnackBarBehavior.floating));
+        setState(() => _currentOtp = otp);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('OTP sent again${otp != null ? ": $otp" : ""}'), behavior: SnackBarBehavior.floating));
       }
     } catch (_) {}
   }
@@ -171,17 +175,18 @@ class _OtpScreenState extends State<OtpScreen> {
             const Spacer(),
 
             // Hint for dev
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: Colors.amber[50], borderRadius: BorderRadius.circular(12)),
-              child: Row(children: [
-                Icon(Icons.info_outline, size: 20, color: Colors.amber[800]),
-                const SizedBox(width: 8),
-                Expanded(child: Text('Dev mode: Check console for OTP',
-                    style: TextStyle(fontSize: 13, color: Colors.amber[900]))),
-              ]),
-            ),
+            if (widget.devOtp != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: Colors.amber[50], borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  Icon(Icons.info_outline, size: 20, color: Colors.amber[800]),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Dev OTP: ${widget.devOtp}',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amber[900]))),
+                ]),
+              ),
           ],
         ),
       ),
