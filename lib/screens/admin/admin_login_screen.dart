@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/admin_auth_service.dart';
+import '../../services/notification_service.dart';
 import 'secure_admin_dashboard.dart';
 import 'admin_change_password_screen.dart';
+import 'delivery_dashboard_screen.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -24,10 +26,24 @@ class _State extends State<AdminLoginScreen> {
     if (_email.text.trim().isEmpty || _password.text.isEmpty) return;
     setState(() { _loading = true; _error = null; });
     try {
-      final mustChange = await AdminAuthService().login(_email.text.trim(), _password.text);
+      final auth = AdminAuthService();
+      final mustChange = await auth.login(_email.text.trim(), _password.text);
+
+      // Subscribe to the role-specific notification topic
+      final ns = NotificationService();
+      if (auth.isOwner) {
+        ns.subscribeToTopic('owner');
+        ns.unsubscribeFromTopic('delivery');
+      } else {
+        ns.subscribeToTopic('delivery');
+        ns.unsubscribeFromTopic('owner');
+      }
+
       if (mounted) {
         if (mustChange) {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminChangePasswordScreen()));
+        } else if (auth.isDelivery) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DeliveryDashboardScreen()));
         } else {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SecureAdminDashboard()));
         }

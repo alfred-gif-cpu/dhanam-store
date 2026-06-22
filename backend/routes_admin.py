@@ -10,6 +10,7 @@ from database import (
 from admin_auth import (
     hash_password, verify_password, create_admin_token, get_current_admin,
 )
+from push_service import notify_delivery_ready
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -46,12 +47,14 @@ async def admin_login(email: str = Body(...), password: str = Body(...)):
 
     token = create_admin_token(str(admin["_id"]), email)
     must_change = admin.get("must_change_password", False)
+    role = admin.get("role", "owner")
 
-    await _log(email, "login", "Admin logged in")
+    await _log(email, "login", f"{role} logged in")
     return {
         "token": token,
         "email": email,
         "name": admin.get("name", "Admin"),
+        "role": role,
         "must_change_password": must_change,
     }
 
@@ -77,7 +80,67 @@ async def change_password(
 
 @router.get("/me")
 async def admin_me(admin: dict = Depends(get_current_admin)):
-    return {"id": admin["id"], "email": admin.get("email", ""), "name": admin.get("name", "Admin")}
+    return {"id": admin["id"], "email": admin.get("email", ""), "name": admin.get("name", "Admin"), "role": admin.get("role", "owner")}
+
+
+def _require_owner(admin: dict):
+    if admin.get("role", "owner") != "owner":
+        raise HTTPException(status_code=403, detail="Owner access required")
+
+
+# ─── Staff (delivery employees) ───────────────────────────
+
+@router.get("/staff")
+async def list_staff(admin: dict = Depends(get_current_admin)):
+    _require_owner(admin)
+    cursor = admins_collection.find({"role": "delivery"}).sort("created_at", -1)
+    staff = []
+    async for s in cursor:
+        staff.append({
+            "id": str(s["_id"]),
+            "email": s.get("email", ""),
+            "name": s.get("name", ""),
+            "phone": s.get("phone", ""),
+            "active": s.get("active", True),
+            "created_at": s.get("created_at", ""),
+        })
+    return {"staff": staff}
+
+
+@router.post("/staff")
+async def create_staff(
+    name: str = Body(...),
+    email: str = Body(...),
+    phone: str = Body(""),
+    password: str = Body(...),
+    admin: dict = Depends(get_current_admin),
+):
+    _require_owner(admin)
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    existing = await admins_collection.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=400, detail="An account with this email already exists")
+    await admins_collection.insert_one({
+        "email": email,
+        "password": hash_password(password),
+        "name": name,
+        "phone": phone,
+        "role": "delivery",
+        "active": True,
+        "must_change_password": False,
+        "created_at": _now(),
+    })
+    await _log(admin["email"], "staff_created", f"Created delivery staff {email}")
+    return {"status": "created"}
+
+
+@router.delete("/staff/{staff_id}")
+async def delete_staff(staff_id: str, admin: dict = Depends(get_current_admin)):
+    _require_owner(admin)
+    await admins_collection.delete_one({"_id": ObjectId(staff_id), "role": "delivery"})
+    await _log(admin["email"], "staff_deleted", f"Removed staff {staff_id}")
+    return {"status": "deleted"}
 
 
 # ─── Dashboard ────────────────────────────────────────────
@@ -333,15 +396,69 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
     if status not in valid:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid}")
     now = _now()
+    match = {"$or": [{"order_id": order_id}, {"_id": ObjectId(order_id)}]} if ObjectId.is_valid(order_id) else {"order_id": order_id}
     await orders_collection.update_one(
-        {"order_id": order_id},
+        match,
         {
             "$set": {"order_status": status, "status": status.lower().replace(" ", "_"), "updated_at": now},
             "$push": {"status_history": {"status": status, "timestamp": now}},
         },
     )
     await _log(admin["email"], "order_status_updated", f"Order {order_id} -> {status}")
+
+    # When the owner marks an order Packed, alert delivery staff
+    if status == "Packed":
+        order = await orders_collection.find_one(match)
+        if order:
+            try:
+                notify_delivery_ready(order)
+            except Exception as e:
+                print(f"[PUSH] Delivery notify failed: {e}")
     return {"status": status}
+
+
+# ─── Delivery (staff role) ────────────────────────────────
+
+@router.get("/delivery/orders")
+async def delivery_orders(admin: dict = Depends(get_current_admin)):
+    # Orders that are packed, out for delivery, or assigned to this staff
+    query = {"order_status": {"$in": ["Packed", "Out For Delivery"]}}
+    cursor = orders_collection.find(query).sort("updated_at", 1)
+    orders = [serialize(o) async for o in cursor]
+    return {"orders": orders, "total": len(orders)}
+
+
+@router.put("/delivery/orders/{order_id}/pickup")
+async def delivery_pickup(order_id: str, admin: dict = Depends(get_current_admin)):
+    now = _now()
+    await orders_collection.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "order_status": "Out For Delivery",
+                "status": "out_for_delivery",
+                "updated_at": now,
+                "tracking.assigned_delivery_partner": admin.get("name", admin.get("email", "")),
+            },
+            "$push": {"status_history": {"status": "Out For Delivery", "timestamp": now}},
+        },
+    )
+    await _log(admin["email"], "order_pickup", f"Picked up order {order_id}")
+    return {"status": "Out For Delivery"}
+
+
+@router.put("/delivery/orders/{order_id}/delivered")
+async def delivery_delivered(order_id: str, admin: dict = Depends(get_current_admin)):
+    now = _now()
+    await orders_collection.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {"order_status": "Delivered", "status": "delivered", "updated_at": now},
+            "$push": {"status_history": {"status": "Delivered", "timestamp": now}},
+        },
+    )
+    await _log(admin["email"], "order_delivered", f"Delivered order {order_id}")
+    return {"status": "Delivered"}
 
 
 # ─── Audit Logs ───────────────────────────────────────────

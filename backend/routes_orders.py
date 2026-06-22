@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from bson import ObjectId
 from database import orders_collection, products_collection, customers_collection, users_collection
 from sms_service import send_order_receipt_sms
+from push_service import notify_new_order
 
 router = APIRouter()
 
@@ -98,6 +99,12 @@ async def create_order(data: dict = Body(...)):
             send_order_receipt_sms(phone, order)
         except Exception as e:
             print(f"[SMS] Receipt send failed: {e}")
+
+    # Notify the shop owner of the new order
+    try:
+        notify_new_order(order)
+    except Exception as e:
+        print(f"[PUSH] New-order notify failed: {e}")
 
     return {
         "id": str(result.inserted_id),
