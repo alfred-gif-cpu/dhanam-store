@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/admin_service.dart';
+import '../../services/admin_auth_service.dart';
 
 class AdminOrdersScreen extends StatefulWidget {
   const AdminOrdersScreen({super.key});
@@ -9,14 +9,14 @@ class AdminOrdersScreen extends StatefulWidget {
 }
 
 class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
-  final AdminService _admin = AdminService();
+  final AdminAuthService _admin = AdminAuthService();
   List<dynamic> _orders = [];
   bool _loading = true;
   String? _statusFilter;
   int _page = 1;
   int _total = 0;
 
-  static const _statuses = ['confirmed', 'packed', 'shipped', 'delivered', 'cancelled'];
+  static const _statuses = ['Confirmed', 'Packed', 'Out For Delivery', 'Delivered', 'Cancelled'];
 
   @override
   void initState() {
@@ -27,7 +27,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final data = await _admin.getOrders(page: _page, status: _statusFilter);
+      final data = await _admin.getOrders(page: _page, status: _statusFilter ?? '');
       setState(() { _orders = data['orders']; _total = data['total']; _loading = false; });
     } catch (_) {
       setState(() => _loading = false);
@@ -35,31 +35,41 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   }
 
   Color _statusColor(String status) => switch (status) {
-    'confirmed' => Colors.blue,
-    'packed' => Colors.orange,
-    'shipped' => Colors.purple,
-    'delivered' => Colors.blue,
-    'cancelled' => Colors.red,
+    'Confirmed' => Colors.blue,
+    'Packed' => Colors.orange,
+    'Out For Delivery' => Colors.purple,
+    'Delivered' => Colors.green,
+    'Cancelled' => Colors.red,
     _ => Colors.grey,
   };
 
   void _showStatusDialog(Map<String, dynamic> order) {
+    final orderId = order['order_id'] ?? order['id'];
+    final current = order['order_status'] ?? '';
     showDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: Text('Update Order #${(order['order_number'] ?? order['id']).toString().substring(0, 10)}'),
+        title: Text('Update $orderId'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         children: _statuses.map((s) => SimpleDialogOption(
           onPressed: () async {
             Navigator.pop(ctx);
-            await _admin.updateOrderStatus(order['id'], s);
+            try {
+              await _admin.updateOrderStatus(orderId, s);
+              if (mounted && s == 'Packed') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Delivery staff notified'), backgroundColor: Colors.green));
+              }
+            } catch (e) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+            }
             _load();
           },
           child: Row(children: [
             Container(width: 12, height: 12, decoration: BoxDecoration(color: _statusColor(s), shape: BoxShape.circle)),
             const SizedBox(width: 12),
-            Text(s.toUpperCase(), style: TextStyle(fontWeight: order['status'] == s ? FontWeight.bold : FontWeight.normal)),
-            if (order['status'] == s) ...[const Spacer(), const Icon(Icons.check, size: 18, color: Colors.blue)],
+            Text(s, style: TextStyle(fontWeight: current == s ? FontWeight.bold : FontWeight.normal)),
+            if (current == s) ...[const Spacer(), const Icon(Icons.check, size: 18, color: Colors.blue)],
           ]),
         )).toList(),
       ),
@@ -80,7 +90,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             children: [
               _filterChip('All', null),
-              ..._statuses.map((s) => _filterChip(s[0].toUpperCase() + s.substring(1), s)),
+              ..._statuses.map((s) => _filterChip(s, s)),
             ],
           ),
         ),
@@ -97,21 +107,21 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                         itemBuilder: (context, index) {
                           final o = _orders[index] as Map<String, dynamic>;
                           final items = o['items'] as List? ?? [];
-                          final status = o['status'] ?? '';
+                          final status = o['order_status'] ?? 'Confirmed';
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(children: [
-                                Expanded(child: Text('#${(o['order_number'] ?? o['id']).toString().substring(0, 10).toUpperCase()}',
+                                Expanded(child: Text('${o['order_id'] ?? o['id']}',
                                     style: const TextStyle(fontWeight: FontWeight.bold))),
                                 GestureDetector(
                                   onTap: () => _showStatusDialog(o),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                    child: Text(status.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _statusColor(status))),
+                                    child: Text(status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _statusColor(status))),
                                   ),
                                 ),
                               ]),
