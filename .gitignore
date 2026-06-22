@@ -48,6 +48,7 @@ app.*.map.json
 *.env
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+backend/firebase-credentials.json
 
 # Backend
 backend/.env
