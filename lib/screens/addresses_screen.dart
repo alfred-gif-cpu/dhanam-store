@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/address.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import 'map_picker_screen.dart';
 
 class AddressesScreen extends StatefulWidget {
   const AddressesScreen({super.key});
@@ -58,6 +59,17 @@ class _AddressesScreenState extends State<AddressesScreen> {
           TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder())),
           const SizedBox(height: 12),
           TextField(controller: line1, decoration: const InputDecoration(labelText: 'Address Line', border: OutlineInputBorder())),
+          const SizedBox(height: 12),
+          SizedBox(height: 44, child: OutlinedButton.icon(
+            onPressed: () async {
+              final result = await Navigator.push<Map<String, dynamic>>(ctx, MaterialPageRoute(builder: (_) => const MapPickerScreen()));
+              if (result != null) line1.text = result['address'] ?? '';
+            },
+            icon: const Icon(Icons.map, size: 18),
+            label: const Text('Pick on Map'),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.green, side: const BorderSide(color: Colors.green),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          )),
           const SizedBox(height: 12),
           Row(children: [
             Expanded(child: TextField(controller: city, decoration: const InputDecoration(labelText: 'City', border: OutlineInputBorder()))),

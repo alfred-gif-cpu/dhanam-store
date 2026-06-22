@@ -55,6 +55,8 @@ async def create_order(data: dict = Body(...)):
         "delivery_address": data.get("delivery_address", data.get("address", {})),
         "delivery_slot": data.get("delivery_slot", ""),
         "payment_method": data.get("payment_method", "cod"),
+        "payment_id": data.get("payment_id", ""),
+        "razorpay_order_id": data.get("razorpay_order_id", ""),
         "subtotal": subtotal,
         "gst": gst,
         "delivery_fee": delivery_fee,
@@ -78,6 +80,7 @@ async def create_order(data: dict = Body(...)):
     return {
         "id": str(result.inserted_id),
         "order_id": order_id,
+        "order_number": order_id,
         "status": "Confirmed",
         "total_amount": total_amount,
         "estimated_delivery": order["tracking"]["estimated_delivery_time"],

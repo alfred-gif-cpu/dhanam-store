@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
+import 'home_screen.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
@@ -59,13 +60,13 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verify() async {
     setState(() { _verifying = true; _error = null; });
     try {
-      final isNew = await AuthService().verifyOtp(widget.phone, _otp);
+      await AuthService().verifyOtp(widget.phone, _otp);
       if (mounted) {
-        if (isNew) {
-          Navigator.pushReplacementNamed(context, '/');
-        } else {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        }
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
       }
     } catch (e) {
       setState(() {

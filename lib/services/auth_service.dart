@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config.dart';
 
 class AuthService extends ChangeNotifier {
   static const _tokenKey = 'auth_token';
   static const _userKey = 'auth_user';
-  static const String _baseUrl = 'http://10.0.2.2:8000';
+  static final String _baseUrl = AppConfig.baseUrl;
 
   static final AuthService _instance = AuthService._();
   factory AuthService() => _instance;
@@ -16,6 +17,9 @@ class AuthService extends ChangeNotifier {
   String? _token;
   Map<String, dynamic>? _user;
   bool _loaded = false;
+
+  // Callback for when user changes — set by CartService
+  static VoidCallback? onUserSwitch;
 
   bool get isLoggedIn => _token != null;
   String? get token => _token;
@@ -83,6 +87,7 @@ class AuthService extends ChangeNotifier {
     await prefs.setString(_userKey, jsonEncode(_user));
 
     notifyListeners();
+    onUserSwitch?.call();
     _fetchProfile();
     return result['is_new_user'] == true;
   }
@@ -116,5 +121,6 @@ class AuthService extends ChangeNotifier {
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
     notifyListeners();
+    onUserSwitch?.call();
   }
 }

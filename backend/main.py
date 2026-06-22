@@ -12,6 +12,10 @@ from auth import generate_otp, verify_otp, create_token, get_current_user
 from routes_customer import router as customer_router
 from routes_orders import router as orders_router
 from routes_admin import router as admin_router
+from routes_addresses import router as addresses_router
+from routes_cart import router as cart_router
+from routes_payments import router as payments_router
+from routes_notifications import router as notifications_router
 
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
@@ -35,6 +39,10 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(customer_router, tags=["Customers"])
 app.include_router(orders_router, tags=["Orders V2"])
 app.include_router(admin_router)
+app.include_router(addresses_router)
+app.include_router(cart_router)
+app.include_router(payments_router)
+app.include_router(notifications_router)
 
 
 # ─── Auth ─────────────────────────────────────────────────

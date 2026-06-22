@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import '../config.dart';
 import '../models/product.dart';
 import '../models/banner.dart';
 import '../models/address.dart';
@@ -7,7 +8,7 @@ import '../models/category.dart';
 import '../models/order.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://10.0.2.2:8000';
+  static final String _baseUrl = AppConfig.baseUrl;
 
   final HttpClient _client = HttpClient();
 
@@ -114,12 +115,25 @@ class ApiService {
 
   // Addresses
   Future<List<Address>> getAddresses(String userId) async {
-    final data = await _get('/addresses/$userId');
-    return (data['addresses'] as List).map((a) => Address.fromJson(a)).toList();
+    try {
+      final data = await _get('/addresses?customer_id=$userId');
+      return (data['addresses'] as List).map((a) => Address.fromJson(a)).toList();
+    } catch (_) {
+      try {
+        final data = await _get('/addresses/$userId');
+        return (data['addresses'] as List).map((a) => Address.fromJson(a)).toList();
+      } catch (_) {
+        return [];
+      }
+    }
   }
 
   Future<String> addAddress(String userId, Map<String, dynamic> address) async {
-    final data = await _post('/addresses/$userId', address);
+    address['customer_id'] = userId;
+    address['name'] = address['name'] ?? address['full_name'] ?? '';
+    address['house_no'] = address['house_no'] ?? address['line1'] ?? '';
+    address['street'] = address['street'] ?? '';
+    final data = await _post('/addresses', address);
     return data['id'];
   }
 
