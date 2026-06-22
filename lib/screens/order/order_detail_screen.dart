@@ -29,7 +29,7 @@ class _State extends State<OrderDetailScreen> {
 
   Color _statusColor(String s) => switch (s.toLowerCase()) {
     'pending' => Colors.grey, 'confirmed' => Colors.blue, 'packed' => Colors.orange,
-    'out for delivery' => Colors.purple, 'delivered' => Colors.green,
+    'out for delivery' => Colors.purple, 'delivered' => Colors.blue,
     'cancelled' => Colors.red, _ => Colors.grey,
   };
 
@@ -64,7 +64,7 @@ class _State extends State<OrderDetailScreen> {
           originalPrice: (item['price'] ?? 0).toDouble(), image: '', stock: 99, description: '',
         ), item['quantity'] ?? 1);
       }
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Items added to cart'), backgroundColor: Colors.green));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Items added to cart'), backgroundColor: Colors.blue));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
@@ -131,7 +131,7 @@ class _State extends State<OrderDetailScreen> {
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Text('₹${(o['total_amount'] ?? o['grand_total'] ?? 0).toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
           ]),
         ]),
         const SizedBox(height: 12),
@@ -161,7 +161,7 @@ class _State extends State<OrderDetailScreen> {
             onPressed: _reorder,
             icon: const Icon(Icons.replay, size: 18),
             label: const Text('Reorder', style: TextStyle(fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
           ))),
         ]),

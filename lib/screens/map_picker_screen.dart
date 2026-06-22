@@ -88,7 +88,7 @@ class _State extends State<MapPickerScreen> {
                   Marker(
                     point: _selectedLocation,
                     width: 50, height: 50,
-                    child: const Icon(Icons.location_pin, size: 50, color: Colors.green),
+                    child: const Icon(Icons.location_pin, size: 50, color: Colors.blue),
                   ),
                 ],
               ),
@@ -107,7 +107,7 @@ class _State extends State<MapPickerScreen> {
               ),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Row(children: [
-                  Icon(Icons.location_on, color: Colors.green[700], size: 24),
+                  Icon(Icons.location_on, color: Colors.blue[700], size: 24),
                   const SizedBox(width: 10),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const Text('Delivery Location', style: TextStyle(fontSize: 12, color: Colors.grey)),
@@ -123,7 +123,7 @@ class _State extends State<MapPickerScreen> {
                   child: ElevatedButton(
                     onPressed: _geocoding ? null : _confirm,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green, foregroundColor: Colors.white,
+                      backgroundColor: Colors.blue, foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
                     child: const Text('Confirm Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),

@@ -40,7 +40,7 @@ class _State extends State<AdminAuditLogsScreen> {
 
   Color _actionColor(String action) {
     if (action.contains('deleted') || action.contains('blocked')) return Colors.red;
-    if (action.contains('added') || action.contains('received') || action.contains('unblocked')) return Colors.green;
+    if (action.contains('added') || action.contains('received') || action.contains('unblocked')) return Colors.blue;
     if (action.contains('edited') || action.contains('updated')) return Colors.orange;
     if (action == 'login') return Colors.blue;
     return Colors.grey;

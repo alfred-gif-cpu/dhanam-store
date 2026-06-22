@@ -60,7 +60,7 @@ class _State extends State<CustomerAddressesScreen> {
               }
               if (ctx.mounted) Navigator.pop(ctx);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
             child: Text(existing != null ? 'Update' : 'Save Address', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           )),
         ])),
@@ -75,7 +75,7 @@ class _State extends State<CustomerAddressesScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(title: const Text('My Addresses'), centerTitle: true, elevation: 0),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showForm(), backgroundColor: Colors.green,
+        onPressed: () => _showForm(), backgroundColor: Colors.blue,
         icon: const Icon(Icons.add, color: Colors.white), label: const Text('Add New', style: TextStyle(color: Colors.white))),
       body: addrs.isEmpty
           ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -92,17 +92,17 @@ class _State extends State<CustomerAddressesScreen> {
                   margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white, borderRadius: BorderRadius.circular(14),
-                    border: isDefault ? Border.all(color: Colors.green, width: 2) : null),
+                    border: isDefault ? Border.all(color: Colors.blue, width: 2) : null),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
-                      Icon(a['label'] == 'Work' ? Icons.work_outline : Icons.home_outlined, color: Colors.green[700]),
+                      Icon(a['label'] == 'Work' ? Icons.work_outline : Icons.home_outlined, color: Colors.blue[700]),
                       const SizedBox(width: 8),
                       Text(a['label'] ?? 'Home', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       if (isDefault) ...[
                         const SizedBox(width: 8),
                         Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(6)),
-                          child: Text('Default', style: TextStyle(fontSize: 10, color: Colors.green[700], fontWeight: FontWeight.w600))),
+                          decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(6)),
+                          child: Text('Default', style: TextStyle(fontSize: 10, color: Colors.blue[700], fontWeight: FontWeight.w600))),
                       ],
                       const Spacer(),
                       PopupMenuButton<String>(

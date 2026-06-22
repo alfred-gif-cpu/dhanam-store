@@ -73,13 +73,13 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with TickerProv
                     width: 110,
                     height: 110,
                     decoration: BoxDecoration(
-                      color: Colors.green[50],
+                      color: Colors.blue[50],
                       shape: BoxShape.circle,
                     ),
                     child: Container(
                       margin: const EdgeInsets.all(12),
                       decoration: const BoxDecoration(
-                        color: Colors.green,
+                        color: Colors.blue,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.check, size: 48, color: Colors.white),
@@ -119,12 +119,12 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with TickerProv
                       _divider(),
                       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                         Row(children: [
-                          Icon(Icons.currency_rupee, size: 20, color: Colors.green[700]),
+                          Icon(Icons.currency_rupee, size: 20, color: Colors.blue[700]),
                           const SizedBox(width: 10),
                           const Text('Total Paid', style: TextStyle(fontSize: 14)),
                         ]),
                         Text('₹${widget.grandTotal.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
                       ]),
                     ]),
                   ),
@@ -160,7 +160,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with TickerProv
                   child: ElevatedButton(
                     onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 0,

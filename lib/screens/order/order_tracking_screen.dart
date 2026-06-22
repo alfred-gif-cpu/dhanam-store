@@ -56,7 +56,7 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [Colors.green[700]!, Colors.green[400]!]),
+                      gradient: LinearGradient(colors: [Colors.blue[700]!, Colors.blue[400]!]),
                       borderRadius: BorderRadius.circular(20)),
                     child: Row(children: [
                       const Icon(Icons.schedule, color: Colors.white, size: 32),
@@ -132,7 +132,7 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
                         ...(_tracking!['status_history'] as List).reversed.map((h) => Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Row(children: [
-                            Icon(Icons.circle, size: 8, color: Colors.green[400]),
+                            Icon(Icons.circle, size: 8, color: Colors.blue[400]),
                             const SizedBox(width: 10),
                             Expanded(child: Text(h['status'] ?? '', style: const TextStyle(fontWeight: FontWeight.w500))),
                             Text(_formatTimestamp(h['timestamp'] ?? ''), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
@@ -163,8 +163,8 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
                       width: 28, height: 28,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.green,
-                        boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.3 + _pulseController.value * 0.3), blurRadius: 8, spreadRadius: 2)],
+                        color: Colors.blue,
+                        boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha: 0.3 + _pulseController.value * 0.3), blurRadius: 8, spreadRadius: 2)],
                       ),
                       child: const Icon(Icons.circle, size: 12, color: Colors.white),
                     ),
@@ -173,12 +173,12 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
                     width: 28, height: 28,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: done ? Colors.green : Colors.grey[300],
+                      color: done ? Colors.blue : Colors.grey[300],
                       border: done ? null : Border.all(color: Colors.grey[400]!, width: 2),
                     ),
                     child: done ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
                   ),
-            if (!isLast) Container(width: 3, height: 48, color: done ? Colors.green : Colors.grey[300]),
+            if (!isLast) Container(width: 3, height: 48, color: done ? Colors.blue : Colors.grey[300]),
           ]),
         ),
         const SizedBox(width: 14),
@@ -188,7 +188,7 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
             padding: EdgeInsets.only(bottom: isLast ? 0 : 32),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Icon(_icons[index], size: 20, color: done ? Colors.green[700] : Colors.grey[400]),
+                Icon(_icons[index], size: 20, color: done ? Colors.blue[700] : Colors.grey[400]),
                 const SizedBox(width: 8),
                 Text(_steps[index], style: TextStyle(
                   fontSize: 15, fontWeight: done ? FontWeight.bold : FontWeight.normal,
@@ -196,7 +196,7 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
               ]),
               if (active)
                 Padding(padding: const EdgeInsets.only(top: 4),
-                  child: Text('In progress...', style: TextStyle(fontSize: 12, color: Colors.green[600]))),
+                  child: Text('In progress...', style: TextStyle(fontSize: 12, color: Colors.blue[600]))),
             ]),
           ),
         ),

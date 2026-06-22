@@ -45,8 +45,8 @@ class _CartScreenState extends State<CartScreen> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           width: 120, height: 120,
-          decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
-          child: Icon(Icons.shopping_cart_outlined, size: 56, color: Colors.green[300]),
+          decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle),
+          child: Icon(Icons.shopping_cart_outlined, size: 56, color: Colors.blue[300]),
         ),
         const SizedBox(height: 24),
         const Text('Your cart is empty', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
@@ -58,7 +58,7 @@ class _CartScreenState extends State<CartScreen> {
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.shopping_bag_outlined),
           label: const Text('Start Shopping', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white,
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
         )),
       ]),
@@ -143,12 +143,12 @@ class _CartScreenState extends State<CartScreen> {
         else
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.green[200]!)),
+            decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.blue[200]!)),
             child: Row(children: [
-              Icon(Icons.check_circle, size: 20, color: Colors.green[700]),
+              Icon(Icons.check_circle, size: 20, color: Colors.blue[700]),
               const SizedBox(width: 8),
-              Text('FREE delivery on this order!', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green[800])),
+              Text('FREE delivery on this order!', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.blue[800])),
             ]),
           ),
 
@@ -229,20 +229,20 @@ class _CartItemCard extends StatelessWidget {
             // Quantity
             Container(
               decoration: BoxDecoration(
-                color: Colors.green[50], borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.green[200]!)),
+                color: Colors.blue[50], borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.blue[200]!)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 _qtyBtn(Icons.remove, () => cart.decrement(item.productId)),
                 Container(
                   constraints: const BoxConstraints(minWidth: 34), alignment: Alignment.center,
-                  child: Text('${item.quantity}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green[800])),
+                  child: Text('${item.quantity}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue[800])),
                 ),
                 _qtyBtn(Icons.add, () => cart.increment(item.productId)),
               ]),
             ),
             const Spacer(),
             Text('₹${item.total.toStringAsFixed(0)}',
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.green)),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.blue)),
           ]),
         ])),
       ]),
@@ -251,7 +251,7 @@ class _CartItemCard extends StatelessWidget {
 
   Widget _qtyBtn(IconData icon, VoidCallback onTap) => InkWell(
     onTap: onTap, borderRadius: BorderRadius.circular(8),
-    child: Padding(padding: const EdgeInsets.all(7), child: Icon(icon, size: 18, color: Colors.green[700])),
+    child: Padding(padding: const EdgeInsets.all(7), child: Icon(icon, size: 18, color: Colors.blue[700])),
   );
 }
 
@@ -292,15 +292,15 @@ class _BillPanel extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.shopping_bag_outlined, size: 18),
             label: const Text('Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            style: OutlinedButton.styleFrom(foregroundColor: Colors.green,
-              side: const BorderSide(color: Colors.green, width: 1.5),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.blue,
+              side: const BorderSide(color: Colors.blue, width: 1.5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
           ))),
           const SizedBox(width: 12),
           // Checkout
           Expanded(flex: 2, child: SizedBox(height: 52, child: ElevatedButton(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen())),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               const Text('Checkout', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -338,12 +338,12 @@ class _BillPanel extends StatelessWidget {
               if (cart.deliveryCharge == 0) ...[
                 const SizedBox(width: 6),
                 Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(4)),
-                  child: Text('FREE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green[700]))),
+                  decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(4)),
+                  child: Text('FREE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue[700]))),
               ],
             ]),
             Text(cart.deliveryCharge == 0 ? '₹0' : '₹${cart.deliveryCharge.toStringAsFixed(0)}',
-                style: TextStyle(fontSize: 14, color: cart.deliveryCharge == 0 ? Colors.green : null)),
+                style: TextStyle(fontSize: 14, color: cart.deliveryCharge == 0 ? Colors.blue : null)),
           ]),
           if (cart.totalSavings > 0) ...[
             const SizedBox(height: 8),
@@ -357,7 +357,7 @@ class _BillPanel extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             const Text('Grand Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Text('₹${cart.grandTotal.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
           ]),
         ]),
       ),

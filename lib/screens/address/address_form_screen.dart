@@ -92,7 +92,7 @@ class _State extends State<AddressFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(_isEditing ? 'Address updated' : 'Address added'),
-          backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+          backgroundColor: Colors.blue, behavior: SnackBarBehavior.floating));
         Navigator.pop(context);
       }
     } catch (e) {
@@ -118,14 +118,14 @@ class _State extends State<AddressFormScreen> {
             child: ChoiceChip(
               label: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(l == 'Work' ? Icons.work_outlined : l == 'Other' ? Icons.location_on_outlined : Icons.home_outlined,
-                    size: 16, color: _label == l ? Colors.green[800] : Colors.grey[600]),
+                    size: 16, color: _label == l ? Colors.blue[800] : Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(l),
               ]),
               selected: _label == l,
               onSelected: (_) => setState(() => _label = l),
-              selectedColor: Colors.green[100],
-              labelStyle: TextStyle(color: _label == l ? Colors.green[800] : Colors.grey[700], fontWeight: _label == l ? FontWeight.w600 : FontWeight.normal),
+              selectedColor: Colors.blue[100],
+              labelStyle: TextStyle(color: _label == l ? Colors.blue[800] : Colors.grey[700], fontWeight: _label == l ? FontWeight.w600 : FontWeight.normal),
             ),
           )).toList()),
           const SizedBox(height: 20),
@@ -136,22 +136,22 @@ class _State extends State<AddressFormScreen> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _lat != 0 ? Colors.green[50] : Colors.white,
+                color: _lat != 0 ? Colors.blue[50] : Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _lat != 0 ? Colors.green[300]! : Colors.grey[300]!),
+                border: Border.all(color: _lat != 0 ? Colors.blue[300]! : Colors.grey[300]!),
               ),
               child: Row(children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.green[100], borderRadius: BorderRadius.circular(12)),
-                  child: Icon(Icons.map, color: Colors.green[700], size: 24),
+                  decoration: BoxDecoration(color: Colors.blue[100], borderRadius: BorderRadius.circular(12)),
+                  child: Icon(Icons.map, color: Colors.blue[700], size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(_lat != 0 ? 'Location Selected' : 'Pick Location on Map',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: _lat != 0 ? Colors.green[800] : null)),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: _lat != 0 ? Colors.blue[800] : null)),
                   if (_lat != 0)
-                    Text('${_lat.toStringAsFixed(4)}, ${_lng.toStringAsFixed(4)}', style: TextStyle(fontSize: 12, color: Colors.green[600]))
+                    Text('${_lat.toStringAsFixed(4)}, ${_lng.toStringAsFixed(4)}', style: TextStyle(fontSize: 12, color: Colors.blue[600]))
                   else
                     Text('Tap to select delivery location', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 ])),
@@ -199,7 +199,7 @@ class _State extends State<AddressFormScreen> {
                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : Text(_isEditing ? 'Update Address' : 'Save Address', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green, foregroundColor: Colors.white,
+              backgroundColor: Colors.blue, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
           )),
           const SizedBox(height: 20),
@@ -237,7 +237,7 @@ class _State extends State<AddressFormScreen> {
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey[300]!)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey[300]!)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.green, width: 2)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.blue, width: 2)),
         errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.red)),
       ),
     );

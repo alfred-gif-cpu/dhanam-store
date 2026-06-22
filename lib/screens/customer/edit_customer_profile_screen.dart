@@ -30,7 +30,7 @@ class _State extends State<EditCustomerProfileScreen> {
     setState(() => _saving = true);
     try {
       await _cs.updateProfile(name: _name.text.trim(), email: _email.text.trim(), gender: _gender, dob: _dob.text.trim());
-      if (mounted) { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated'), backgroundColor: Colors.green)); }
+      if (mounted) { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated'), backgroundColor: Colors.blue)); }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     } finally { if (mounted) setState(() => _saving = false); }
@@ -48,11 +48,11 @@ class _State extends State<EditCustomerProfileScreen> {
       appBar: AppBar(title: const Text('Edit Profile'), centerTitle: true, elevation: 0),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         Center(child: Stack(children: [
-          CircleAvatar(radius: 48, backgroundColor: Colors.green[100],
+          CircleAvatar(radius: 48, backgroundColor: Colors.blue[100],
             backgroundImage: _cs.profileImage.isNotEmpty ? NetworkImage(_cs.profileImage) : null,
-            child: _cs.profileImage.isEmpty ? Icon(Icons.person, size: 48, color: Colors.green[700]) : null),
+            child: _cs.profileImage.isEmpty ? Icon(Icons.person, size: 48, color: Colors.blue[700]) : null),
           Positioned(bottom: 0, right: 0, child: Container(
-            padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+            padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
             child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
           )),
         ])),
@@ -75,14 +75,14 @@ class _State extends State<EditCustomerProfileScreen> {
           child: ChoiceChip(
             label: Text(g), selected: _gender == g,
             onSelected: (_) => setState(() => _gender = g),
-            selectedColor: Colors.green[100],
-            labelStyle: TextStyle(color: _gender == g ? Colors.green[800] : Colors.grey[700], fontWeight: _gender == g ? FontWeight.w600 : FontWeight.normal),
+            selectedColor: Colors.blue[100],
+            labelStyle: TextStyle(color: _gender == g ? Colors.blue[800] : Colors.grey[700], fontWeight: _gender == g ? FontWeight.w600 : FontWeight.normal),
           ),
         )).toList()),
         const SizedBox(height: 28),
         SizedBox(height: 54, child: ElevatedButton(
           onPressed: _saving ? null : _save,
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
           child: _saving ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         )),
@@ -94,7 +94,7 @@ class _State extends State<EditCustomerProfileScreen> {
     return TextField(controller: c, keyboardType: keyboard, decoration: InputDecoration(
       labelText: label, prefixIcon: Icon(icon), filled: true, fillColor: Colors.white,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.green, width: 2)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.blue, width: 2)),
     ));
   }
 }

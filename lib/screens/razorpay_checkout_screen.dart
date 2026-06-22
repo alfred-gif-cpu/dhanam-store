@@ -211,7 +211,7 @@ class _RazorpayCheckoutScreenState extends State<RazorpayCheckoutScreen> {
         children: [
           WebViewWidget(controller: _controller),
           if (_loading)
-            const Center(child: CircularProgressIndicator(color: Colors.green)),
+            const Center(child: CircularProgressIndicator(color: Colors.blue)),
         ],
       ),
     );

@@ -1,107 +1,97 @@
-"""Generate the Dhanam Store app icon and splash logo."""
-from PIL import Image, ImageDraw
-import math
+"""Generate the Dhanam Stores app icon (blue basket + wordmark)."""
+from PIL import Image, ImageDraw, ImageFont
 
 OUT_ICON = "../../assets/branding/app_icon.png"
 OUT_FG = "../../assets/branding/app_icon_foreground.png"
 OUT_SPLASH = "../../assets/branding/splash_logo.png"
 
-PRIMARY = (27, 94, 32)      # #1B5E20
-PRIMARY_LT = (76, 175, 80)  # #4CAF50
-ACCENT = (255, 109, 0)      # #FF6D00
+SKY = (33, 150, 243)      # #2196F3
+BLUE = (21, 101, 192)     # #1565C0
+NAVY = (13, 71, 161)      # #0D47A1
 WHITE = (255, 255, 255)
+
+FONTS = "C:/Windows/Fonts/"
+def font(name, size):
+    return ImageFont.truetype(FONTS + name, size)
+
+S = 1024
 
 
 def lerp(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def gradient_bg(size, c1, c2):
+def grad(size, c1, c2):
     img = Image.new("RGB", (size, size), c1)
     px = img.load()
     for y in range(size):
         for x in range(size):
             t = (x + y) / (2 * size)
             px[x, y] = lerp(c1, c2, t)
-    return img
+    return img.convert("RGBA")
 
 
-def draw_storefront(draw, cx, cy, w, color, awning_color, door_color=PRIMARY):
-    """Draw a simple storefront: awning + building + door + window."""
-    half = w // 2
-    left = cx - half
-    right = cx + half
-    top = cy - half
-    bottom = cy + half
-
-    # Building body (white)
-    body_top = top + int(w * 0.34)
-    draw.rounded_rectangle([left, body_top, right, bottom], radius=int(w * 0.06), fill=color)
-
-    # Awning (scalloped) — orange
-    awning_h = int(w * 0.16)
-    awning_top = top + int(w * 0.20)
-    n = 5
-    seg = w / n
-    for i in range(n):
-        x0 = left + i * seg
-        x1 = left + (i + 1) * seg
-        draw.rectangle([x0, awning_top, x1, awning_top + awning_h], fill=awning_color)
-    # scallop circles along the bottom edge of awning
-    r = seg / 2
-    for i in range(n):
-        xc = left + i * seg + r
-        yc = awning_top + awning_h
-        draw.ellipse([xc - r, yc - r, xc + r, yc + r], fill=awning_color)
-
-    # Door (colored, on the left)
-    door_w = int(w * 0.22)
-    door_h = int(w * 0.30)
-    dl = cx - int(w * 0.20)
-    dr = dl + door_w
-    dt = bottom - door_h
-    draw.rounded_rectangle([dl, dt, dr, bottom], radius=int(door_w * 0.14), fill=door_color)
-    # door handle
-    hy = (dt + bottom) // 2
-    draw.ellipse([dr - int(door_w * 0.28), hy - 7, dr - int(door_w * 0.28) + 14, hy + 7], fill=WHITE)
-
-    # Window (colored square, on the right)
-    win = int(w * 0.22)
-    wl = cx + int(w * 0.02)
-    wt = body_top + int(w * 0.07)
-    draw.rounded_rectangle([wl, wt, wl + win, wt + win], radius=int(win * 0.12), fill=door_color)
-    # window cross
-    midx = wl + win // 2
-    midy = wt + win // 2
-    lw = max(4, int(w * 0.012))
-    draw.line([midx, wt, midx, wt + win], fill=WHITE, width=lw)
-    draw.line([wl, midy, wl + win, midy], fill=WHITE, width=lw)
+def centered(draw, text, fnt, cx, cy, fill):
+    box = draw.textbbox((0, 0), text, font=fnt)
+    w = box[2] - box[0]
+    h = box[3] - box[1]
+    draw.text((cx - w / 2 - box[0], cy - h / 2 - box[1]), text, font=fnt, fill=fill)
 
 
-def make_icon(size, with_bg=True, pad_ratio=0.0):
+def draw_basket(draw, cx, cy, w, basket_color, line_color):
+    """Draw a shopping basket: handle + trapezoid body + slats."""
+    half = w / 2
+    top_y = cy - w * 0.42
+    bot_y = cy + w * 0.40
+    # handle (squared)
+    hw = w * 0.30
+    hh = w * 0.30
+    lw = max(6, int(w * 0.075))
+    draw.line(
+        [(cx - hw / 2, top_y), (cx - hw / 2, top_y - hh),
+         (cx + hw / 2, top_y - hh), (cx + hw / 2, top_y)],
+        fill=basket_color, width=lw, joint="curve",
+    )
+    # body trapezoid
+    top_l, top_r = cx - half, cx + half
+    bot_l, bot_r = cx - half * 0.72, cx + half * 0.72
+    draw.polygon(
+        [(top_l, top_y), (top_r, top_y), (bot_r, bot_y), (bot_l, bot_y)],
+        fill=basket_color,
+    )
+    # vertical slats
+    slat_w = max(5, int(w * 0.06))
+    for fx in (-0.22, 0.0, 0.22):
+        x = cx + half * fx
+        draw.line([(x, top_y + w * 0.10), (x + (bot_y - top_y) * 0 , bot_y - w * 0.06)],
+                  fill=line_color, width=slat_w)
+
+
+def compose(bg, basket_color, line_color, text_color, with_bg=True, scale=1.0):
     if with_bg:
-        img = gradient_bg(size, PRIMARY_LT, PRIMARY).convert("RGBA")
+        img = grad(S, SKY, BLUE)
     else:
-        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    inset = int(size * pad_ratio)
-    sf_w = int((size - 2 * inset) * 0.56)
-    draw_storefront(draw, size // 2, int(size * 0.52), sf_w, WHITE, ACCENT)
+        img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    bw = int(S * 0.34 * scale)
+    cx = S / 2
+    cy = S * 0.40
+    draw_basket(d, cx, cy, bw, basket_color, line_color)
+    centered(d, "Dhanam", font("arialbd.ttf", int(S * 0.115 * scale)), cx, S * 0.66, text_color)
+    centered(d, "STORES", font("arialbd.ttf", int(S * 0.066 * scale)), cx, S * 0.775, text_color)
     return img
 
 
-# Full icon (with gradient background)
-icon = make_icon(1024, with_bg=True)
+# Full icon: blue gradient bg, white basket + white text
+icon = compose(None, WHITE, SKY, WHITE, with_bg=True)
 icon.convert("RGB").save(OUT_ICON)
 
-# Adaptive foreground (transparent bg, extra padding for safe zone)
-fg = make_icon(1024, with_bg=False, pad_ratio=0.18)
+# Adaptive foreground: transparent bg, slightly smaller for safe zone
+fg = compose(None, WHITE, SKY, WHITE, with_bg=False, scale=0.82)
 fg.save(OUT_FG)
 
-# Splash logo (transparent, storefront in green for white/colored bg)
-splash = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
-d = ImageDraw.Draw(splash)
-draw_storefront(d, 512, 512, 560, WHITE, ACCENT)
+# Splash logo: white basket + white text on transparent (shown on blue splash)
+splash = compose(None, WHITE, (33, 150, 243, 0), WHITE, with_bg=False)
 splash.save(OUT_SPLASH)
 
-print("Icons generated.")
+print("Dhanam Stores icon generated.")

@@ -56,7 +56,7 @@ class HorizontalProductList extends StatelessWidget {
                   Row(
                     children: [
                       Text('₹${p.price.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue)),
                       if (p.hasDiscount) ...[
                         const SizedBox(width: 4),
                         Text('₹${p.originalPrice.toStringAsFixed(0)}',

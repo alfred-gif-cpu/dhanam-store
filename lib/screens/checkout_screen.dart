@@ -238,7 +238,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   height: 28,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: done ? Colors.green : active ? Colors.green : Colors.grey[300],
+                    color: done ? Colors.blue : active ? Colors.blue : Colors.grey[300],
                   ),
                   child: Center(
                     child: done
@@ -247,9 +247,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Text(steps[i], style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? Colors.green[800] : Colors.grey[500])),
+                Text(steps[i], style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? Colors.blue[800] : Colors.grey[500])),
                 if (i < steps.length - 1)
-                  Expanded(child: Container(height: 2, margin: const EdgeInsets.symmetric(horizontal: 4), color: done ? Colors.green : Colors.grey[300])),
+                  Expanded(child: Container(height: 2, margin: const EdgeInsets.symmetric(horizontal: 4), color: done ? Colors.blue : Colors.grey[300])),
               ],
             ),
           );
@@ -293,7 +293,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: selected ? Colors.green : Colors.grey[200]!, width: selected ? 2 : 1),
+                  border: Border.all(color: selected ? Colors.blue : Colors.grey[200]!, width: selected ? 2 : 1),
                 ),
                 child: Row(
                   children: [
@@ -301,12 +301,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: selected ? Colors.green[50] : Colors.grey[100],
+                        color: selected ? Colors.blue[50] : Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         addr.label == 'Work' ? Icons.work_outline : Icons.home_outlined,
-                        color: selected ? Colors.green[700] : Colors.grey[500],
+                        color: selected ? Colors.blue[700] : Colors.grey[500],
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -317,8 +317,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(6)),
-                            child: Text('Selected', style: TextStyle(fontSize: 10, color: Colors.green[700], fontWeight: FontWeight.w600)),
+                            decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(6)),
+                            child: Text('Selected', style: TextStyle(fontSize: 10, color: Colors.blue[700], fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ]),
@@ -328,7 +328,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Text(addr.phone, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                     ])),
                     Radio<String>(value: addr.id, groupValue: _selectedAddress?.id,
-                        onChanged: (_) => setState(() => _selectedAddress = addr), activeColor: Colors.green),
+                        onChanged: (_) => setState(() => _selectedAddress = addr), activeColor: Colors.blue),
                   ],
                 ),
               ),
@@ -373,16 +373,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: selected ? Colors.green[50] : Colors.white,
+                color: selected ? Colors.blue[50] : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: selected ? Colors.green : Colors.grey[200]!, width: selected ? 2 : 1),
+                border: Border.all(color: selected ? Colors.blue : Colors.grey[200]!, width: selected ? 2 : 1),
               ),
               child: Row(children: [
-                Icon(Icons.schedule, size: 20, color: selected ? Colors.green[700] : Colors.grey[400]),
+                Icon(Icons.schedule, size: 20, color: selected ? Colors.blue[700] : Colors.grey[400]),
                 const SizedBox(width: 12),
-                Text(timeOnly, style: TextStyle(fontSize: 15, fontWeight: selected ? FontWeight.w600 : FontWeight.normal, color: selected ? Colors.green[800] : null)),
+                Text(timeOnly, style: TextStyle(fontSize: 15, fontWeight: selected ? FontWeight.w600 : FontWeight.normal, color: selected ? Colors.blue[800] : null)),
                 const Spacer(),
-                if (selected) Icon(Icons.check_circle, size: 22, color: Colors.green[700]),
+                if (selected) Icon(Icons.check_circle, size: 22, color: Colors.blue[700]),
               ]),
             ),
           );
@@ -502,12 +502,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _billRow('Subtotal', '₹${_cart.subtotal.toStringAsFixed(2)}'),
             _billRow('GST (18%)', '₹${_cart.gstAmount.toStringAsFixed(2)}'),
             _billRow('Delivery', _cart.deliveryCharge == 0 ? 'FREE' : '₹${_cart.deliveryCharge.toStringAsFixed(0)}',
-                valueColor: _cart.deliveryCharge == 0 ? Colors.green : null),
+                valueColor: _cart.deliveryCharge == 0 ? Colors.blue : null),
             const SizedBox(height: 8),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               const Text('Grand Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               Text('₹${_cart.grandTotal.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
             ]),
           ]),
         ),
@@ -521,7 +521,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 22, color: Colors.green[700]),
+        Icon(icon, size: 22, color: Colors.blue[700]),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
@@ -530,7 +530,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ])),
         GestureDetector(
           onTap: () => setState(() => _step = title == 'Delivery to' ? 0 : title == 'Delivery slot' ? 1 : 2),
-          child: Text('Change', style: TextStyle(fontSize: 13, color: Colors.green[700], fontWeight: FontWeight.w600)),
+          child: Text('Change', style: TextStyle(fontSize: 13, color: Colors.blue[700], fontWeight: FontWeight.w600)),
         ),
       ]),
     );
@@ -573,7 +573,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: ElevatedButton(
           onPressed: _canProceed && !_placing ? _next : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _step == 3 ? Colors.green[700] : Colors.green,
+            backgroundColor: _step == 3 ? Colors.blue[700] : Colors.blue,
             foregroundColor: Colors.white,
             disabledBackgroundColor: Colors.grey[300],
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

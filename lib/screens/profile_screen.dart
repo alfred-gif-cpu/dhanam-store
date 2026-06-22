@@ -45,8 +45,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 width: 100,
                 height: 100,
-                decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
-                child: Icon(Icons.person_outline, size: 48, color: Colors.green[300]),
+                decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle),
+                child: Icon(Icons.person_outline, size: 48, color: Colors.blue[300]),
               ),
               const SizedBox(height: 24),
               const Text('Login to Dhanam Store', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
@@ -60,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green, foregroundColor: Colors.white,
+                    backgroundColor: Colors.blue, foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
                   child: const Text('Login / Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
@@ -89,8 +89,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(children: [
                 CircleAvatar(
                   radius: 32,
-                  backgroundColor: Colors.green[100],
-                  child: Text(initials, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green[700])),
+                  backgroundColor: Colors.blue[100],
+                  child: Text(initials, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue[700])),
                 ),
                 const SizedBox(width: 16),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -170,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
       child: ListTile(
-        leading: Icon(icon, color: Colors.green[700]),
+        leading: Icon(icon, color: Colors.blue[700]),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         trailing: const Icon(Icons.chevron_right),

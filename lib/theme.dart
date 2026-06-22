@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const primary = Color(0xFF1B5E20);
-  static const primaryLight = Color(0xFF4CAF50);
-  static const primarySurface = Color(0xFFE8F5E9);
-  static const accent = Color(0xFFFF6D00);
+  static const primary = Color(0xFF0D47A1);
+  static const primaryLight = Color(0xFF2196F3);
+  static const primarySurface = Color(0xFFE3F2FD);
+  static const accent = Color(0xFFFF9800);
   static const accentLight = Color(0xFFFFF3E0);
   static const surface = Color(0xFFF8F9FA);
   static const card = Colors.white;

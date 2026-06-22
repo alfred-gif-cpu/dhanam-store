@@ -33,7 +33,7 @@ class _State extends State<AdminOrderAnalyticsScreen> {
           : RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
               // Revenue cards
               Row(children: [
-                Expanded(child: _card('Revenue Today', '₹${(_data?['revenue_today'] ?? 0).toStringAsFixed(0)}', Icons.today, Colors.green)),
+                Expanded(child: _card('Revenue Today', '₹${(_data?['revenue_today'] ?? 0).toStringAsFixed(0)}', Icons.today, Colors.blue)),
                 const SizedBox(width: 12),
                 Expanded(child: _card('This Month', '₹${(_data?['revenue_this_month'] ?? 0).toStringAsFixed(0)}', Icons.calendar_month, Colors.blue)),
               ]),
@@ -47,7 +47,7 @@ class _State extends State<AdminOrderAnalyticsScreen> {
               Row(children: [
                 Expanded(child: _card('Avg Order', '₹${(_data?['avg_order_value'] ?? 0).toStringAsFixed(0)}', Icons.trending_up, Colors.teal)),
                 const SizedBox(width: 12),
-                Expanded(child: _card('Delivery Rate', '${_data?['delivery_success_rate'] ?? 0}%', Icons.local_shipping, Colors.green)),
+                Expanded(child: _card('Delivery Rate', '${_data?['delivery_success_rate'] ?? 0}%', Icons.local_shipping, Colors.blue)),
               ]),
               const SizedBox(height: 12),
               // Cancel rate
@@ -83,7 +83,7 @@ class _State extends State<AdminOrderAnalyticsScreen> {
                       Text(p['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
                       Text('${p['quantity']} sold', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                     ])),
-                    Text('₹${(p['revenue'] ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                    Text('₹${(p['revenue'] ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
                   ]),
                 );
               }),

@@ -67,7 +67,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _statCard('Products', '${s['total_products']}', Icons.inventory_2, Colors.blue),
             _statCard('Orders', '${s['total_orders']}', Icons.receipt_long, Colors.orange),
             _statCard('Users', '${s['total_users']}', Icons.people, Colors.purple),
-            _statCard('Revenue', '₹${(s['total_revenue'] as num).toStringAsFixed(0)}', Icons.currency_rupee, Colors.green),
+            _statCard('Revenue', '₹${(s['total_revenue'] as num).toStringAsFixed(0)}', Icons.currency_rupee, Colors.blue),
           ],
         ),
         const SizedBox(height: 16),
@@ -183,7 +183,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'confirmed' => Colors.blue,
     'packed' => Colors.orange,
     'shipped' => Colors.purple,
-    'delivered' => Colors.green,
+    'delivered' => Colors.blue,
     'cancelled' => Colors.red,
     _ => Colors.grey,
   };

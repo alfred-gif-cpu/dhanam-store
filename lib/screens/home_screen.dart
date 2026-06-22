@@ -269,7 +269,7 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppColors.primary, Color(0xFF2E7D32)],
+                            colors: [AppColors.primary, Color(0xFF1565C0)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
