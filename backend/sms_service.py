@@ -36,6 +36,29 @@ def send_sms(phone: str, message: str) -> bool:
         return False
 
 
+def send_otp_sms(phone: str, otp: str) -> bool:
+    if settings.sms_api_key:
+        number = _clean_phone(phone)
+        try:
+            headers = {"authorization": settings.sms_api_key}
+            params = {
+                "route": "otp",
+                "variables_values": otp,
+                "flash": 0,
+                "numbers": number,
+            }
+            resp = httpx.get(FAST2SMS_URL, params=params, headers=headers, timeout=15)
+            ok = resp.status_code == 200 and resp.json().get("return") is True
+            if not ok:
+                print(f"[SMS] OTP failed to {number}: {resp.text}")
+            return ok
+        except Exception as e:
+            print(f"[SMS] OTP error to {number}: {e}")
+            return False
+    message = f"Your Dhanam Store OTP is {otp}. Valid for 5 minutes."
+    return send_sms(phone, message)
+
+
 def send_order_receipt_sms(phone: str, order: dict) -> bool:
     order_id = order.get("order_id", order.get("order_number", ""))
     total = order.get("grand_total", order.get("total_amount", 0))
