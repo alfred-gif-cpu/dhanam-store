@@ -116,7 +116,8 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
   }
 
   Widget _orderCard(Map<String, dynamic> o) {
-    final orderId = o['order_id'] ?? '';
+    final orderId = (o['order_id'] ?? '').toString().isNotEmpty ? o['order_id'] : (o['id'] ?? '');
+    final displayId = (o['order_id'] ?? '').toString().isNotEmpty ? o['order_id'] : '#${(o['id'] ?? '').toString().substring(0, 6)}';
     final status = o['order_status'] ?? '';
     final addr = Map<String, dynamic>.from((o['delivery_address'] ?? {}) as Map);
     final items = (o['items'] ?? []) as List;
@@ -139,7 +140,7 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Row(
               children: [
-                Text(orderId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(displayId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
