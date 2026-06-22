@@ -402,7 +402,9 @@ async def create_order(order: dict = Body(...)):
 
 @app.get("/orders/{user_id}")
 async def get_orders(user_id: str):
-    cursor = orders_collection.find({"user_id": user_id}).sort("created_at", -1)
+    cursor = orders_collection.find(
+        {"$or": [{"user_id": user_id}, {"customer_id": user_id}]}
+    ).sort("created_at", -1)
     orders = [serialize_doc(o) async for o in cursor]
     return {"orders": orders}
 
