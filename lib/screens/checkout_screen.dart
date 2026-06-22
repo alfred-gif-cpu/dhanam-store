@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/address.dart';
+import '../services/address_service.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/cart_service.dart';
-import 'addresses_screen.dart';
+import '../services/payment_service.dart';
+import 'address/address_list_screen.dart';
 import 'login_screen.dart';
 import 'order_success_screen.dart';
 
@@ -16,7 +18,9 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final ApiService _api = ApiService();
+  final AddressService _addrSvc = AddressService();
   final CartService _cart = CartService();
+  final PaymentService _payment = PaymentService();
 
   int _step = 0;
   List<Address> _addresses = [];
@@ -41,6 +45,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadAddresses();
   }
 
+  String _pendingRazorpayOrderId = '';
+
   void _generateSlots() {
     final now = DateTime.now();
     final labels = ['Today', 'Tomorrow'];
@@ -56,10 +62,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _loadAddresses() async {
     try {
-      final addrs = await _api.getAddresses(AuthService().userId);
+      var addrs = await _addrSvc.getAddresses(AuthService().userId);
+      if (addrs.isEmpty) {
+        addrs = await _api.getAddresses(AuthService().userId);
+      }
       setState(() {
         _addresses = addrs;
-        if (addrs.isNotEmpty) _selectedAddress = addrs.first;
+        final defaultAddr = addrs.where((a) => a.isDefault).toList();
+        _selectedAddress = defaultAddr.isNotEmpty ? defaultAddr.first : (addrs.isNotEmpty ? addrs.first : null);
         _loading = false;
       });
     } catch (_) {
@@ -88,6 +98,57 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _placeOrder() async {
     setState(() => _placing = true);
+
+    if (_paymentMethod == 'cod') {
+      await _completeOrder();
+      return;
+    }
+
+    final receipt = 'DH${DateTime.now().millisecondsSinceEpoch}';
+    final orderData = await _payment.createRazorpayOrder(
+      amount: _cart.grandTotal,
+      receipt: receipt,
+    );
+
+    if (orderData == null) {
+      if (!mounted) return;
+      setState(() => _placing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not initiate payment. Please try again.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    _pendingRazorpayOrderId = orderData['order_id'] as String;
+    final auth = AuthService();
+
+    if (!mounted) return;
+    final result = await _payment.openCheckout(
+      context: context,
+      keyId: orderData['key_id'] as String,
+      orderId: _pendingRazorpayOrderId,
+      amountInPaise: orderData['amount'] as int,
+      customerName: _selectedAddress?.fullName ?? '',
+      customerPhone: auth.phone,
+    );
+
+    if (!mounted) return;
+
+    if (result != null && result['status'] == 'success') {
+      await _completeOrder(paymentId: result['payment_id'] ?? '');
+    } else {
+      setState(() => _placing = false);
+      if (result != null && result['status'] == 'error') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Payment failed: ${result['message']}'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _completeOrder({String paymentId = ''}) async {
+    setState(() => _placing = true);
+    final grandTotal = _cart.grandTotal;
     try {
       final result = await _api.createOrder({
         'user_id': AuthService().userId,
@@ -101,8 +162,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'subtotal': _cart.subtotal,
         'gst': _cart.gstAmount,
         'delivery_fee': _cart.deliveryCharge,
-        'grand_total': _cart.grandTotal,
+        'grand_total': grandTotal,
         'payment_method': _paymentMethod,
+        'payment_id': paymentId,
+        'razorpay_order_id': _pendingRazorpayOrderId,
         'delivery_slot': _deliverySlot,
         'address': _selectedAddress!.toJson(),
       });
@@ -112,7 +175,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           context,
           MaterialPageRoute(builder: (_) => OrderSuccessScreen(
             orderNumber: result['order_number'] ?? '',
-            grandTotal: _cart.grandTotal,
+            grandTotal: grandTotal,
             deliverySlot: _deliverySlot,
             paymentMethod: _paymentMethod,
           )),
@@ -207,7 +270,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const Text('Deliver to', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             TextButton.icon(
               onPressed: () async {
-                await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressesScreen()));
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressListScreen()));
                 _loadAddresses();
               },
               icon: const Icon(Icons.add, size: 18),

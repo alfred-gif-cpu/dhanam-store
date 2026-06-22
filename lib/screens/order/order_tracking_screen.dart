@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/order_service.dart';
+import 'delivery_tracking_map_screen.dart';
 
 class OrderTrackingScreen extends StatefulWidget {
   final String orderId;
@@ -67,6 +68,26 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
                             style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                       ])),
                     ]),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Live map button
+                  SizedBox(
+                    width: double.infinity, height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => DeliveryTrackingMapScreen(
+                          orderId: widget.orderId,
+                          deliveryLat: 12.7409,
+                          deliveryLng: 77.8253,
+                        ),
+                      )),
+                      icon: const Icon(Icons.map, size: 20),
+                      label: const Text('View Live on Map', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue, foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
+                    ),
                   ),
                   const SizedBox(height: 24),
 

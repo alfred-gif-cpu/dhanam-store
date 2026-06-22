@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     database_name: str = "dhanam_store"
     jwt_secret: str = "dhanam-store-secret-change-in-production"
     jwt_expiry_hours: int = 720
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

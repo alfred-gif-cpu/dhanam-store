@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config.dart';
 
 class CustomerService extends ChangeNotifier {
   static const _key = 'customer_data';
-  static const String _baseUrl = 'http://10.0.2.2:8000';
+  static final String _baseUrl = AppConfig.baseUrl;
   static final CustomerService _instance = CustomerService._();
   factory CustomerService() => _instance;
   CustomerService._();

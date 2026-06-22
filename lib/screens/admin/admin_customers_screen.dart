@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../config.dart';
 
 class AdminCustomersScreen extends StatefulWidget {
   const AdminCustomersScreen({super.key});
@@ -11,7 +12,7 @@ class AdminCustomersScreen extends StatefulWidget {
 }
 
 class _State extends State<AdminCustomersScreen> {
-  static const _baseUrl = 'http://10.0.2.2:8000';
+  static final _baseUrl = AppConfig.baseUrl;
   final HttpClient _client = HttpClient();
   final TextEditingController _search = TextEditingController();
   Timer? _debounce;

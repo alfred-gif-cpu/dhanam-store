@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'orders_screen.dart';
-import 'addresses_screen.dart';
+import 'address/address_list_screen.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart';
-import 'admin/admin_dashboard_screen.dart';
+import '../services/admin_auth_service.dart';
+import 'admin/admin_login_screen.dart';
+import 'admin/secure_admin_dashboard.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -106,7 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _tile(context, Icons.receipt_long, 'My Orders', 'Track, return, or buy again',
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen()))),
           _tile(context, Icons.location_on_outlined, 'My Addresses', 'Manage delivery addresses',
-              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressesScreen()))),
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressListScreen()))),
           _tile(context, Icons.payment, 'Payment Methods', 'Manage saved payments', null),
           _tile(context, Icons.headset_mic_outlined, 'Help & Support', 'Get help with your orders', null),
           _tile(context, Icons.info_outline, 'About', 'App version 2.0.0', null),
@@ -121,7 +123,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: Text('Manage products, orders, users', style: TextStyle(fontSize: 12, color: Colors.indigo[300])),
               trailing: const Icon(Icons.chevron_right, color: Colors.indigo),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDashboardScreen())),
+              onTap: () {
+                if (AdminAuthService().isLoggedIn) {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SecureAdminDashboard()));
+                } else {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminLoginScreen()));
+                }
+              },
             ),
           ),
           // Logout

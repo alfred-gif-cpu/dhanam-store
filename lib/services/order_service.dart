@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import '../config.dart';
 
 class OrderService {
-  static const String _baseUrl = 'http://10.0.2.2:8000';
+  static final String _baseUrl = AppConfig.baseUrl;
   final HttpClient _client = HttpClient();
 
   Future<Map<String, dynamic>> _get(String path) async {
