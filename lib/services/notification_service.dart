@@ -15,6 +15,8 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._();
 
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   static final String _baseUrl = AppConfig.baseUrl;
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
