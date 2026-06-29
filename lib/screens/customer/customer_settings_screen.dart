@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../legal_page_screen.dart';
 
 class CustomerSettingsScreen extends StatefulWidget {
   const CustomerSettingsScreen({super.key});
@@ -31,8 +32,10 @@ class _State extends State<CustomerSettingsScreen> {
         const Text('Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         _tile(Icons.lock_outline, 'Change Password', () {}),
-        _tile(Icons.privacy_tip_outlined, 'Privacy Policy', () {}),
-        _tile(Icons.description_outlined, 'Terms of Service', () {}),
+        _tile(Icons.privacy_tip_outlined, 'Privacy Policy', () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const LegalPageScreen(title: 'Privacy Policy', content: LegalPageScreen.privacyPolicy)))),
+        _tile(Icons.description_outlined, 'Terms of Service', () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const LegalPageScreen(title: 'Terms of Service', content: LegalPageScreen.termsOfService)))),
         _tile(Icons.info_outline, 'About App', () => _showAbout()),
 
         const SizedBox(height: 20),
