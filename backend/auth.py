@@ -6,32 +6,34 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from config import settings
-from database import users_collection
+from database import users_collection, otp_collection
 
 security = HTTPBearer(auto_error=False)
 
-_otp_store: dict[str, dict] = {}
 
-
-def generate_otp(phone: str) -> str:
+async def generate_otp(phone: str) -> str:
     otp = f"{random.randint(1000, 9999)}"
-    _otp_store[phone] = {
-        "otp": otp,
-        "expires": datetime.now(timezone.utc) + timedelta(minutes=5),
-    }
+    await otp_collection.update_one(
+        {"phone": phone},
+        {"$set": {
+            "otp": otp,
+            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
+        }},
+        upsert=True,
+    )
     return otp
 
 
-def verify_otp(phone: str, otp: str) -> bool:
-    entry = _otp_store.get(phone)
+async def verify_otp(phone: str, otp: str) -> bool:
+    entry = await otp_collection.find_one({"phone": phone})
     if not entry:
         return False
-    if datetime.now(timezone.utc) > entry["expires"]:
-        _otp_store.pop(phone, None)
+    if datetime.now(timezone.utc) > entry["expires_at"]:
+        await otp_collection.delete_one({"phone": phone})
         return False
     if entry["otp"] != otp:
         return False
-    _otp_store.pop(phone, None)
+    await otp_collection.delete_one({"phone": phone})
     return True
 
 

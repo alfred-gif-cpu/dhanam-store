@@ -1,8 +1,16 @@
+import logging
+import re
+import traceback
 from pathlib import Path
 from datetime import datetime, timedelta
 from fastapi import FastAPI, Query, HTTPException, Request, Body, Depends, File, UploadFile, Form
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from bson import ObjectId
 from database import (
     products_collection, banners_collection, orders_collection,
@@ -11,6 +19,11 @@ from database import (
 )
 from auth import generate_otp, verify_otp, create_token, get_current_user
 from config import settings
+
+log = logging.getLogger(__name__)
+limiter = Limiter(key_func=get_remote_address)
+
+_PHONE_RE = re.compile(r"^\+?91?\d{10}$")
 from routes_customer import router as customer_router
 from routes_orders import router as orders_router
 from routes_admin import router as admin_router
@@ -28,6 +41,7 @@ app = FastAPI(
     description="Backend API for Dhanam Store grocery app",
     version="2.0.0",
 )
+app.state.limiter = limiter
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,6 +50,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"detail": "Too many requests. Please try again later."})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"detail": "Invalid request data", "errors": exc.errors()})
+
+
+@app.exception_handler(Exception)
+async def global_error_handler(request: Request, exc: Exception):
+    log.error("Unhandled error on %s %s: %s", request.method, request.url.path, traceback.format_exc())
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(customer_router, tags=["Customers"])
@@ -55,10 +85,12 @@ async def startup():
 # ─── Auth ─────────────────────────────────────────────────
 
 @app.post("/auth/send-otp")
-async def send_otp(phone: str = Body(..., embed=True)):
-    if not phone or len(phone) < 10:
-        raise HTTPException(status_code=400, detail="Invalid phone number")
-    otp = generate_otp(phone)
+@limiter.limit("5/minute")
+async def send_otp(request: Request, phone: str = Body(..., embed=True)):
+    phone = (phone or "").strip()
+    if not _PHONE_RE.match(phone.replace(" ", "")):
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
+    otp = await generate_otp(phone)
     response = {"status": "sent", "message": "OTP sent successfully"}
     if settings.debug:
         response["otp"] = otp
@@ -66,8 +98,15 @@ async def send_otp(phone: str = Body(..., embed=True)):
 
 
 @app.post("/auth/verify-otp")
-async def verify_otp_endpoint(phone: str = Body(...), otp: str = Body(...)):
-    if not verify_otp(phone, otp):
+@limiter.limit("10/minute")
+async def verify_otp_endpoint(request: Request, phone: str = Body(...), otp: str = Body(...)):
+    phone = (phone or "").strip()
+    otp = (otp or "").strip()
+    if not _PHONE_RE.match(phone.replace(" ", "")):
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
+    if not re.match(r"^\d{4}$", otp):
+        raise HTTPException(status_code=400, detail="OTP must be 4 digits")
+    if not await verify_otp(phone, otp):
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
     user = await users_collection.find_one({"phone": phone})
@@ -88,11 +127,11 @@ async def verify_otp_endpoint(phone: str = Body(...), otp: str = Body(...)):
 
 
 @app.post("/auth/firebase-login")
-async def firebase_login(phone: str = Body(..., embed=True)):
-    """Login/register using a Firebase-verified phone number.
-    Called after Firebase Phone Auth succeeds on the client."""
-    if not phone or len(phone) < 10:
-        raise HTTPException(status_code=400, detail="Invalid phone number")
+@limiter.limit("10/minute")
+async def firebase_login(request: Request, phone: str = Body(..., embed=True)):
+    phone = (phone or "").strip()
+    if not _PHONE_RE.match(phone.replace(" ", "")):
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
 
     user = await users_collection.find_one({"phone": phone})
     is_new = user is None
@@ -522,21 +561,53 @@ async def admin_stats():
 
 # ─── Admin: Products ─────────────────────────────────────
 
+from pydantic import BaseModel as _BM, Field as _F
+
+class _ProductCreate(_BM):
+    name: str = _F(min_length=1, max_length=200)
+    price: float = _F(gt=0)
+    category: str = _F(min_length=1)
+    stock: int = _F(ge=0, default=0)
+    description: str = ""
+    brand: str = ""
+    unit: str = ""
+    original_price: float | None = None
+    featured: bool = False
+
+    class Config:
+        extra = "allow"
+
+
+class _ProductUpdate(_BM):
+    name: str | None = None
+    price: float | None = _F(default=None, gt=0)
+    category: str | None = None
+    stock: int | None = _F(default=None, ge=0)
+    description: str | None = None
+    brand: str | None = None
+    unit: str | None = None
+    original_price: float | None = None
+    featured: bool | None = None
+
+    class Config:
+        extra = "allow"
+
+
 @app.post("/admin/products")
-async def create_product(request: Request, product: dict = Body(...)):
-    product["created_at"] = datetime.utcnow().isoformat()
-    result = await products_collection.insert_one(product)
+async def create_product(request: Request, product: _ProductCreate):
+    data = product.model_dump(exclude_none=True)
+    data["created_at"] = datetime.utcnow().isoformat()
+    result = await products_collection.insert_one(data)
     return {"id": str(result.inserted_id), "status": "created"}
 
 
 @app.put("/admin/products/{product_id}")
-async def update_product(product_id: str, product: dict = Body(...)):
+async def update_product(product_id: str, product: _ProductUpdate):
     if not ObjectId.is_valid(product_id):
         raise HTTPException(status_code=400, detail="Invalid product ID")
-    product.pop("_id", None)
-    product.pop("id", None)
-    product["updated_at"] = datetime.utcnow().isoformat()
-    await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": product})
+    data = product.model_dump(exclude_none=True)
+    data["updated_at"] = datetime.utcnow().isoformat()
+    await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": data})
     return {"status": "updated"}
 
 

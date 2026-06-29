@@ -14,6 +14,7 @@ customers_collection = db["customers"]
 wallet_transactions_collection = db["wallet_transactions"]
 admins_collection = db["admins"]
 audit_logs_collection = db["audit_logs"]
+otp_collection = db["otps"]
 
 
 async def ensure_indexes():
@@ -30,3 +31,4 @@ async def ensure_indexes():
     await addresses_collection.create_index("user_id")
     await wallet_transactions_collection.create_index("customer_id")
     await admins_collection.create_index("email", unique=True, sparse=True)
+    await otp_collection.create_index("expires_at", expireAfterSeconds=0)
