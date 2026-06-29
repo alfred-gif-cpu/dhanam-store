@@ -5,9 +5,8 @@ class Settings(BaseSettings):
     database_name: str = "dhanam_store"
     jwt_secret: str = "dhanam-store-secret-change-in-production"
     jwt_expiry_hours: int = 720
-    razorpay_key_id: str = ""
-    razorpay_key_secret: str = ""
-    sms_api_key: str = ""
+    debug: bool = False
+    cors_origins: list[str] = ["*"]
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -16,4 +15,10 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-print("Mongo URI:", settings.mongodb_uri[:20])
+if "change-in-production" in settings.jwt_secret:
+    import logging
+    logging.getLogger(__name__).warning(
+        "JWT_SECRET is still the default — set a strong secret in .env before deploying"
+    )
+
+logging.getLogger(__name__).info("Connected to MongoDB: %s...", settings.mongodb_uri[:20])

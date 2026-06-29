@@ -4,7 +4,6 @@ import '../services/address_service.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/cart_service.dart';
-import '../services/payment_service.dart';
 import 'address/address_list_screen.dart';
 import 'login_screen.dart';
 import 'order_success_screen.dart';
@@ -20,15 +19,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final ApiService _api = ApiService();
   final AddressService _addrSvc = AddressService();
   final CartService _cart = CartService();
-  final PaymentService _payment = PaymentService();
-
   int _step = 0;
   List<Address> _addresses = [];
   Address? _selectedAddress;
   String _deliverySlot = '';
-  String _paymentMethod = 'cod';
   bool _loading = true;
   bool _placing = false;
+  String? _addrError;
 
   final _slots = <Map<String, String>>[];
 
@@ -45,8 +42,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadAddresses();
   }
 
-  String _pendingRazorpayOrderId = '';
-
   void _generateSlots() {
     final now = DateTime.now();
     final labels = ['Today', 'Tomorrow'];
@@ -61,6 +56,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _loadAddresses() async {
+    setState(() { _loading = true; _addrError = null; });
     try {
       var addrs = await _addrSvc.getAddresses(AuthService().userId);
       if (addrs.isEmpty) {
@@ -72,20 +68,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _selectedAddress = defaultAddr.isNotEmpty ? defaultAddr.first : (addrs.isNotEmpty ? addrs.first : null);
         _loading = false;
       });
-    } catch (_) {
-      setState(() => _loading = false);
+    } catch (e) {
+      setState(() { _addrError = e.toString(); _loading = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: const Text('Failed to load addresses'), behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(label: 'RETRY', onPressed: _loadAddresses)),
+        );
+      }
     }
   }
 
   bool get _canProceed {
     if (_step == 0) return _selectedAddress != null;
     if (_step == 1) return _deliverySlot.isNotEmpty;
-    if (_step == 2) return _paymentMethod.isNotEmpty;
     return true;
   }
 
   void _next() {
-    if (_step < 3) {
+    if (_step < 2) {
       setState(() => _step++);
     } else {
       _placeOrder();
@@ -97,56 +98,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _placeOrder() async {
-    setState(() => _placing = true);
-
-    if (_paymentMethod == 'cod') {
-      await _completeOrder();
-      return;
-    }
-
-    final receipt = 'DH${DateTime.now().millisecondsSinceEpoch}';
-    final orderData = await _payment.createRazorpayOrder(
-      amount: _cart.grandTotal,
-      receipt: receipt,
-    );
-
-    if (orderData == null) {
-      if (!mounted) return;
-      setState(() => _placing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not initiate payment. Please try again.'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    _pendingRazorpayOrderId = orderData['order_id'] as String;
-    final auth = AuthService();
-
-    if (!mounted) return;
-    final result = await _payment.openCheckout(
-      context: context,
-      keyId: orderData['key_id'] as String,
-      orderId: _pendingRazorpayOrderId,
-      amountInPaise: orderData['amount'] as int,
-      customerName: _selectedAddress?.fullName ?? '',
-      customerPhone: auth.phone,
-    );
-
-    if (!mounted) return;
-
-    if (result != null && result['status'] == 'success') {
-      await _completeOrder(paymentId: result['payment_id'] ?? '');
-    } else {
-      setState(() => _placing = false);
-      if (result != null && result['status'] == 'error') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment failed: ${result['message']}'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  Future<void> _completeOrder({String paymentId = ''}) async {
     setState(() => _placing = true);
     final grandTotal = _cart.grandTotal;
     try {
@@ -163,9 +114,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'gst': _cart.gstAmount,
         'delivery_fee': _cart.deliveryCharge,
         'grand_total': grandTotal,
-        'payment_method': _paymentMethod,
-        'payment_id': paymentId,
-        'razorpay_order_id': _pendingRazorpayOrderId,
+        'payment_method': 'cod',
         'delivery_slot': _deliverySlot,
         'address': _selectedAddress!.toJson(),
       });
@@ -177,7 +126,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             orderNumber: result['order_number'] ?? '',
             grandTotal: grandTotal,
             deliverySlot: _deliverySlot,
-            paymentMethod: _paymentMethod,
+            paymentMethod: 'cod',
           )),
         );
       }
@@ -206,13 +155,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
+          : _addrError != null && _addresses.isEmpty
+              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text('Could not load addresses', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(onPressed: _loadAddresses, icon: const Icon(Icons.refresh, size: 18), label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+                ]))
+              : Column(
               children: [
                 _buildStepper(),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
-                    child: [_buildAddressStep, _buildSlotStep, _buildPaymentStep, _buildReviewStep][_step](),
+                    child: [_buildAddressStep, _buildSlotStep, _buildReviewStep][_step](),
                   ),
                 ),
               ],
@@ -222,7 +181,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _buildStepper() {
-    final steps = ['Address', 'Slot', 'Payment', 'Review'];
+    final steps = ['Address', 'Slot', 'Review'];
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       color: Colors.white,
@@ -327,8 +286,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Text(addr.shortAddress, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                       Text(addr.phone, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                     ])),
-                    Radio<String>(value: addr.id, groupValue: _selectedAddress?.id,
-                        onChanged: (_) => setState(() => _selectedAddress = addr), activeColor: Colors.blue),
+                    Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                        color: selected ? Colors.blue : Colors.grey[400]),
                   ],
                 ),
               ),
@@ -391,60 +350,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // ─── Step 3: Payment ───
-  Widget _buildPaymentStep() {
-    return ListView(
-      key: const ValueKey('step-payment'),
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text('Payment method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text('Choose how you\'d like to pay', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
-        const SizedBox(height: 16),
-        _paymentOption('upi', 'UPI Payment', 'Google Pay, PhonePe, Paytm', Icons.qr_code_2, Colors.purple),
-        _paymentOption('card', 'Credit / Debit Card', 'Visa, Mastercard, RuPay', Icons.credit_card, Colors.blue),
-        _paymentOption('cod', 'Cash on Delivery', 'Pay when your order arrives', Icons.money, Colors.orange),
-      ],
-    );
-  }
-
-  Widget _paymentOption(String value, String title, String subtitle, IconData icon, Color color) {
-    final selected = _paymentMethod == value;
-    return GestureDetector(
-      onTap: () => setState(() => _paymentMethod = value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.05) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? color : Colors.grey[200]!, width: selected ? 2 : 1),
-        ),
-        child: Row(children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: selected ? color : null)),
-            const SizedBox(height: 2),
-            Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-          ])),
-          Radio<String>(value: value, groupValue: _paymentMethod,
-              onChanged: (v) => setState(() => _paymentMethod = v!), activeColor: color),
-        ]),
-      ),
-    );
-  }
-
-  // ─── Step 4: Review ───
+  // ─── Step 3: Review ───
   Widget _buildReviewStep() {
     return ListView(
       key: const ValueKey('step-review'),
@@ -467,12 +373,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         const SizedBox(height: 10),
 
         // Payment summary
-        _reviewCard(Icons.payment, 'Payment', [
-          Text(
-            _paymentMethod == 'upi' ? 'UPI Payment' : _paymentMethod == 'card' ? 'Credit / Debit Card' : 'Cash on Delivery',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ]),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          child: Row(children: [
+            Icon(Icons.money, size: 22, color: Colors.orange[700]),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Payment', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              const SizedBox(height: 4),
+              const Text('Cash on Delivery', style: TextStyle(fontWeight: FontWeight.w600)),
+            ])),
+          ]),
+        ),
         const SizedBox(height: 16),
 
         // Items
@@ -529,7 +442,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ...children,
         ])),
         GestureDetector(
-          onTap: () => setState(() => _step = title == 'Delivery to' ? 0 : title == 'Delivery slot' ? 1 : 2),
+          onTap: () => setState(() => _step = title == 'Delivery to' ? 0 : 1),
           child: Text('Change', style: TextStyle(fontSize: 13, color: Colors.blue[700], fontWeight: FontWeight.w600)),
         ),
       ]),
@@ -561,7 +474,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _buildBottomBar() {
-    final labels = ['Continue', 'Continue', 'Continue', 'Place Order — ₹${_cart.grandTotal.toStringAsFixed(0)}'];
+    final labels = ['Continue', 'Continue', 'Place Order — ₹${_cart.grandTotal.toStringAsFixed(0)}'];
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
       decoration: BoxDecoration(
@@ -573,7 +486,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: ElevatedButton(
           onPressed: _canProceed && !_placing ? _next : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _step == 3 ? Colors.blue[700] : Colors.blue,
+            backgroundColor: _step == 2 ? Colors.blue[700] : Colors.blue,
             foregroundColor: Colors.white,
             disabledBackgroundColor: Colors.grey[300],
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -582,8 +495,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: _placing
               ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  if (_step == 3) const Icon(Icons.lock, size: 18),
-                  if (_step == 3) const SizedBox(width: 8),
+                  if (_step == 2) const Icon(Icons.lock, size: 18),
+                  if (_step == 2) const SizedBox(width: 8),
                   Text(labels[_step], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ]),
         ),
