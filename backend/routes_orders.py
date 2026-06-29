@@ -1,4 +1,5 @@
 import io
+import re
 import logging
 from datetime import datetime, timedelta
 from typing import Literal
@@ -478,8 +479,8 @@ async def admin_all_orders(
         query["order_status"] = status
     if q:
         query["$or"] = [
-            {"order_id": {"$regex": q, "$options": "i"}},
-            {"customer_id": {"$regex": q, "$options": "i"}},
+            {"order_id": {"$regex": re.escape(q), "$options": "i"}},
+            {"customer_id": {"$regex": re.escape(q), "$options": "i"}},
         ]
     total = await orders_collection.count_documents(query)
     cursor = orders_collection.find(query).sort("created_at", -1).skip(skip).limit(limit)

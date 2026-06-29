@@ -18,12 +18,16 @@ from database import (
     ensure_indexes,
 )
 from auth import generate_otp, verify_otp, create_token, get_current_user
+from admin_auth import get_current_admin
 from config import settings
 
 log = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 _PHONE_RE = re.compile(r"^\+?91?\d{10}$")
+
+def _escape_regex(s: str) -> str:
+    return re.escape(s)
 from routes_customer import router as customer_router
 from routes_orders import router as orders_router
 from routes_admin import router as admin_router
@@ -50,6 +54,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -338,7 +352,7 @@ async def get_categories(request: Request):
 
 @app.get("/search/suggestions")
 async def search_suggestions(q: str = Query(..., min_length=1)):
-    regex = {"$regex": q, "$options": "i"}
+    regex = {"$regex": _escape_regex(q), "$options": "i"}
     pipeline = [
         {"$match": {"$or": [{"name": regex}, {"brand": regex}, {"category": regex}]}},
         {"$limit": 50},
@@ -373,10 +387,11 @@ async def search_products(
 ):
     base_url = str(request.base_url).rstrip("/")
     skip = (page - 1) * limit
+    escaped = _escape_regex(q)
     query = {"$or": [
-        {"name": {"$regex": q, "$options": "i"}},
-        {"brand": {"$regex": q, "$options": "i"}},
-        {"category": {"$regex": q, "$options": "i"}},
+        {"name": {"$regex": escaped, "$options": "i"}},
+        {"brand": {"$regex": escaped, "$options": "i"}},
+        {"category": {"$regex": escaped, "$options": "i"}},
     ]}
     total = await products_collection.count_documents(query)
     cursor = products_collection.find(query).skip(skip).limit(limit)
@@ -409,7 +424,9 @@ async def get_banners(request: Request):
 # ─── Wishlist ─────────────────────────────────────────────
 
 @app.get("/wishlist/{user_id}")
-async def get_wishlist(user_id: str, request: Request):
+async def get_wishlist(user_id: str, request: Request, user: dict = Depends(get_current_user)):
+    if user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     base_url = str(request.base_url).rstrip("/")
     doc = await wishlists_collection.find_one({"user_id": user_id})
     if not doc or not doc.get("product_ids"):
@@ -421,7 +438,9 @@ async def get_wishlist(user_id: str, request: Request):
 
 
 @app.post("/wishlist/{user_id}/add")
-async def add_to_wishlist(user_id: str, product_id: str = Body(..., embed=True)):
+async def add_to_wishlist(user_id: str, product_id: str = Body(..., embed=True), user: dict = Depends(get_current_user)):
+    if user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     await wishlists_collection.update_one(
         {"user_id": user_id},
         {"$addToSet": {"product_ids": product_id}},
@@ -431,7 +450,9 @@ async def add_to_wishlist(user_id: str, product_id: str = Body(..., embed=True))
 
 
 @app.post("/wishlist/{user_id}/remove")
-async def remove_from_wishlist(user_id: str, product_id: str = Body(..., embed=True)):
+async def remove_from_wishlist(user_id: str, product_id: str = Body(..., embed=True), user: dict = Depends(get_current_user)):
+    if user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     await wishlists_collection.update_one(
         {"user_id": user_id},
         {"$pull": {"product_ids": product_id}},
@@ -442,14 +463,18 @@ async def remove_from_wishlist(user_id: str, product_id: str = Body(..., embed=T
 # ─── Addresses ────────────────────────────────────────────
 
 @app.get("/addresses/{user_id}")
-async def get_addresses(user_id: str):
+async def get_addresses(user_id: str, user: dict = Depends(get_current_user)):
+    if user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     cursor = addresses_collection.find({"user_id": user_id})
     addresses = [serialize_doc(a) async for a in cursor]
     return {"addresses": addresses}
 
 
 @app.post("/addresses/{user_id}")
-async def add_address(user_id: str, address: dict = Body(...)):
+async def add_address(user_id: str, address: dict = Body(...), user: dict = Depends(get_current_user)):
+    if user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     address["user_id"] = user_id
     address["created_at"] = datetime.utcnow().isoformat()
     result = await addresses_collection.insert_one(address)
@@ -521,7 +546,7 @@ async def get_order_detail(order_id: str):
 # ─── Admin Dashboard ──────────────────────────────────────
 
 @app.get("/admin/stats")
-async def admin_stats():
+async def admin_stats(_admin: dict = Depends(get_current_admin)):
     total_products = await products_collection.count_documents({})
     total_orders = await orders_collection.count_documents({})
     total_users = await users_collection.count_documents({})
@@ -594,7 +619,7 @@ class _ProductUpdate(_BM):
 
 
 @app.post("/admin/products")
-async def create_product(request: Request, product: _ProductCreate):
+async def create_product(request: Request, product: _ProductCreate, _admin: dict = Depends(get_current_admin)):
     data = product.model_dump(exclude_none=True)
     data["created_at"] = datetime.utcnow().isoformat()
     result = await products_collection.insert_one(data)
@@ -602,7 +627,7 @@ async def create_product(request: Request, product: _ProductCreate):
 
 
 @app.put("/admin/products/{product_id}")
-async def update_product(product_id: str, product: _ProductUpdate):
+async def update_product(product_id: str, product: _ProductUpdate, _admin: dict = Depends(get_current_admin)):
     if not ObjectId.is_valid(product_id):
         raise HTTPException(status_code=400, detail="Invalid product ID")
     data = product.model_dump(exclude_none=True)
@@ -612,7 +637,7 @@ async def update_product(product_id: str, product: _ProductUpdate):
 
 
 @app.delete("/admin/products/{product_id}")
-async def delete_product(product_id: str):
+async def delete_product(product_id: str, _admin: dict = Depends(get_current_admin)):
     if not ObjectId.is_valid(product_id):
         raise HTTPException(status_code=400, detail="Invalid product ID")
     await products_collection.delete_one({"_id": ObjectId(product_id)})
@@ -620,15 +645,18 @@ async def delete_product(product_id: str):
 
 
 @app.put("/admin/products/{product_id}/featured")
-async def toggle_featured(product_id: str, featured: bool = Body(..., embed=True)):
+async def toggle_featured(product_id: str, featured: bool = Body(..., embed=True), _admin: dict = Depends(get_current_admin)):
     if not ObjectId.is_valid(product_id):
         raise HTTPException(status_code=400, detail="Invalid product ID")
     await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": {"featured": featured}})
     return {"status": "updated", "featured": featured}
 
 
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
+
 @app.post("/admin/products/{product_id}/image")
-async def upload_product_image(product_id: str, request: Request, file: UploadFile = File(...)):
+async def upload_product_image(product_id: str, request: Request, file: UploadFile = File(...), _admin: dict = Depends(get_current_admin)):
     import re
     if not ObjectId.is_valid(product_id):
         raise HTTPException(status_code=400, detail="Invalid product ID")
@@ -636,11 +664,17 @@ async def upload_product_image(product_id: str, request: Request, file: UploadFi
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}")
+    content = await file.read()
+    if len(content) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
     ext = Path(file.filename or "img.jpg").suffix or ".jpg"
+    if ext.lower() not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        raise HTTPException(status_code=400, detail="Invalid file extension")
     slug = re.sub(r"[^a-z0-9]+", "-", product.get("name", "product").lower()).strip("-")
     filename = f"{slug}{ext}"
     filepath = STATIC_DIR / "images" / filename
-    content = await file.read()
     filepath.write_bytes(content)
 
     await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": {"image_url": filename}})
@@ -651,7 +685,7 @@ async def upload_product_image(product_id: str, request: Request, file: UploadFi
 # ─── Admin: Categories ───────────────────────────────────
 
 @app.post("/admin/categories")
-async def add_category(name: str = Body(..., embed=True)):
+async def add_category(name: str = Body(..., embed=True), _admin: dict = Depends(get_current_admin)):
     existing = await products_collection.distinct("category")
     if name in existing:
         raise HTTPException(status_code=400, detail="Category already exists")
@@ -660,7 +694,7 @@ async def add_category(name: str = Body(..., embed=True)):
 
 
 @app.delete("/admin/categories/{category_name}")
-async def delete_category(category_name: str):
+async def delete_category(category_name: str, _admin: dict = Depends(get_current_admin)):
     count = await products_collection.count_documents({"category": category_name})
     if count > 1:
         raise HTTPException(status_code=400, detail=f"Category has {count} products. Remove products first.")
@@ -675,6 +709,7 @@ async def admin_orders(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     status: str | None = None,
+    _admin: dict = Depends(get_current_admin),
 ):
     skip = (page - 1) * limit
     query = {"status": status} if status else {}
@@ -685,7 +720,7 @@ async def admin_orders(
 
 
 @app.put("/admin/orders/{order_id}/status")
-async def update_order_status(order_id: str, status: str = Body(..., embed=True)):
+async def update_order_status(order_id: str, status: str = Body(..., embed=True), _admin: dict = Depends(get_current_admin)):
     if not ObjectId.is_valid(order_id):
         raise HTTPException(status_code=400, detail="Invalid order ID")
     now = datetime.utcnow().isoformat()
@@ -705,6 +740,7 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
 async def admin_users(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
+    _admin: dict = Depends(get_current_admin),
 ):
     skip = (page - 1) * limit
     total = await users_collection.count_documents({})
@@ -716,7 +752,7 @@ async def admin_users(
 # ─── Admin: Banners ───────────────────────────────────────
 
 @app.post("/admin/banners")
-async def create_banner(banner: dict = Body(...)):
+async def create_banner(banner: dict = Body(...), _admin: dict = Depends(get_current_admin)):
     banner["active"] = banner.get("active", True)
     banner["order"] = banner.get("order", 0)
     result = await banners_collection.insert_one(banner)
@@ -724,7 +760,7 @@ async def create_banner(banner: dict = Body(...)):
 
 
 @app.delete("/admin/banners/{banner_id}")
-async def delete_banner(banner_id: str):
+async def delete_banner(banner_id: str, _admin: dict = Depends(get_current_admin)):
     if not ObjectId.is_valid(banner_id):
         raise HTTPException(status_code=400, detail="Invalid banner ID")
     await banners_collection.delete_one({"_id": ObjectId(banner_id)})
