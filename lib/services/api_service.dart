@@ -6,42 +6,87 @@ import '../models/banner.dart';
 import '../models/address.dart';
 import '../models/category.dart';
 import '../models/order.dart';
+import 'auth_service.dart';
+
+class ApiException implements Exception {
+  final int statusCode;
+  final String message;
+  ApiException(this.statusCode, this.message);
+  @override
+  String toString() => message;
+}
+
+class NetworkException implements Exception {
+  final String message;
+  NetworkException([this.message = 'No internet connection. Please check your network.']);
+  @override
+  String toString() => message;
+}
 
 class ApiService {
   static final String _baseUrl = AppConfig.baseUrl;
 
   final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
 
-  Future<Map<String, dynamic>> _get(String path) async {
-    final request = await _client.getUrl(Uri.parse('$_baseUrl$path'));
-    final response = await request.close();
-    final body = await response.transform(utf8.decoder).join();
-    return jsonDecode(body) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> _request(String method, String path, {Map<String, dynamic>? data}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      late HttpClientRequest request;
+      switch (method) {
+        case 'GET':
+          request = await _client.getUrl(uri);
+        case 'POST':
+          request = await _client.postUrl(uri);
+        case 'PUT':
+          request = await _client.putUrl(uri);
+        case 'DELETE':
+          request = await _client.deleteUrl(uri);
+        default:
+          request = await _client.getUrl(uri);
+      }
+
+      final token = AuthService().token;
+      if (token != null) {
+        request.headers.set('Authorization', 'Bearer $token');
+      }
+
+      if (data != null) {
+        request.headers.contentType = ContentType.json;
+        request.write(jsonEncode(data));
+      }
+
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+
+      if (response.statusCode == 401) {
+        await AuthService().logout();
+        throw ApiException(401, 'Session expired. Please log in again.');
+      }
+
+      if (response.statusCode >= 400) {
+        String message = 'Request failed';
+        try {
+          final errorBody = jsonDecode(body) as Map<String, dynamic>;
+          message = errorBody['detail']?.toString() ?? message;
+        } catch (_) {}
+        throw ApiException(response.statusCode, message);
+      }
+
+      if (method == 'DELETE' && body.isEmpty) return {};
+      return jsonDecode(body) as Map<String, dynamic>;
+    } on SocketException {
+      throw NetworkException();
+    } on HttpException {
+      throw NetworkException('Server unreachable. Please try again later.');
+    } on HandshakeException {
+      throw NetworkException('Secure connection failed. Please try again.');
+    }
   }
 
-  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> data) async {
-    final request = await _client.postUrl(Uri.parse('$_baseUrl$path'));
-    request.headers.contentType = ContentType.json;
-    request.write(jsonEncode(data));
-    final response = await request.close();
-    final body = await response.transform(utf8.decoder).join();
-    return jsonDecode(body) as Map<String, dynamic>;
-  }
-
-  Future<Map<String, dynamic>> _put(String path, Map<String, dynamic> data) async {
-    final request = await _client.putUrl(Uri.parse('$_baseUrl$path'));
-    request.headers.contentType = ContentType.json;
-    request.write(jsonEncode(data));
-    final response = await request.close();
-    final body = await response.transform(utf8.decoder).join();
-    return jsonDecode(body) as Map<String, dynamic>;
-  }
-
-  Future<void> _delete(String path) async {
-    final request = await _client.deleteUrl(Uri.parse('$_baseUrl$path'));
-    final response = await request.close();
-    await response.drain();
-  }
+  Future<Map<String, dynamic>> _get(String path) => _request('GET', path);
+  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> data) => _request('POST', path, data: data);
+  Future<Map<String, dynamic>> _put(String path, Map<String, dynamic> data) => _request('PUT', path, data: data);
+  Future<void> _delete(String path) async => await _request('DELETE', path);
 
   // Products
   Future<ProductResponse> getProducts({int page = 1, int limit = 20, String? category}) async {
