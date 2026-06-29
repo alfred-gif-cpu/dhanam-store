@@ -22,7 +22,19 @@ from admin_auth import get_current_admin
 from config import settings
 
 log = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
+
+
+def _client_ip(request: Request) -> str:
+    """Resolve the real client IP behind Railway's proxy.
+    Railway sets X-Forwarded-For; the first entry is the originating client.
+    Falls back to the direct peer address for local/non-proxied requests."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=_client_ip)
 
 _PHONE_RE = re.compile(r"^\+?91?\d{10}$")
 
