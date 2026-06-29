@@ -210,9 +210,9 @@ async def list_products(
     query: dict = {}
     if q:
         query["$or"] = [
-            {"name": {"$regex": q, "$options": "i"}},
-            {"brand": {"$regex": q, "$options": "i"}},
-            {"category": {"$regex": q, "$options": "i"}},
+            {"name": {"$regex": re.escape(q), "$options": "i"}},
+            {"brand": {"$regex": re.escape(q), "$options": "i"}},
+            {"category": {"$regex": re.escape(q), "$options": "i"}},
         ]
     total = await products_collection.count_documents(query)
     cursor = products_collection.find(query).sort("name", 1).skip(skip).limit(limit)
@@ -338,10 +338,10 @@ async def list_customers(
     query: dict = {}
     if q:
         query["$or"] = [
-            {"name": {"$regex": q, "$options": "i"}},
-            {"phone": {"$regex": q, "$options": "i"}},
-            {"email": {"$regex": q, "$options": "i"}},
-            {"customer_id": {"$regex": q, "$options": "i"}},
+            {"name": {"$regex": re.escape(q), "$options": "i"}},
+            {"phone": {"$regex": re.escape(q), "$options": "i"}},
+            {"email": {"$regex": re.escape(q), "$options": "i"}},
+            {"customer_id": {"$regex": re.escape(q), "$options": "i"}},
         ]
     if status == "active":
         query["is_active"] = True
@@ -384,8 +384,8 @@ async def list_orders(
         query["order_status"] = status
     if q:
         query["$or"] = [
-            {"order_id": {"$regex": q, "$options": "i"}},
-            {"customer_id": {"$regex": q, "$options": "i"}},
+            {"order_id": {"$regex": re.escape(q), "$options": "i"}},
+            {"customer_id": {"$regex": re.escape(q), "$options": "i"}},
         ]
     total = await orders_collection.count_documents(query)
     cursor = orders_collection.find(query).sort("created_at", -1).skip(skip).limit(limit)
