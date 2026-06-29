@@ -15,7 +15,7 @@ class CategoryCarousel extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final cat = categories[index];
           return GestureDetector(
@@ -34,7 +34,7 @@ class CategoryCarousel extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     child: cat.image.isNotEmpty
                         ? Image.network(cat.image, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _fallbackIcon(cat.name))
+                            errorBuilder: (_, _, _) => _fallbackIcon(cat.name))
                         : _fallbackIcon(cat.name),
                   ),
                   const SizedBox(height: 6),

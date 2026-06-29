@@ -13,7 +13,7 @@ class CartService extends ChangeNotifier {
   factory CartService() => _instance;
   CartService._();
 
-  final HttpClient _client = HttpClient();
+  final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
   final List<CartItem> _items = [];
   bool _loaded = false;
   String _loadedForUser = '';

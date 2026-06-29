@@ -96,7 +96,7 @@ class _State extends State<AddressFormScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${e.toString().replaceFirst("Exception: ", "")}')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

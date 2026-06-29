@@ -12,6 +12,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   final AdminAuthService _admin = AdminAuthService();
   List<dynamic> _orders = [];
   bool _loading = true;
+  String? _error;
   String? _statusFilter;
   int _page = 1;
   int _total = 0;
@@ -25,12 +26,12 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
       final data = await _admin.getOrders(page: _page, status: _statusFilter ?? '');
       setState(() { _orders = data['orders']; _total = data['total']; _loading = false; });
-    } catch (_) {
-      setState(() => _loading = false);
+    } catch (e) {
+      setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
@@ -97,9 +98,19 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
-              : _orders.isEmpty
-                  ? Center(child: Text('No orders found', style: TextStyle(color: Colors.grey[600])))
-                  : RefreshIndicator(
+              : _error != null
+                  ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text('Could not load orders', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh, size: 18), label: const Text('Retry'),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+                    ]))
+                  : _orders.isEmpty
+                      ? Center(child: Text('No orders found', style: TextStyle(color: Colors.grey[600])))
+                      : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView.builder(
                         padding: const EdgeInsets.all(12),

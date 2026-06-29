@@ -1,8 +1,11 @@
 import re
+import logging
 from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, Query, HTTPException, Request, Body, Depends, File, UploadFile
 from bson import ObjectId
+
+log = logging.getLogger(__name__)
 from database import (
     admins_collection, audit_logs_collection, products_collection,
     orders_collection, customers_collection, users_collection,
@@ -413,7 +416,7 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
             try:
                 notify_delivery_ready(order)
             except Exception as e:
-                print(f"[PUSH] Delivery notify failed: {e}")
+                log.warning("Delivery push notify failed: %s", e)
     return {"status": status}
 
 

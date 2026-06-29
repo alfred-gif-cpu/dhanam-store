@@ -127,13 +127,13 @@ class _State extends State<SecureAdminDashboard> {
             final pct = total > 0 ? (e.value as int) / total : 0.0;
             return Padding(padding: const EdgeInsets.only(bottom: 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(e.key ?? 'Unknown', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _statusColor(e.key ?? ''))),
+                Text(e.key, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _statusColor(e.key))),
                 Text('${e.value}', style: const TextStyle(fontWeight: FontWeight.bold)),
               ]),
               const SizedBox(height: 4),
               ClipRRect(borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(value: pct, minHeight: 6, backgroundColor: Colors.grey[200],
-                  valueColor: AlwaysStoppedAnimation(_statusColor(e.key ?? '')))),
+                  valueColor: AlwaysStoppedAnimation(_statusColor(e.key)))),
             ]));
           }).toList()),
         ),

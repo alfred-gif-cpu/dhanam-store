@@ -55,7 +55,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                 clipBehavior: Clip.antiAlias,
                 child: banner.image.isNotEmpty
                     ? Image.network(banner.image, fit: BoxFit.cover, width: double.infinity,
-                        errorBuilder: (_, __, ___) => _placeholder(banner.title))
+                        errorBuilder: (_, _, _) => _placeholder(banner.title))
                     : _placeholder(banner.title),
               );
             },

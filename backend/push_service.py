@@ -7,7 +7,10 @@ Otherwise it logs to console (dev mode) so the app flow still works.
 """
 import os
 import json
+import logging
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 _app = None
 _messaging = None
@@ -33,20 +36,20 @@ def _init():
                 cred = credentials.Certificate(str(path))
 
         if cred is None:
-            print("[PUSH] No Firebase credentials configured — running in console mode")
+            log.info("No Firebase credentials configured — running in console mode")
             return
 
         _app = firebase_admin.initialize_app(cred)
         _messaging = messaging
-        print("[PUSH] Firebase Admin initialized")
+        log.info("Firebase Admin initialized")
     except Exception as e:
-        print(f"[PUSH] Init failed, console mode: {e}")
+        log.warning("Firebase init failed, console mode: %s", e)
 
 
 def send_to_topic(topic: str, title: str, body: str, data: dict | None = None) -> bool:
     _init()
     if not _messaging:
-        print(f"[PUSH] (console) topic={topic} | {title} — {body}")
+        log.debug("(console) topic=%s | %s — %s", topic, title, body)
         return False
     try:
         msg = _messaging.Message(
@@ -58,7 +61,7 @@ def send_to_topic(topic: str, title: str, body: str, data: dict | None = None) -
         _messaging.send(msg)
         return True
     except Exception as e:
-        print(f"[PUSH] Send to topic {topic} failed: {e}")
+        log.warning("Send to topic %s failed: %s", topic, e)
         return False
 
 

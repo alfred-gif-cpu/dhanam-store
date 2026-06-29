@@ -75,7 +75,7 @@ class _FlashDealSectionState extends State<FlashDealSection> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: widget.products.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (_, i) => _FlashCard(product: widget.products[i]),
           ),
         ),

@@ -17,6 +17,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final AdminService _admin = AdminService();
   Map<String, dynamic>? _stats;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -25,11 +26,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
     try {
       final stats = await _admin.getStats();
       setState(() { _stats = stats; _loading = false; });
-    } catch (_) {
-      setState(() => _loading = false);
+    } catch (e) {
+      setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
@@ -46,7 +48,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(onRefresh: _load, child: _buildBody()),
+          : _error != null
+              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text('Could not load dashboard', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh, size: 18), label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+                ]))
+              : RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
   }
 

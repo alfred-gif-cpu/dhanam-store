@@ -17,7 +17,7 @@ class _State extends State<OrderListScreen> with SingleTickerProviderStateMixin 
 
   List<dynamic> _orders = [];
   bool _loading = true;
-  int _total = 0;
+  String? _error;
 
   @override
   void initState() {
@@ -38,12 +38,12 @@ class _State extends State<OrderListScreen> with SingleTickerProviderStateMixin 
   };
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
       final userId = AuthService().userId;
       final data = await _svc.getCustomerOrders(userId, status: _statusFilter);
-      setState(() { _orders = data['orders'] ?? []; _total = data['total'] ?? 0; _loading = false; });
-    } catch (_) { setState(() => _loading = false); }
+      setState(() { _orders = data['orders'] ?? []; _loading = false; });
+    } catch (e) { setState(() { _error = e.toString(); _loading = false; }); }
   }
 
   Color _statusColor(String s) => switch (s.toLowerCase()) {
@@ -69,9 +69,11 @@ class _State extends State<OrderListScreen> with SingleTickerProviderStateMixin 
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _orders.isEmpty
-              ? _empty()
-              : RefreshIndicator(onRefresh: _load, child: ListView.builder(
+          : _error != null
+              ? _errorWidget()
+              : _orders.isEmpty
+                  ? _empty()
+                  : RefreshIndicator(onRefresh: _load, child: ListView.builder(
                   padding: const EdgeInsets.all(16), itemCount: _orders.length,
                   itemBuilder: (_, i) {
                     final o = _orders[i] as Map<String, dynamic>;
@@ -128,5 +130,19 @@ class _State extends State<OrderListScreen> with SingleTickerProviderStateMixin 
     Icon(Icons.receipt_long, size: 64, color: Colors.grey[300]),
     const SizedBox(height: 16),
     Text('No orders found', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+  ]));
+
+  Widget _errorWidget() => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+    Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+    const SizedBox(height: 16),
+    Text('Could not load orders', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+    const SizedBox(height: 16),
+    ElevatedButton.icon(
+      onPressed: _load,
+      icon: const Icon(Icons.refresh, size: 18),
+      label: const Text('Retry'),
+      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+    ),
   ]));
 }

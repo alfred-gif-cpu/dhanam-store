@@ -42,8 +42,10 @@ class _State extends State<AddressListScreen> {
     if (confirm == true) {
       await _svc.deleteAddress(addr.id);
       _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Address deleted'), behavior: SnackBarBehavior.floating));
+      }
     }
   }
 

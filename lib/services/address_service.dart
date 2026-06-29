@@ -5,15 +5,20 @@ import '../models/address.dart';
 
 class AddressService {
   static final String _baseUrl = AppConfig.baseUrl;
-  final HttpClient _client = HttpClient();
+  final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
 
   Future<Map<String, dynamic>> _request(String method, String path, [Map<String, dynamic>? body]) async {
     final uri = Uri.parse('$_baseUrl$path');
     late HttpClientRequest req;
-    if (method == 'POST') req = await _client.postUrl(uri);
-    else if (method == 'PUT') req = await _client.putUrl(uri);
-    else if (method == 'DELETE') { req = await _client.deleteUrl(uri); }
-    else req = await _client.getUrl(uri);
+    if (method == 'POST') {
+      req = await _client.postUrl(uri);
+    } else if (method == 'PUT') {
+      req = await _client.putUrl(uri);
+    } else if (method == 'DELETE') {
+      req = await _client.deleteUrl(uri);
+    } else {
+      req = await _client.getUrl(uri);
+    }
 
     if (body != null) {
       req.headers.contentType = ContentType.json;

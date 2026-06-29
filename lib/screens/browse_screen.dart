@@ -33,7 +33,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
     try {
       final categories = await _api.getCategories();
       setState(() => _categories = categories);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to load categories: $e');
+    }
   }
 
   Future<void> _loadProducts() async {
@@ -89,7 +91,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _categories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final cat = _categories[index];
                   final selected = cat.name == _selectedCategory;

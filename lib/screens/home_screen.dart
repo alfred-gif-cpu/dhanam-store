@@ -117,6 +117,7 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
   List<Product> _trending = [];
   List<Product> _recentlyViewed = [];
   bool _loading = true;
+  String? _error;
 
   @override
   bool get wantKeepAlive => true;
@@ -151,7 +152,7 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
   void _refresh() => setState(() {});
 
   Future<void> _loadAll() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
       final results = await Future.wait([
         _api.getBanners(),
@@ -173,7 +174,7 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
       _loadRecentlyViewed();
       _greetController.forward();
     } catch (e) {
-      setState(() => _loading = false);
+      setState(() { _error = e.toString(); _loading = false; });
       _greetController.forward();
     }
   }
@@ -255,8 +256,25 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
         ],
         body: _loading
             ? const ShimmerLoading()
-            : RefreshIndicator(
-                onRefresh: _loadAll,
+            : _error != null
+                ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.wifi_off_rounded, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text('Could not connect to server', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                    const SizedBox(height: 8),
+                    Text('Check your connection and try again', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _loadAll,
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Retry', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    ),
+                  ]))
+                : RefreshIndicator(
+                    onRefresh: _loadAll,
                 child: ListView(
                   children: [
                     const SizedBox(height: 8),

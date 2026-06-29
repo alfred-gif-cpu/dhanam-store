@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../services/customer_service.dart';
 
 class CustomerSettingsScreen extends StatefulWidget {
   const CustomerSettingsScreen({super.key});
@@ -67,7 +66,7 @@ class _State extends State<CustomerSettingsScreen> {
         secondary: Icon(icon, color: Colors.blue[700]),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(sub, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-        value: value, onChanged: onChanged, activeColor: Colors.blue,
+        value: value, onChanged: onChanged, activeThumbColor: Colors.blue,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );

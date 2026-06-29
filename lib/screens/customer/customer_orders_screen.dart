@@ -12,16 +12,18 @@ class _State extends State<CustomerOrdersScreen> {
   final CustomerService _cs = CustomerService();
   List<dynamic> _orders = [];
   bool _loading = true;
-  int _page = 1;
+  String? _error;
+  final int _page = 1;
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
     try {
       final data = await _cs.getOrderHistory(page: _page);
       setState(() { _orders = data['orders'] ?? []; _loading = false; });
-    } catch (_) { setState(() => _loading = false); }
+    } catch (e) { setState(() { _error = e.toString(); _loading = false; }); }
   }
 
   Color _statusColor(String s) => switch (s) {
@@ -35,8 +37,18 @@ class _State extends State<CustomerOrdersScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(title: const Text('My Orders'), centerTitle: true, elevation: 0),
       body: _loading ? const Center(child: CircularProgressIndicator())
-          : _orders.isEmpty
+          : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text('Could not load orders', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh, size: 18), label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+                ]))
+              : _orders.isEmpty
+                  ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text('No orders yet', style: TextStyle(fontSize: 18, color: Colors.grey[600])),

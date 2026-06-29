@@ -34,7 +34,7 @@ class _State extends State<CustomerAddressesScreen> {
           Text(existing != null ? 'Edit Address' : 'Add Address', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: label, items: ['Home', 'Work', 'Other'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+            initialValue: label, items: ['Home', 'Work', 'Other'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
             onChanged: (v) => label = v!, decoration: const InputDecoration(labelText: 'Label', border: OutlineInputBorder())),
           const SizedBox(height: 12),
           TextField(controller: house, decoration: const InputDecoration(labelText: 'House/Flat No.', border: OutlineInputBorder())),

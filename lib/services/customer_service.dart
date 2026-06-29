@@ -11,7 +11,7 @@ class CustomerService extends ChangeNotifier {
   factory CustomerService() => _instance;
   CustomerService._();
 
-  final HttpClient _client = HttpClient();
+  final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
   Map<String, dynamic>? _customer;
   bool _loaded = false;
 

@@ -14,6 +14,7 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
   final OrderService _svc = OrderService();
   Map<String, dynamic>? _tracking;
   bool _loading = true;
+  String? _error;
   late AnimationController _pulseController;
 
   static const _steps = ['Pending', 'Confirmed', 'Packed', 'Out For Delivery', 'Delivered'];
@@ -30,10 +31,11 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
   void dispose() { _pulseController.dispose(); super.dispose(); }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
     try {
       final data = await _svc.trackOrder(widget.orderId);
       setState(() { _tracking = data; _loading = false; });
-    } catch (_) { setState(() => _loading = false); }
+    } catch (e) { setState(() { _error = e.toString(); _loading = false; }); }
   }
 
   int get _currentStep {
@@ -49,8 +51,18 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
       appBar: AppBar(title: Text('Track #${widget.orderId}'), centerTitle: true, elevation: 0),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _tracking == null
-              ? const Center(child: Text('Tracking unavailable'))
+          : _error != null
+              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text('Could not load tracking', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh, size: 18), label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+                ]))
+              : _tracking == null
+                  ? const Center(child: Text('Tracking unavailable'))
               : ListView(padding: const EdgeInsets.all(20), children: [
                   // ETA card
                   Container(
@@ -159,7 +171,7 @@ class _State extends State<OrderTrackingScreen> with SingleTickerProviderStateMi
             active
                 ? AnimatedBuilder(
                     animation: _pulseController,
-                    builder: (_, __) => Container(
+                    builder: (_, _) => Container(
                       width: 28, height: 28,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,

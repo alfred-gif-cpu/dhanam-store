@@ -3,7 +3,6 @@ import '../models/cart_item.dart';
 import '../services/cart_service.dart';
 import '../widgets/product_image.dart';
 import 'checkout_screen.dart';
-import 'home_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});

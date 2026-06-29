@@ -1,7 +1,13 @@
+import logging
+import logging
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 from database import db
+
+log = logging.getLogger(__name__)
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -70,7 +76,8 @@ async def send_notification(req: SendNotificationRequest):
                 )
                 messaging.send(message)
                 sent_count += 1
-            except Exception:
+            except Exception as e:
+                log.warning("FCM send failed for token %s, removing: %s", t["token"][:8], e)
                 await fcm_tokens_collection.delete_one({"_id": t["_id"]})
     else:
         tokens = await fcm_tokens_collection.find().to_list(1000)
@@ -83,7 +90,8 @@ async def send_notification(req: SendNotificationRequest):
                 )
                 messaging.send(message)
                 sent_count += 1
-            except Exception:
+            except Exception as e:
+                log.warning("FCM send failed for token %s, removing: %s", t["token"][:8], e)
                 await fcm_tokens_collection.delete_one({"_id": t["_id"]})
 
     await notifications_collection.insert_one({
