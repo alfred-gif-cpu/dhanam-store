@@ -181,7 +181,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                   child: SizedBox(
                                     width: 50, height: 50,
                                     child: p.image.isNotEmpty
-                                        ? Image.network(p.image, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _ph())
+                                        ? Image.network(p.image, fit: BoxFit.cover, errorBuilder: (_, _, _) => _ph())
                                         : _ph(),
                                   ),
                                 ),
@@ -196,8 +196,9 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                     } else if (action == 'delete') {
                                       _delete(p);
                                     } else if (action == 'feature') {
+                                      final messenger = ScaffoldMessenger.of(context);
                                       await _admin.toggleFeatured(p.id, true);
-                                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marked as featured'), behavior: SnackBarBehavior.floating));
+                                      if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Marked as featured'), behavior: SnackBarBehavior.floating));
                                     }
                                   },
                                   itemBuilder: (_) => const [

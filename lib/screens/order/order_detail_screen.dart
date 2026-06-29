@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../config.dart';
 import '../../services/order_service.dart';
 import '../../services/cart_service.dart';
 import '../../models/product.dart';
@@ -16,15 +18,17 @@ class _State extends State<OrderDetailScreen> {
   final OrderService _svc = OrderService();
   Map<String, dynamic>? _order;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
     try {
       final data = await _svc.getOrder(widget.orderId);
       setState(() { _order = data; _loading = false; });
-    } catch (_) { setState(() => _loading = false); }
+    } catch (e) { setState(() { _error = e.toString(); _loading = false; }); }
   }
 
   Color _statusColor(String s) => switch (s.toLowerCase()) {
@@ -73,6 +77,15 @@ class _State extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return Scaffold(appBar: AppBar(title: const Text('Order Details')), body: const Center(child: CircularProgressIndicator()));
+    if (_error != null) return Scaffold(appBar: AppBar(title: const Text('Order Details')), body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+      const SizedBox(height: 16),
+      Text('Could not load order', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+      const SizedBox(height: 16),
+      ElevatedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh, size: 18), label: const Text('Retry'),
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+    ])));
     if (_order == null) return Scaffold(appBar: AppBar(title: const Text('Order Details')), body: const Center(child: Text('Order not found')));
 
     final o = _order!;
@@ -169,8 +182,15 @@ class _State extends State<OrderDetailScreen> {
 
         // Invoice
         SizedBox(height: 48, child: OutlinedButton.icon(
-          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Invoice available at /orders/{id}/invoice endpoint'), behavior: SnackBarBehavior.floating)),
+          onPressed: () async {
+            final url = Uri.parse('${AppConfig.baseUrl}/orders/${widget.orderId}/invoice');
+            if (await canLaunchUrl(url)) {
+              await launchUrl(url, mode: LaunchMode.externalApplication);
+            } else if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not open invoice'), behavior: SnackBarBehavior.floating));
+            }
+          },
           icon: const Icon(Icons.receipt, size: 18),
           label: const Text('Download Invoice', style: TextStyle(fontWeight: FontWeight.bold)),
           style: OutlinedButton.styleFrom(foregroundColor: Colors.indigo, side: const BorderSide(color: Colors.indigo),

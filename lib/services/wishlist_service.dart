@@ -69,7 +69,7 @@ class WishlistService extends ChangeNotifier {
     }
   }
 
-  void _saveLocal() async {
+  Future<void> _saveLocal() async {
     final prefs = await SharedPreferences.getInstance();
     final data = _items.map((p) => {
       'id': p.id, 'name': p.name, 'category': p.category, 'brand': p.brand,

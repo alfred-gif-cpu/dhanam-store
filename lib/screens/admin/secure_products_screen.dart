@@ -69,15 +69,17 @@ class _State extends State<SecureProductsScreen> {
         onSave: (data) async {
           try {
             if (isEdit) {
-              await _auth.putAdmin('/admin/products/${product!['id']}', data);
+              await _auth.putAdmin('/admin/products/${product['id']}', data);
             } else {
               await _auth.postAdmin('/admin/products', data);
             }
             if (ctx.mounted) Navigator.pop(ctx);
             _load();
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(isEdit ? 'Product updated' : 'Product added'),
               backgroundColor: Colors.blue, behavior: SnackBarBehavior.floating));
+            }
           } catch (e) {
             if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
           }
@@ -101,8 +103,10 @@ class _State extends State<SecureProductsScreen> {
       try {
         await _auth.deleteAdmin('/admin/products/${product['id']}');
         _load();
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('${product['name']} deleted'), behavior: SnackBarBehavior.floating));
+        }
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
@@ -183,7 +187,7 @@ class _State extends State<SecureProductsScreen> {
                                     width: 56, height: 56,
                                     child: (p['image'] ?? '').toString().isNotEmpty
                                         ? Image.network(p['image'], fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => _placeholder())
+                                            errorBuilder: (_, _, _) => _placeholder())
                                         : _placeholder(),
                                   ),
                                 ),
@@ -330,7 +334,7 @@ class _ProductFormState extends State<_ProductForm> {
         const SizedBox(height: 12),
 
         DropdownButtonFormField<String>(
-          value: _category,
+          initialValue: _category,
           items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14)))).toList(),
           onChanged: (v) => setState(() => _category = v!),
           decoration: InputDecoration(

@@ -47,6 +47,8 @@ app.*.map.json
 # Secrets
 *.env
 android/app/google-services.json
+android/key.properties
+android/app/release-keystore.jks
 ios/Runner/GoogleService-Info.plist
 backend/firebase-credentials.json
 

@@ -123,7 +123,7 @@ class _State extends State<DeliveryTrackingMapScreen> {
               ),
               PolylineLayer(polylines: [
                 Polyline(points: [_storeLocation, _driverLocation], color: Colors.blue, strokeWidth: 4,
-                    pattern: const StrokePattern.dashed(segments: [10, 6])),
+                    pattern: StrokePattern.dashed(segments: const [10, 6])),
                 Polyline(points: [_driverLocation, _deliveryLocation], color: Colors.blue, strokeWidth: 4),
               ]),
               MarkerLayer(markers: [

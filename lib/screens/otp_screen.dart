@@ -6,17 +6,20 @@ import 'home_screen.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
-  final String? devOtp;
-  const OtpScreen({super.key, required this.phone, this.devOtp});
+  const OtpScreen({super.key, required this.phone});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  final _nameController = TextEditingController();
+  final _nameFocus = FocusNode();
   bool _verifying = false;
+  bool _needName = false;
+  bool _savingName = false;
   String? _error;
   int _resendSeconds = 30;
   Timer? _timer;
@@ -30,8 +33,14 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   void dispose() {
-    for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
+    _nameController.dispose();
+    _nameFocus.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -48,50 +57,136 @@ class _OtpScreenState extends State<OtpScreen> {
   String get _otp => _controllers.map((c) => c.text).join();
 
   void _onDigitChanged(int index, String value) {
-    if (value.length == 1 && index < 3) {
+    if (value.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
     }
     if (value.isEmpty && index > 0) {
       _focusNodes[index - 1].requestFocus();
     }
     setState(() => _error = null);
-    if (_otp.length == 4) _verify();
+    if (_otp.length == 6) _verify();
   }
 
   Future<void> _verify() async {
     setState(() { _verifying = true; _error = null; });
     try {
-      await AuthService().verifyOtp(widget.phone, _otp);
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
+      final isNewUser = await AuthService().verifyOtpFirebase(widget.phone, _otp);
+      if (!mounted) return;
+      if (isNewUser) {
+        setState(() { _needName = true; _verifying = false; });
+        WidgetsBinding.instance.addPostFrameCallback((_) => _nameFocus.requestFocus());
+      } else {
+        _goHome();
       }
     } catch (e) {
+      String errorMsg = e.toString().replaceFirst('Exception: ', '');
+      if (errorMsg.contains('invalid-verification-code') || errorMsg.contains('invalid-sms-code')) {
+        errorMsg = 'Invalid OTP. Please try again.';
+      } else if (errorMsg.contains('session-expired')) {
+        errorMsg = 'OTP expired. Please request a new one.';
+      }
       setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = errorMsg;
         _verifying = false;
-        for (final c in _controllers) c.clear();
+        for (final c in _controllers) {
+          c.clear();
+        }
         _focusNodes[0].requestFocus();
       });
     }
   }
 
-  String? _currentOtp;
+  Future<void> _submitName() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Please enter your name');
+      return;
+    }
+    setState(() { _savingName = true; _error = null; });
+    try {
+      await AuthService().updateProfile(name: name);
+      _goHome();
+    } catch (e) {
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _savingName = false;
+      });
+    }
+  }
+
+  void _goHome() {
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      (route) => false,
+    );
+  }
 
   Future<void> _resend() async {
     if (_resendSeconds > 0) return;
-    try {
-      final otp = await AuthService().sendOtp(widget.phone);
-      _startTimer();
-      if (mounted) {
-        setState(() => _currentOtp = otp);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('OTP sent again${otp != null ? ": $otp" : ""}'), behavior: SnackBarBehavior.floating));
-      }
-    } catch (_) {}
+    setState(() => _error = null);
+    await AuthService().sendOtpFirebase(
+      widget.phone,
+      onCodeSent: (_) {
+        _startTimer();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('OTP sent again'), behavior: SnackBarBehavior.floating));
+        }
+      },
+      onError: (error) {
+        if (mounted) setState(() => _error = error);
+      },
+      onAutoVerified: () => _goHome(),
+    );
+  }
+
+  Widget _buildNameStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("What's your name?", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text('Looks like you are new here. Tell us your name to finish setting up your account.',
+            style: TextStyle(fontSize: 15, color: Colors.grey[600])),
+        const SizedBox(height: 36),
+        TextField(
+          controller: _nameController,
+          focusNode: _nameFocus,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.done,
+          onChanged: (_) => setState(() => _error = null),
+          onSubmitted: (_) => _submitName(),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          decoration: InputDecoration(
+            hintText: 'Full name',
+            prefixIcon: const Icon(Icons.person_outline),
+            filled: true,
+            fillColor: Colors.grey[100],
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Colors.blue, width: 2)),
+          ),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          Text(_error!, style: TextStyle(color: Colors.red[700], fontSize: 14)),
+        ],
+        const SizedBox(height: 28),
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: ElevatedButton(
+            onPressed: _savingName ? null : _submitName,
+            child: _savingName
+                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Continue'),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -103,7 +198,7 @@ class _OtpScreenState extends State<OtpScreen> {
       appBar: AppBar(backgroundColor: Colors.white, elevation: 0, foregroundColor: Colors.black),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
+        child: _needName ? _buildNameStep() : Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Verify OTP', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
@@ -111,19 +206,19 @@ class _OtpScreenState extends State<OtpScreen> {
             RichText(text: TextSpan(
               style: TextStyle(fontSize: 15, color: Colors.grey[600]),
               children: [
-                const TextSpan(text: 'Enter the 4-digit code sent to '),
+                const TextSpan(text: 'Enter the 6-digit code sent to '),
                 TextSpan(text: maskedPhone, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
               ],
             )),
             const SizedBox(height: 36),
 
-            // OTP boxes
+            // OTP boxes (6 digits for Firebase)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (i) => Container(
-                width: 60,
-                height: 64,
-                margin: EdgeInsets.only(right: i < 3 ? 14 : 0),
+              children: List.generate(6, (i) => Container(
+                width: 48,
+                height: 58,
+                margin: EdgeInsets.only(right: i < 5 ? 8 : 0),
                 child: TextField(
                   controller: _controllers[i],
                   focusNode: _focusNodes[i],
@@ -132,18 +227,15 @@ class _OtpScreenState extends State<OtpScreen> {
                   maxLength: 1,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onChanged: (v) => _onDigitChanged(i, v),
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
                     counterText: '',
                     filled: true,
                     fillColor: _focusNodes[i].hasFocus ? Colors.blue[50] : Colors.grey[100],
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(color: Colors.blue, width: 2)),
-                    errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Colors.red, width: 2)),
                   ),
                 ),
               )),
@@ -156,7 +248,6 @@ class _OtpScreenState extends State<OtpScreen> {
 
             const SizedBox(height: 28),
 
-            // Verifying indicator
             if (_verifying)
               const Center(child: CircularProgressIndicator()),
 
@@ -173,20 +264,6 @@ class _OtpScreenState extends State<OtpScreen> {
             ),
 
             const Spacer(),
-
-            // Hint for dev
-            if (widget.devOtp != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: Colors.amber[50], borderRadius: BorderRadius.circular(12)),
-                child: Row(children: [
-                  Icon(Icons.info_outline, size: 20, color: Colors.amber[800]),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text('Dev OTP: ${widget.devOtp}',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amber[900]))),
-                ]),
-              ),
           ],
         ),
       ),

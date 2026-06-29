@@ -110,7 +110,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             const SizedBox(height: 14),
             // Category dropdown
             DropdownButtonFormField<String>(
-              value: _categories.any((c) => c.name == _category) ? _category : null,
+              initialValue: _categories.any((c) => c.name == _category) ? _category : null,
               items: _categories.map((c) => DropdownMenuItem(value: c.name, child: Text(c.name))).toList(),
               onChanged: (v) => _category = v ?? '',
               decoration: _decoration('Category'),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/product.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -148,7 +149,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         await _reviewService.submitReview(
           productId: product.id,
           userId: auth.userId,
-          userName: auth.phone,
+          userName: auth.name.trim().isNotEmpty ? auth.name.trim() : 'Customer',
           rating: selectedRating,
           title: titleCtrl.text.trim(),
           comment: commentCtrl.text.trim(),
@@ -218,7 +219,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.share_outlined),
-                onPressed: () {},
+                onPressed: () {
+                  final text = StringBuffer('Check out ${product.name}');
+                  if (product.hasDiscount) {
+                    text.write(' - ${product.discountPercent}% OFF!');
+                  }
+                  text.write('\n₹${product.price.toStringAsFixed(0)}');
+                  if (product.hasDiscount) {
+                    text.write(' (was ₹${product.originalPrice.toStringAsFixed(0)})');
+                  }
+                  text.write('\n\nShop now on Dhanam Store!');
+                  SharePlus.instance.share(ShareParams(text: text.toString()));
+                },
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -427,7 +439,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _related.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) => _RelatedCard(
                 product: _related[index],
                 onTap: () {

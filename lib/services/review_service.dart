@@ -4,7 +4,7 @@ import '../config.dart';
 
 class ReviewService {
   static final String _baseUrl = AppConfig.baseUrl;
-  final HttpClient _client = HttpClient();
+  final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
 
   Future<Map<String, dynamic>> getProductReviews(String productId) async {
     final request = await _client.getUrl(Uri.parse('$_baseUrl/reviews/product/$productId'));

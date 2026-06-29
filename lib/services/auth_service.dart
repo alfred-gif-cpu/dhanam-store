@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
@@ -13,13 +15,18 @@ class AuthService extends ChangeNotifier {
   factory AuthService() => _instance;
   AuthService._();
 
-  final HttpClient _client = HttpClient();
+  final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
+  final fb.FirebaseAuth _fbAuth = fb.FirebaseAuth.instance;
   String? _token;
   Map<String, dynamic>? _user;
   bool _loaded = false;
 
   // Callback for when user changes — set by CartService
   static VoidCallback? onUserSwitch;
+
+  // Firebase Phone Auth state
+  String? _verificationId;
+  int? _resendToken;
 
   bool get isLoggedIn => _token != null;
   String? get token => _token;
@@ -73,6 +80,88 @@ class AuthService extends ChangeNotifier {
     return jsonDecode(data) as Map<String, dynamic>;
   }
 
+  /// Send OTP via Firebase Phone Auth.
+  /// Returns a completer that resolves when verification completes.
+  Future<void> sendOtpFirebase(
+    String phone, {
+    required void Function(String verificationId) onCodeSent,
+    required void Function(String error) onError,
+    required void Function() onAutoVerified,
+  }) async {
+    await _fbAuth.verifyPhoneNumber(
+      phoneNumber: phone,
+      forceResendingToken: _resendToken,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (fb.PhoneAuthCredential credential) async {
+        // Auto-verification (Android only — auto-reads the SMS)
+        try {
+          await _fbAuth.signInWithCredential(credential);
+          await _loginWithFirebasePhone(phone);
+          onAutoVerified();
+        } catch (e) {
+          onError(e.toString());
+        }
+      },
+      verificationFailed: (fb.FirebaseAuthException e) {
+        onError(_friendlyFirebaseError(e));
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        _verificationId = verificationId;
+        _resendToken = resendToken;
+        onCodeSent(verificationId);
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _verificationId = verificationId;
+      },
+    );
+  }
+
+  /// Verify the OTP code entered by the user.
+  /// Returns true if the user is new (needs name).
+  Future<bool> verifyOtpFirebase(String phone, String otp) async {
+    if (_verificationId == null) {
+      throw Exception('No verification in progress. Please request OTP again.');
+    }
+    final credential = fb.PhoneAuthProvider.credential(
+      verificationId: _verificationId!,
+      smsCode: otp,
+    );
+    await _fbAuth.signInWithCredential(credential);
+    return _loginWithFirebasePhone(phone);
+  }
+
+  /// After Firebase verifies the phone, call our backend to get a JWT.
+  Future<bool> _loginWithFirebasePhone(String phone) async {
+    final result = await _post('/auth/firebase-login', {'phone': phone});
+    _token = result['token'];
+    _user = {'id': result['user_id'], 'phone': phone, 'name': '', 'email': ''};
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, _token!);
+    await prefs.setString(_userKey, jsonEncode(_user));
+
+    notifyListeners();
+    onUserSwitch?.call();
+    _fetchProfile();
+    return result['is_new_user'] == true;
+  }
+
+  String _friendlyFirebaseError(fb.FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-phone-number':
+        return 'Invalid phone number format';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later';
+      case 'quota-exceeded':
+        return 'SMS quota exceeded. Try again tomorrow';
+      case 'network-request-failed':
+        return 'Network error. Check your connection';
+      default:
+        return e.message ?? 'Verification failed';
+    }
+  }
+
+  // Keep old methods for backward compatibility (dev mode fallback)
   Future<String?> sendOtp(String phone) async {
     final result = await _post('/auth/send-otp', {'phone': phone});
     return result['otp']?.toString();
@@ -118,6 +207,9 @@ class AuthService extends ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     _user = null;
+    _verificationId = null;
+    _resendToken = null;
+    try { await _fbAuth.signOut(); } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);

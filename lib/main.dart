@@ -1,5 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'firebase_options.dart';
 import 'screens/admin/admin_orders_screen.dart';
 import 'screens/admin/delivery_dashboard_screen.dart';
 import 'screens/login_screen.dart';
@@ -15,10 +17,13 @@ import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  if (kIsWeb) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
+  } else {
+    await Firebase.initializeApp();
+  }
   await AdminAuthService().load();
   await AuthService().load();
-  await AuthService().logout();
   await CartService().load();
   WishlistService().load();
   SearchHistoryService().load();

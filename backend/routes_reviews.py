@@ -1,12 +1,45 @@
+import re
+import logging
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 from bson import ObjectId
 from database import db
 
+log = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
 reviews_collection = db["reviews"]
+users_collection = db["users"]
+
+# A value that looks like a phone number must never be shown publicly.
+_PHONE_RE = re.compile(r"^\+?\d[\d\s\-]{6,}$")
+
+
+async def _account_names(reviews: list[dict]) -> dict:
+    """Map user_id -> current account name for the given reviews."""
+    oids = []
+    for r in reviews:
+        uid = r.get("user_id")
+        if uid:
+            try:
+                oids.append(ObjectId(uid))
+            except Exception as e:
+                log.warning("Invalid user_id in review: %s – %s", uid, e)
+    names: dict[str, str] = {}
+    if oids:
+        async for u in users_collection.find({"_id": {"$in": oids}}, {"name": 1}):
+            names[str(u["_id"])] = (u.get("name") or "").strip()
+    return names
+
+
+def _display_name(account_name: str, stored_name: str) -> str:
+    """Prefer the account's current name; never expose a phone number."""
+    name = (account_name or "").strip() or (stored_name or "").strip()
+    if not name or _PHONE_RE.match(name):
+        return "Customer"
+    return name
 
 
 class CreateReviewRequest(BaseModel):
@@ -65,6 +98,11 @@ async def get_product_reviews(product_id: str, limit: int = 20, skip: int = 0):
     reviews = await reviews_collection.find(
         {"product_id": product_id}
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+
+    # Show the account name only; never leak a phone number (incl. older reviews).
+    name_by_id = await _account_names(reviews)
+    for r in reviews:
+        r["user_name"] = _display_name(name_by_id.get(r.get("user_id"), ""), r.get("user_name"))
 
     total = await reviews_collection.count_documents({"product_id": product_id})
 

@@ -1,8 +1,10 @@
 import re
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, Query, HTTPException, Request, Body, File, UploadFile
+from fastapi import APIRouter, Depends, Query, HTTPException, Request, Body, File, UploadFile
 from bson import ObjectId
+from auth import get_current_user
+from admin_auth import get_current_admin
 from database import customers_collection, orders_collection, wallet_transactions_collection, products_collection
 
 router = APIRouter()
@@ -189,7 +191,7 @@ async def customer_cart(customer_id: str):
 # ─── Loyalty Points ──────────────────────────────────────
 
 @router.post("/customers/{customer_id}/loyalty/add")
-async def add_loyalty_points(customer_id: str, points: int = Body(..., embed=True), reason: str = Body("purchase", embed=True)):
+async def add_loyalty_points(customer_id: str, points: int = Body(..., embed=True), reason: str = Body("purchase", embed=True), _admin: dict = Depends(get_current_admin)):
     if points <= 0:
         raise HTTPException(status_code=400, detail="Points must be positive")
     await customers_collection.update_one(
@@ -200,7 +202,7 @@ async def add_loyalty_points(customer_id: str, points: int = Body(..., embed=Tru
 
 
 @router.post("/customers/{customer_id}/loyalty/redeem")
-async def redeem_loyalty_points(customer_id: str, points: int = Body(..., embed=True)):
+async def redeem_loyalty_points(customer_id: str, points: int = Body(..., embed=True), _user: dict = Depends(get_current_user)):
     customer = await customers_collection.find_one({"customer_id": customer_id})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -216,7 +218,7 @@ async def redeem_loyalty_points(customer_id: str, points: int = Body(..., embed=
 # ─── Wallet ──────────────────────────────────────────────
 
 @router.post("/customers/{customer_id}/wallet/credit")
-async def wallet_credit(customer_id: str, amount: float = Body(..., embed=True), reason: str = Body("top_up", embed=True)):
+async def wallet_credit(customer_id: str, amount: float = Body(..., embed=True), reason: str = Body("top_up", embed=True), _admin: dict = Depends(get_current_admin)):
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
     now = datetime.utcnow().isoformat()
@@ -232,7 +234,7 @@ async def wallet_credit(customer_id: str, amount: float = Body(..., embed=True),
 
 
 @router.post("/customers/{customer_id}/wallet/debit")
-async def wallet_debit(customer_id: str, amount: float = Body(..., embed=True), reason: str = Body("purchase", embed=True)):
+async def wallet_debit(customer_id: str, amount: float = Body(..., embed=True), reason: str = Body("purchase", embed=True), _user: dict = Depends(get_current_user)):
     customer = await customers_collection.find_one({"customer_id": customer_id})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -267,6 +269,7 @@ async def admin_list_customers(
     limit: int = Query(20, ge=1, le=100),
     q: str = Query(""),
     status: str = Query(""),
+    _admin: dict = Depends(get_current_admin),
 ):
     skip = (page - 1) * limit
     query: dict = {}
@@ -289,7 +292,7 @@ async def admin_list_customers(
 
 
 @router.get("/admin/customers/{customer_id}/orders")
-async def admin_customer_orders(customer_id: str):
+async def admin_customer_orders(customer_id: str, _admin: dict = Depends(get_current_admin)):
     cursor = orders_collection.find({"user_id": customer_id}).sort("created_at", -1)
     orders = [serialize(o) async for o in cursor]
     total_spending = sum(o.get("grand_total", 0) for o in orders)
@@ -297,39 +300,44 @@ async def admin_customer_orders(customer_id: str):
 
 
 @router.put("/admin/customers/{customer_id}/block")
-async def block_customer(customer_id: str):
+async def block_customer(customer_id: str, _admin: dict = Depends(get_current_admin)):
     await customers_collection.update_one({"customer_id": customer_id}, {"$set": {"is_active": False, "updated_at": datetime.utcnow().isoformat()}})
     return {"status": "blocked"}
 
 
 @router.put("/admin/customers/{customer_id}/activate")
-async def activate_customer(customer_id: str):
+async def activate_customer(customer_id: str, _admin: dict = Depends(get_current_admin)):
     await customers_collection.update_one({"customer_id": customer_id}, {"$set": {"is_active": True, "updated_at": datetime.utcnow().isoformat()}})
     return {"status": "activated"}
 
 
 @router.get("/admin/customers/top-spenders")
-async def top_spenders(limit: int = Query(10, ge=1, le=50)):
+async def top_spenders(limit: int = Query(10, ge=1, le=50), _admin: dict = Depends(get_current_admin)):
     pipeline = [
         {"$group": {"_id": "$user_id", "total_spent": {"$sum": "$grand_total"}, "order_count": {"$sum": 1}}},
         {"$sort": {"total_spent": -1}},
         {"$limit": limit},
+        {"$lookup": {
+            "from": "customers",
+            "localField": "_id",
+            "foreignField": "customer_id",
+            "as": "customer",
+        }},
+        {"$unwind": {"path": "$customer", "preserveNullAndEmptyArrays": True}},
+        {"$project": {
+            "customer_id": "$_id",
+            "name": {"$ifNull": ["$customer.name", ""]},
+            "phone": {"$ifNull": ["$customer.phone", ""]},
+            "total_spent": 1,
+            "order_count": 1,
+        }},
     ]
-    results = []
-    async for doc in orders_collection.aggregate(pipeline):
-        customer = await customers_collection.find_one({"customer_id": doc["_id"]})
-        results.append({
-            "customer_id": doc["_id"],
-            "name": customer.get("name", "") if customer else "",
-            "phone": customer.get("phone", "") if customer else "",
-            "total_spent": doc["total_spent"],
-            "order_count": doc["order_count"],
-        })
+    results = [doc async for doc in orders_collection.aggregate(pipeline)]
     return {"top_spenders": results}
 
 
 @router.get("/admin/customers/export-csv")
-async def export_customers_csv():
+async def export_customers_csv(_admin: dict = Depends(get_current_admin)):
     from fastapi.responses import StreamingResponse
     import csv, io
 
@@ -355,7 +363,7 @@ async def export_customers_csv():
 # ─── Analytics ────────────────────────────────────────────
 
 @router.get("/admin/customers/analytics")
-async def customer_analytics():
+async def customer_analytics(_admin: dict = Depends(get_current_admin)):
     total = await customers_collection.count_documents({})
     active = await customers_collection.count_documents({"is_active": True})
 
@@ -367,16 +375,21 @@ async def customer_analytics():
         {"$group": {"_id": "$user_id", "total": {"$sum": "$grand_total"}, "count": {"$sum": 1}}},
         {"$sort": {"total": -1}},
         {"$limit": 5},
+        {"$lookup": {
+            "from": "customers",
+            "localField": "_id",
+            "foreignField": "customer_id",
+            "as": "customer",
+        }},
+        {"$unwind": {"path": "$customer", "preserveNullAndEmptyArrays": True}},
+        {"$project": {
+            "customer_id": "$_id",
+            "name": {"$ifNull": ["$customer.name", "Unknown"]},
+            "total_revenue": "$total",
+            "orders": "$count",
+        }},
     ]
-    top_customers = []
-    async for doc in orders_collection.aggregate(revenue_pipeline):
-        cust = await customers_collection.find_one({"customer_id": doc["_id"]})
-        top_customers.append({
-            "customer_id": doc["_id"],
-            "name": cust.get("name", "") if cust else "Unknown",
-            "total_revenue": doc["total"],
-            "orders": doc["count"],
-        })
+    top_customers = [doc async for doc in orders_collection.aggregate(revenue_pipeline)]
 
     product_pipeline = [
         {"$unwind": "$items"},

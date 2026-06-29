@@ -13,7 +13,7 @@ class AdminAuthService extends ChangeNotifier {
   factory AdminAuthService() => _instance;
   AdminAuthService._();
 
-  final HttpClient _client = HttpClient();
+  final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
   String? _token;
   Map<String, dynamic>? _admin;
   bool _loaded = false;

@@ -48,7 +48,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
           const Text('Add Address', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: label,
+            initialValue: label,
             items: ['Home', 'Work', 'Other'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
             onChanged: (v) => label = v!,
             decoration: const InputDecoration(labelText: 'Label', border: OutlineInputBorder()),

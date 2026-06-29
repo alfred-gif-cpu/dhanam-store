@@ -10,7 +10,7 @@ import '../models/order.dart';
 class ApiService {
   static final String _baseUrl = AppConfig.baseUrl;
 
-  final HttpClient _client = HttpClient();
+  final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
 
   Future<Map<String, dynamic>> _get(String path) async {
     final request = await _client.getUrl(Uri.parse('$_baseUrl$path'));
