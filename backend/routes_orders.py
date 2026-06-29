@@ -1,10 +1,12 @@
 import io
 import logging
 from datetime import datetime, timedelta
+from typing import Literal
 from fastapi import APIRouter, Query, HTTPException, Body
 from fastapi.responses import StreamingResponse
 from bson import ObjectId
 from fpdf import FPDF
+from pydantic import BaseModel, Field
 from database import orders_collection, products_collection, customers_collection, users_collection
 
 log = logging.getLogger(__name__)
@@ -13,6 +15,38 @@ from push_service import notify_new_order
 router = APIRouter()
 
 VALID_STATUSES = ["Pending", "Confirmed", "Packed", "Out For Delivery", "Delivered", "Cancelled", "Refund Initiated", "Refund Completed"]
+
+
+class OrderItem(BaseModel):
+    product_id: str
+    name: str = ""
+    price: float = Field(gt=0)
+    quantity: int = Field(gt=0)
+    image: str = ""
+
+
+class OrderAddress(BaseModel):
+    full_name: str = ""
+    phone: str = ""
+    house_no: str = ""
+    street: str = ""
+    city: str = ""
+    state: str = ""
+    pincode: str = ""
+    label: str = ""
+    latitude: float = 0
+    longitude: float = 0
+
+    class Config:
+        extra = "allow"
+
+
+class CreateOrderRequest(BaseModel):
+    user_id: str
+    items: list[OrderItem] = Field(min_length=1)
+    address: OrderAddress
+    delivery_slot: str = Field(min_length=1)
+    payment_method: Literal["cod"] = "cod"
 
 
 def serialize(doc: dict) -> dict:
@@ -36,18 +70,17 @@ def _now() -> str:
 # ─── Create Order ─────────────────────────────────────────
 
 @router.post("/orders/create")
-async def create_order(data: dict = Body(...)):
-    items = data.get("items", [])
-    if not items:
-        raise HTTPException(status_code=400, detail="Order must have at least one item")
-
-    for item in items:
-        item["subtotal"] = round(item.get("price", 0) * item.get("quantity", 0), 2)
+async def create_order(data: CreateOrderRequest):
+    items = []
+    for item in data.items:
+        d = item.model_dump()
+        d["subtotal"] = round(item.price * item.quantity, 2)
+        items.append(d)
 
     subtotal = round(sum(i["subtotal"] for i in items), 2)
-    gst = round(data.get("gst", subtotal * 0.18), 2)
-    delivery_fee = data.get("delivery_fee", 0 if subtotal >= 499 else 30)
-    discount = data.get("discount", 0)
+    gst = round(subtotal * 0.18, 2)
+    delivery_fee = 0 if subtotal >= 499 else 30
+    discount = 0
     total_amount = round(subtotal + gst + delivery_fee - discount, 2)
 
     now = _now()
@@ -55,13 +88,12 @@ async def create_order(data: dict = Body(...)):
 
     order = {
         "order_id": order_id,
-        "customer_id": data.get("customer_id", data.get("user_id", "")),
+        "customer_id": data.user_id,
+        "user_id": data.user_id,
         "items": items,
-        "delivery_address": data.get("delivery_address", data.get("address", {})),
-        "delivery_slot": data.get("delivery_slot", ""),
-        "payment_method": data.get("payment_method", "cod"),
-        "payment_id": data.get("payment_id", ""),
-        "razorpay_order_id": data.get("razorpay_order_id", ""),
+        "delivery_address": data.address.model_dump(),
+        "delivery_slot": data.delivery_slot,
+        "payment_method": data.payment_method,
         "subtotal": subtotal,
         "gst": gst,
         "delivery_fee": delivery_fee,
@@ -83,20 +115,6 @@ async def create_order(data: dict = Body(...)):
 
     result = await orders_collection.insert_one(order)
 
-    # Send bill receipt via SMS to the order's phone number
-    phone = ""
-    addr = order.get("delivery_address", {})
-    if isinstance(addr, dict):
-        phone = addr.get("phone", "")
-    if not phone:
-        customer_id = data.get("customer_id", data.get("user_id", ""))
-        if customer_id:
-            try:
-                user = await users_collection.find_one({"_id": ObjectId(customer_id)})
-                if user:
-                    phone = user.get("phone", "")
-            except Exception as e:
-                log.warning("Failed to look up customer phone: %s", e)
     # Notify the shop owner of the new order
     try:
         notify_new_order(order)
