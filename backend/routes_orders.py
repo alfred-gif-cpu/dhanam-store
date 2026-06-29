@@ -1,10 +1,13 @@
 import io
+import logging
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Query, HTTPException, Body
 from fastapi.responses import StreamingResponse
 from bson import ObjectId
+from fpdf import FPDF
 from database import orders_collection, products_collection, customers_collection, users_collection
-from sms_service import send_order_receipt_sms
+
+log = logging.getLogger(__name__)
 from push_service import notify_new_order
 
 router = APIRouter()
@@ -92,19 +95,13 @@ async def create_order(data: dict = Body(...)):
                 user = await users_collection.find_one({"_id": ObjectId(customer_id)})
                 if user:
                     phone = user.get("phone", "")
-            except Exception:
-                pass
-    if phone:
-        try:
-            send_order_receipt_sms(phone, order)
-        except Exception as e:
-            print(f"[SMS] Receipt send failed: {e}")
-
+            except Exception as e:
+                log.warning("Failed to look up customer phone: %s", e)
     # Notify the shop owner of the new order
     try:
         notify_new_order(order)
     except Exception as e:
-        print(f"[PUSH] New-order notify failed: {e}")
+        log.warning("Push notification for new order failed: %s", e)
 
     return {
         "id": str(result.inserted_id),
@@ -311,61 +308,140 @@ async def reorder(order_id: str):
 
 # ─── Invoice ─────────────────────────────────────────────
 
+def _build_invoice_pdf(order: dict) -> bytes:
+    pdf = FPDF()
+    pdf.add_page()
+    pw = pdf.w - pdf.l_margin - pdf.r_margin
+
+    # Header
+    pdf.set_fill_color(13, 71, 161)
+    pdf.rect(0, 0, pdf.w, 44, "F")
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_y(10)
+    pdf.cell(pw, 10, "DHANAM STORE", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(pw, 8, "Tax Invoice", align="C", new_x="LMARGIN", new_y="NEXT")
+
+    # Order info
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_y(52)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(pw / 2, 7, f"Order: {order.get('order_id', '')}")
+    pdf.cell(pw / 2, 7, f"Date: {order.get('created_at', '')[:10]}", align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(pw / 2, 6, f"Status: {order.get('order_status', '')}")
+    pdf.cell(pw / 2, 6, f"Payment: {(order.get('payment_method') or 'N/A').upper()}", align="R", new_x="LMARGIN", new_y="NEXT")
+
+    # Delivery address
+    addr = order.get("delivery_address") or {}
+    if addr:
+        pdf.ln(4)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(pw, 6, "Delivery Address", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 9)
+        name = addr.get("full_name") or addr.get("label") or ""
+        line1 = addr.get("line1") or addr.get("house_no") or ""
+        city = addr.get("city", "")
+        state = addr.get("state", "")
+        pincode = addr.get("pincode", "")
+        phone = addr.get("phone", "")
+        if name:
+            pdf.cell(pw, 5, name, new_x="LMARGIN", new_y="NEXT")
+        if line1 or city:
+            pdf.cell(pw, 5, f"{line1}, {city}" if line1 else city, new_x="LMARGIN", new_y="NEXT")
+        if state or pincode:
+            pdf.cell(pw, 5, f"{state} - {pincode}", new_x="LMARGIN", new_y="NEXT")
+        if phone:
+            pdf.cell(pw, 5, f"Phone: {phone}", new_x="LMARGIN", new_y="NEXT")
+
+    # Items table
+    pdf.ln(6)
+    col_name = pw * 0.50
+    col_qty = pw * 0.12
+    col_price = pw * 0.19
+    col_total = pw * 0.19
+
+    pdf.set_fill_color(240, 240, 245)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(col_name, 9, "  Item", border=0, fill=True)
+    pdf.cell(col_qty, 9, "Qty", border=0, fill=True, align="C")
+    pdf.cell(col_price, 9, "Price", border=0, fill=True, align="R")
+    pdf.cell(col_total, 9, "Total", border=0, fill=True, align="R", new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_font("Helvetica", "", 9)
+    for i, item in enumerate(order.get("items", [])):
+        name = (item.get("product_name") or item.get("name", ""))[:40]
+        qty = item.get("quantity", 0)
+        price = item.get("price", 0)
+        total = qty * price
+        if i % 2 == 1:
+            pdf.set_fill_color(248, 248, 252)
+            fill = True
+        else:
+            fill = False
+        pdf.cell(col_name, 8, f"  {name}", border=0, fill=fill)
+        pdf.cell(col_qty, 8, str(qty), border=0, fill=fill, align="C")
+        pdf.cell(col_price, 8, f"{price:,.2f}", border=0, fill=fill, align="R")
+        pdf.cell(col_total, 8, f"{total:,.2f}", border=0, fill=fill, align="R", new_x="LMARGIN", new_y="NEXT")
+
+    # Separator
+    pdf.ln(2)
+    pdf.set_draw_color(200, 200, 200)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + pw, pdf.get_y())
+    pdf.ln(4)
+
+    # Summary
+    sum_label_w = pw * 0.70
+    sum_val_w = pw * 0.30
+    pdf.set_font("Helvetica", "", 10)
+    for label, val in [
+        ("Subtotal", order.get("subtotal", 0)),
+        ("GST (18%)", order.get("gst", 0)),
+        ("Delivery Fee", order.get("delivery_fee", 0)),
+    ]:
+        pdf.cell(sum_label_w, 7, label, align="R")
+        display = "FREE" if label == "Delivery Fee" and val == 0 else f"{val:,.2f}"
+        pdf.cell(sum_val_w, 7, display, align="R", new_x="LMARGIN", new_y="NEXT")
+
+    discount = order.get("discount", 0)
+    if discount > 0:
+        pdf.set_text_color(0, 150, 0)
+        pdf.cell(sum_label_w, 7, "Discount", align="R")
+        pdf.cell(sum_val_w, 7, f"-{discount:,.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+
+    # Total
+    pdf.ln(2)
+    pdf.set_fill_color(13, 71, 161)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 13)
+    grand = order.get("total_amount", order.get("grand_total", 0))
+    pdf.cell(sum_label_w, 12, "TOTAL  ", align="R", fill=True)
+    pdf.cell(sum_val_w, 12, f"  {grand:,.2f}  ", align="R", fill=True, new_x="LMARGIN", new_y="NEXT")
+
+    # Footer
+    pdf.set_text_color(120, 120, 120)
+    pdf.set_font("Helvetica", "I", 9)
+    pdf.ln(16)
+    pdf.cell(pw, 6, "Thank you for shopping at Dhanam Store!", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 8)
+    pdf.cell(pw, 5, "This is a computer-generated invoice and does not require a signature.", align="C")
+
+    return pdf.output()
+
+
 @router.get("/orders/{order_id}/invoice")
 async def download_invoice(order_id: str):
     order = await orders_collection.find_one({"order_id": order_id})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    lines = [
-        "=" * 50,
-        "           DHANAM STORE - TAX INVOICE",
-        "=" * 50,
-        f"Order ID: {order.get('order_id', '')}",
-        f"Date: {order.get('created_at', '')[:10]}",
-        f"Status: {order.get('order_status', '')}",
-        f"Payment: {order.get('payment_method', '')}",
-        "-" * 50,
-        f"{'Item':<25} {'Qty':>4} {'Price':>8} {'Total':>8}",
-        "-" * 50,
-    ]
-
-    for item in order.get("items", []):
-        name = (item.get("product_name") or item.get("name", ""))[:24]
-        qty = item.get("quantity", 0)
-        price = item.get("price", 0)
-        total = qty * price
-        lines.append(f"{name:<25} {qty:>4} {price:>8.2f} {total:>8.2f}")
-
-    lines.extend([
-        "-" * 50,
-        f"{'Subtotal':>39} {order.get('subtotal', 0):>8.2f}",
-        f"{'GST (18%)':>39} {order.get('gst', 0):>8.2f}",
-        f"{'Delivery':>39} {order.get('delivery_fee', 0):>8.2f}",
-    ])
-
-    if order.get("discount", 0) > 0:
-        lines.append(f"{'Discount':>39} -{order['discount']:>7.2f}")
-
-    lines.extend([
-        "=" * 50,
-        f"{'TOTAL':>39} {order.get('total_amount', order.get('grand_total', 0)):>8.2f}",
-        "=" * 50,
-        "",
-        "Thank you for shopping at Dhanam Store!",
-    ])
-
-    addr = order.get("delivery_address", {})
-    if addr:
-        lines.extend(["", "Delivery Address:", f"  {addr.get('full_name', addr.get('label', ''))}",
-                       f"  {addr.get('line1', addr.get('house_no', ''))}, {addr.get('city', '')}",
-                       f"  {addr.get('state', '')} - {addr.get('pincode', '')}"])
-
-    content = "\n".join(lines)
+    pdf_bytes = _build_invoice_pdf(order)
     return StreamingResponse(
-        iter([content]),
-        media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename=invoice-{order_id}.txt"},
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="invoice-{order_id}.pdf"'},
     )
 
 

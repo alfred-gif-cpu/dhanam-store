@@ -7,16 +7,15 @@ from bson import ObjectId
 from database import (
     products_collection, banners_collection, orders_collection,
     addresses_collection, wishlists_collection, users_collection,
+    ensure_indexes,
 )
 from auth import generate_otp, verify_otp, create_token, get_current_user
-from sms_service import send_otp_sms
 from config import settings
 from routes_customer import router as customer_router
 from routes_orders import router as orders_router
 from routes_admin import router as admin_router
 from routes_addresses import router as addresses_router
 from routes_cart import router as cart_router
-from routes_payments import router as payments_router
 from routes_notifications import router as notifications_router
 from routes_reviews import router as reviews_router
 
@@ -32,8 +31,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -44,9 +43,13 @@ app.include_router(orders_router, tags=["Orders V2"])
 app.include_router(admin_router)
 app.include_router(addresses_router)
 app.include_router(cart_router)
-app.include_router(payments_router)
 app.include_router(notifications_router)
 app.include_router(reviews_router)
+
+
+@app.on_event("startup")
+async def startup():
+    await ensure_indexes()
 
 
 # ─── Auth ─────────────────────────────────────────────────
@@ -56,11 +59,8 @@ async def send_otp(phone: str = Body(..., embed=True)):
     if not phone or len(phone) < 10:
         raise HTTPException(status_code=400, detail="Invalid phone number")
     otp = generate_otp(phone)
-    print(f"[OTP] {phone}: {otp}")
-    send_otp_sms(phone, otp)
     response = {"status": "sent", "message": "OTP sent successfully"}
-    # Only expose OTP in response when SMS is not configured (dev mode)
-    if not settings.sms_api_key:
+    if settings.debug:
         response["otp"] = otp
     return response
 
@@ -69,6 +69,30 @@ async def send_otp(phone: str = Body(..., embed=True)):
 async def verify_otp_endpoint(phone: str = Body(...), otp: str = Body(...)):
     if not verify_otp(phone, otp):
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
+    user = await users_collection.find_one({"phone": phone})
+    is_new = user is None
+    if is_new:
+        result = await users_collection.insert_one({
+            "phone": phone,
+            "name": "",
+            "email": "",
+            "created_at": datetime.utcnow().isoformat(),
+        })
+        user_id = str(result.inserted_id)
+    else:
+        user_id = str(user["_id"])
+
+    token = create_token(user_id, phone)
+    return {"token": token, "user_id": user_id, "is_new_user": is_new}
+
+
+@app.post("/auth/firebase-login")
+async def firebase_login(phone: str = Body(..., embed=True)):
+    """Login/register using a Firebase-verified phone number.
+    Called after Firebase Phone Auth succeeds on the client."""
+    if not phone or len(phone) < 10:
+        raise HTTPException(status_code=400, detail="Invalid phone number")
 
     user = await users_collection.find_one({"phone": phone})
     is_new = user is None
@@ -111,6 +135,42 @@ async def update_profile(
     if update:
         await users_collection.update_one({"phone": user["phone"]}, {"$set": update})
     return {"status": "updated"}
+
+
+# ─── Recent searches (per-user, stored in the user's record) ──
+
+_MAX_RECENT_SEARCHES = 10
+
+
+@app.get("/auth/recent-searches")
+async def get_recent_searches(user: dict = Depends(get_current_user)):
+    return {"searches": user.get("recent_searches", [])}
+
+
+@app.post("/auth/recent-searches")
+async def add_recent_search(query: str = Body(..., embed=True), user: dict = Depends(get_current_user)):
+    q = (query or "").strip()
+    searches = list(user.get("recent_searches", []))
+    if q:
+        searches = [s for s in searches if s.lower() != q.lower()]
+        searches.insert(0, q)
+        searches = searches[:_MAX_RECENT_SEARCHES]
+        await users_collection.update_one({"phone": user["phone"]}, {"$set": {"recent_searches": searches}})
+    return {"searches": searches}
+
+
+@app.post("/auth/recent-searches/remove")
+async def remove_recent_search(query: str = Body(..., embed=True), user: dict = Depends(get_current_user)):
+    q = (query or "").strip()
+    searches = [s for s in user.get("recent_searches", []) if s.lower() != q.lower()]
+    await users_collection.update_one({"phone": user["phone"]}, {"$set": {"recent_searches": searches}})
+    return {"searches": searches}
+
+
+@app.delete("/auth/recent-searches")
+async def clear_recent_searches(user: dict = Depends(get_current_user)):
+    await users_collection.update_one({"phone": user["phone"]}, {"$set": {"recent_searches": []}})
+    return {"searches": []}
 
 
 # ─── Helpers ──────────────────────────────────────────────
