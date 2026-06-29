@@ -1,3 +1,4 @@
+import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -16,7 +17,6 @@ class Settings(BaseSettings):
 settings = Settings()
 
 if "change-in-production" in settings.jwt_secret:
-    import logging
     logging.getLogger(__name__).warning(
         "JWT_SECRET is still the default — set a strong secret in .env before deploying"
     )
