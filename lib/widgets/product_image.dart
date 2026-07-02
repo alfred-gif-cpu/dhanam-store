@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class ProductImage extends StatelessWidget {
   final String imageUrl;
   final String? category;
+  final String? name;
   final double? width;
   final double? height;
   final BoxFit fit;
@@ -11,31 +12,34 @@ class ProductImage extends StatelessWidget {
     super.key,
     required this.imageUrl,
     this.category,
+    this.name,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
   });
 
-  static const _categoryColors = <String, Color>{
-    'fruit': Color(0xFFE8F5E9),
-    'vegetable': Color(0xFFC8E6C9),
-    'dairy': Color(0xFFFFF8E1),
-    'bakery': Color(0xFFFFF3E0),
-    'beverage': Color(0xFFE3F2FD),
-    'snack': Color(0xFFFCE4EC),
-    'meat': Color(0xFFFFEBEE),
-    'frozen': Color(0xFFE0F7FA),
-    'clean': Color(0xFFE8EAF6),
-    'personal': Color(0xFFF3E5F5),
-    'spice': Color(0xFFFBE9E7),
-    'rice': Color(0xFFF1F8E9),
-    'oil': Color(0xFFFFF8E1),
+  // Each category maps to a (soft background, accent) colour pair.
+  static const _categoryColors = <String, List<Color>>{
+    'fruit': [Color(0xFFE8F5E9), Color(0xFF43A047)],
+    'vegetable': [Color(0xFFE8F5E9), Color(0xFF2E7D32)],
+    'dairy': [Color(0xFFFFF8E1), Color(0xFFF9A825)],
+    'bakery': [Color(0xFFFFF3E0), Color(0xFFEF6C00)],
+    'beverage': [Color(0xFFE3F2FD), Color(0xFF1976D2)],
+    'snack': [Color(0xFFFCE4EC), Color(0xFFC2185B)],
+    'meat': [Color(0xFFFFEBEE), Color(0xFFD32F2F)],
+    'frozen': [Color(0xFFE0F7FA), Color(0xFF0097A7)],
+    'clean': [Color(0xFFE8EAF6), Color(0xFF3949AB)],
+    'personal': [Color(0xFFF3E5F5), Color(0xFF8E24AA)],
+    'spice': [Color(0xFFFBE9E7), Color(0xFFE64A19)],
+    'rice': [Color(0xFFF1F8E9), Color(0xFF689F38)],
+    'oil': [Color(0xFFFFF8E1), Color(0xFFF57F17)],
+    'baby': [Color(0xFFFCE4EC), Color(0xFFEC407A)],
   };
 
   static const _categoryIcons = <String, IconData>{
     'fruit': Icons.apple,
-    'vegetable': Icons.grass,
-    'dairy': Icons.egg,
+    'vegetable': Icons.eco,
+    'dairy': Icons.egg_alt,
     'bakery': Icons.bakery_dining,
     'beverage': Icons.local_cafe,
     'snack': Icons.cookie,
@@ -46,6 +50,7 @@ class ProductImage extends StatelessWidget {
     'spice': Icons.local_fire_department,
     'rice': Icons.rice_bowl,
     'oil': Icons.water_drop,
+    'baby': Icons.child_friendly,
   };
 
   @override
@@ -62,50 +67,71 @@ class ProductImage extends StatelessWidget {
         return Container(
           width: width,
           height: height,
-          color: _bgColor,
-          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          color: _bg,
+          child: Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _accent.withValues(alpha: 0.5)),
+            ),
+          ),
         );
       },
       errorBuilder: (_, _, _) => _placeholder(),
     );
   }
 
-  Color get _bgColor {
-    if (category == null) return Colors.grey[200]!;
-    final cat = category!.toLowerCase();
-    for (final entry in _categoryColors.entries) {
-      if (cat.contains(entry.key)) return entry.value;
+  List<Color> get _pair {
+    if (category != null) {
+      final cat = category!.toLowerCase();
+      for (final entry in _categoryColors.entries) {
+        if (cat.contains(entry.key)) return entry.value;
+      }
     }
-    return Colors.grey[200]!;
+    return const [Color(0xFFF1F3F6), Color(0xFF1976D2)];
   }
+
+  Color get _bg => _pair[0];
+  Color get _accent => _pair[1];
 
   IconData get _icon {
-    if (category == null) return Icons.image_not_supported_outlined;
-    final cat = category!.toLowerCase();
-    for (final entry in _categoryIcons.entries) {
-      if (cat.contains(entry.key)) return entry.value;
+    if (category != null) {
+      final cat = category!.toLowerCase();
+      for (final entry in _categoryIcons.entries) {
+        if (cat.contains(entry.key)) return entry.value;
+      }
     }
-    return Icons.shopping_bag_outlined;
+    return Icons.shopping_basket;
   }
 
+  /// A clean, branded placeholder for products without a photo — a soft
+  /// category-tinted panel with the category icon in a white disc.
   Widget _placeholder() {
     return Container(
       width: width,
       height: height,
-      color: _bgColor,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(_icon, size: 40, color: Colors.grey[500]),
-          const SizedBox(height: 4),
-          Text(
-            category ?? 'No Image',
-            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+      color: _bg,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: _accent.withValues(alpha: 0.15), blurRadius: 8)],
+              ),
+              child: Icon(_icon, size: 28, color: _accent),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Dhanam Stores',
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: _accent.withValues(alpha: 0.7), letterSpacing: 0.3),
+            ),
+          ],
+        ),
       ),
     );
   }
