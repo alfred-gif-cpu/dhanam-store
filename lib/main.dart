@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/admin/admin_orders_screen.dart';
 import 'screens/admin/delivery_dashboard_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/admin_auth_service.dart';
 import 'services/auth_service.dart';
@@ -57,7 +58,7 @@ class DhanamStoreApp extends StatelessWidget {
       title: 'Dhanam Stores',
       theme: appTheme(),
       navigatorKey: NotificationService.navigatorKey,
-      home: const LoginScreen(),
+      home: AuthService().isLoggedIn ? const HomeScreen() : const LoginScreen(),
     );
   }
 }
