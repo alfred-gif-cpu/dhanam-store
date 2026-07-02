@@ -110,7 +110,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen()))),
           _tile(context, Icons.location_on_outlined, 'My Addresses', 'Manage delivery addresses',
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressListScreen()))),
-          _tile(context, Icons.payment, 'Payment Methods', 'Manage saved payments', null),
           _tile(context, Icons.headset_mic_outlined, 'Help & Support', 'Get help with your orders', null),
           _tile(context, Icons.info_outline, 'About', 'App version 2.0.0', null),
           const SizedBox(height: 10),
