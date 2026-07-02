@@ -15,7 +15,7 @@ from bson import ObjectId
 from database import (
     products_collection, banners_collection, orders_collection,
     addresses_collection, wishlists_collection, users_collection,
-    ensure_indexes,
+    otp_collection, ensure_indexes,
 )
 from auth import generate_otp, verify_otp, create_token, get_current_user
 from admin_auth import get_current_admin
@@ -108,6 +108,17 @@ async def startup():
     await ensure_indexes()
 
 
+@app.get("/health")
+async def health_check():
+    """Lightweight liveness/readiness probe for Railway.
+    Pings MongoDB so a hung DB connection surfaces as unhealthy."""
+    try:
+        await users_collection.database.command("ping")
+        return {"status": "healthy"}
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "unhealthy"})
+
+
 # ─── Auth ─────────────────────────────────────────────────
 
 @app.post("/auth/send-otp")
@@ -184,6 +195,23 @@ async def get_me(user: dict = Depends(get_current_user)):
         "name": user.get("name", ""),
         "email": user.get("email", ""),
     }
+
+
+@app.delete("/auth/account")
+async def delete_account(user: dict = Depends(get_current_user)):
+    """Permanently delete the authenticated user and all associated data.
+    Required by Google Play's account-deletion policy."""
+    user_id = user["id"]
+    phone = user.get("phone", "")
+
+    await orders_collection.delete_many({"$or": [{"user_id": user_id}, {"customer_id": user_id}]})
+    await addresses_collection.delete_many({"user_id": user_id})
+    await wishlists_collection.delete_many({"user_id": user_id})
+    await users_collection.delete_one({"_id": ObjectId(user_id)})
+    if phone:
+        await otp_collection.delete_many({"phone": phone})
+
+    return {"status": "deleted", "message": "Account and all data permanently deleted"}
 
 
 @app.put("/auth/profile")

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../legal_page_screen.dart';
+import '../login_screen.dart';
+import '../../services/auth_service.dart';
 
 class CustomerSettingsScreen extends StatefulWidget {
   const CustomerSettingsScreen({super.key});
@@ -52,7 +54,7 @@ class _State extends State<CustomerSettingsScreen> {
               content: const Text('This will permanently delete your account, orders, and all data. This cannot be undone.'),
               actions: [
                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                TextButton(onPressed: () { Navigator.pop(ctx); }, child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+                TextButton(onPressed: () { Navigator.pop(ctx); _deleteAccount(); }, child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
               ],
             )),
           ),
@@ -87,6 +89,32 @@ class _State extends State<CustomerSettingsScreen> {
         onTap: onTap,
       ),
     );
+  }
+
+  Future<void> _deleteAccount() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      await AuthService().deleteAccount();
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your account has been deleted'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading spinner
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete account: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   void _showAbout() {

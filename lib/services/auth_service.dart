@@ -204,6 +204,21 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Permanently delete the user's account and all data (backend + Firebase),
+  /// then clear the local session. Required by Google Play policy.
+  Future<void> deleteAccount() async {
+    final request = await _client.deleteUrl(Uri.parse('$_baseUrl/auth/account'));
+    if (_token != null) request.headers.set('Authorization', 'Bearer $_token');
+    final response = await request.close();
+    final data = await response.transform(utf8.decoder).join();
+    if (response.statusCode >= 400) {
+      final result = jsonDecode(data) as Map<String, dynamic>;
+      throw Exception(result['detail'] ?? 'Failed to delete account');
+    }
+    try { await _fbAuth.currentUser?.delete(); } catch (_) {}
+    await logout();
+  }
+
   Future<void> logout() async {
     _token = null;
     _user = null;
