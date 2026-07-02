@@ -54,7 +54,7 @@ class DhanamStoreApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Dhanam Store',
+      title: 'Dhanam Stores',
       theme: appTheme(),
       navigatorKey: NotificationService.navigatorKey,
       home: const LoginScreen(),

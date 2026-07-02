@@ -218,7 +218,7 @@ class _State extends State<DeliveryTrackingMapScreen> {
                     backgroundColor: Colors.grey[200], valueColor: AlwaysStoppedAnimation(Colors.blue[600]!))),
                 const SizedBox(height: 6),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Dhanam Store', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                  Text('Dhanam Stores', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                   Text('Your Location', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                 ]),
               ]),

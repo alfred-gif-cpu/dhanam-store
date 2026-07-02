@@ -69,7 +69,7 @@ class _State extends State<AdminLoginScreen> {
             const SizedBox(height: 24),
             const Text('Admin Panel', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 4),
-            Text('Dhanam Store', style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.7))),
+            Text('Dhanam Stores', style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.7))),
             const SizedBox(height: 40),
 
             TextField(

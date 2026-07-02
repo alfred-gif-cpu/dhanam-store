@@ -120,7 +120,7 @@ class _State extends State<CustomerSettingsScreen> {
   void _showAbout() {
     showAboutDialog(
       context: context,
-      applicationName: 'Dhanam Store',
+      applicationName: 'Dhanam Stores',
       applicationVersion: '2.0.0',
       applicationIcon: Icon(Icons.storefront, size: 48, color: Colors.blue[700]),
       children: [const Text('Your neighbourhood grocery store, delivering fresh products in 10 minutes.')],

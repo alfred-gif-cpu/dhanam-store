@@ -50,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Icon(Icons.person_outline, size: 48, color: Colors.blue[300]),
               ),
               const SizedBox(height: 24),
-              const Text('Login to Dhanam Store', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const Text('Login to Dhanam Stores', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text('View orders, save addresses, and checkout faster',
                   textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: Colors.grey[500])),

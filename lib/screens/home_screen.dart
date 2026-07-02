@@ -210,7 +210,7 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
                     const SizedBox(height: 1),
                     Row(
                       children: [
-                        const Text('Dhanam Store', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                        const Text('Dhanam Stores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

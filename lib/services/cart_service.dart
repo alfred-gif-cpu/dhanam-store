@@ -20,6 +20,12 @@ class CartService extends ChangeNotifier {
 
   List<CartItem> get items => List.unmodifiable(_items);
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
+
+  int quantityOf(String productId) {
+    final index = _items.indexWhere((e) => e.productId == productId);
+    return index >= 0 ? _items[index].quantity : 0;
+  }
+
   int get uniqueCount => _items.length;
   bool get isEmpty => _items.isEmpty;
   bool get isNotEmpty => _items.isNotEmpty;

@@ -2,7 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="Dhanam Store"
+        android:label="Dhanam Stores"
         android:name="${applicationName}"
         tools:replace="android:label"
         android:icon="@mipmap/ic_launcher">

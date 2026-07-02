@@ -99,7 +99,7 @@ class NotificationService {
 
   Future<void> showNotification(RemoteMessage message) async {
     final notification = message.notification;
-    final title = notification?.title ?? message.data['title'] ?? 'Dhanam Store';
+    final title = notification?.title ?? message.data['title'] ?? 'Dhanam Stores';
     final body = notification?.body ?? message.data['body'] ?? '';
 
     await _local.show(

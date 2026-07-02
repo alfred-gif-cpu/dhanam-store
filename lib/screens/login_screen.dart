@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   const SizedBox(height: 28),
                   const Text('Welcome to', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                   const SizedBox(height: 4),
-                  const Text('Dhanam Store',
+                  const Text('Dhanam Stores',
                       style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: -0.5)),
                   const SizedBox(height: 8),
                   Row(

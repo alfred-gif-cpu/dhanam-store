@@ -228,7 +228,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   if (product.hasDiscount) {
                     text.write(' (was ₹${product.originalPrice.toStringAsFixed(0)})');
                   }
-                  text.write('\n\nShop now on Dhanam Store!');
+                  text.write('\n\nShop now on Dhanam Stores!');
                   SharePlus.instance.share(ShareParams(text: text.toString()));
                 },
               ),

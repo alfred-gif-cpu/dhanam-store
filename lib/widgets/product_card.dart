@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../screens/product_detail_screen.dart';
 import '../services/wishlist_service.dart';
+import '../services/cart_service.dart';
 import 'product_image.dart';
 
 class ProductCard extends StatefulWidget {
@@ -13,32 +14,27 @@ class ProductCard extends StatefulWidget {
   State<ProductCard> createState() => _ProductCardState();
 }
 
-class _ProductCardState extends State<ProductCard> with SingleTickerProviderStateMixin {
+class _ProductCardState extends State<ProductCard> {
   final WishlistService _wishlist = WishlistService();
-  late AnimationController _heartAnim;
+  final CartService _cart = CartService();
+
+  static const _green = Color(0xFF0C831F);
 
   @override
   void initState() {
     super.initState();
     _wishlist.addListener(_refresh);
-    _heartAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _cart.addListener(_refresh);
   }
 
   @override
   void dispose() {
     _wishlist.removeListener(_refresh);
-    _heartAnim.dispose();
+    _cart.removeListener(_refresh);
     super.dispose();
   }
 
-  void _refresh() => setState(() {});
-
-  void _toggleWishlist() {
-    _wishlist.toggle(widget.product);
-    if (_wishlist.isWishlisted(widget.product.id)) {
-      _heartAnim.forward(from: 0);
-    }
-  }
+  void _refresh() { if (mounted) setState(() {}); }
 
   @override
   Widget build(BuildContext context) {
@@ -50,99 +46,188 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
         context,
         MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
       ),
-      child: Card(
-        elevation: 2,
-        shadowColor: Colors.black26,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE8E8E8)),
+        ),
         clipBehavior: Clip.antiAlias,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
+            // ─── Image area ───
+            AspectRatio(
+              aspectRatio: 1,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Hero(
-                    tag: 'product-image-${product.id}',
-                    child: ProductImage(imageUrl: product.image, category: product.category),
+                  Container(
+                    color: const Color(0xFFF7F7F7),
+                    padding: const EdgeInsets.all(8),
+                    child: Hero(
+                      tag: 'product-image-${product.id}',
+                      child: ProductImage(
+                        imageUrl: product.image,
+                        category: product.category,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
+                  // Discount badge (angled corner ribbon style)
+                  if (product.hasDiscount)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF1976D2),
+                          borderRadius: BorderRadius.only(bottomRight: Radius.circular(8)),
+                        ),
+                        child: Text('${product.discountPercent}% OFF',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
+                    ),
                   // Wishlist heart
                   Positioned(
                     top: 4,
                     right: 4,
                     child: GestureDetector(
-                      onTap: _toggleWishlist,
-                      child: ScaleTransition(
-                        scale: Tween(begin: 1.0, end: 1.3).animate(
-                          CurvedAnimation(parent: _heartAnim, curve: Curves.elasticOut),
+                      onTap: () => _wishlist.toggle(product),
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)],
                         ),
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
-                          ),
-                          child: Icon(
-                            wishlisted ? Icons.favorite : Icons.favorite_outline,
-                            size: 18,
-                            color: wishlisted ? Colors.red : Colors.grey[500],
-                          ),
+                        child: Icon(
+                          wishlisted ? Icons.favorite : Icons.favorite_outline,
+                          size: 16,
+                          color: wishlisted ? Colors.red : Colors.grey[500],
                         ),
                       ),
                     ),
                   ),
-                  // Discount badge
-                  if (product.hasDiscount)
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6)),
-                        child: Text('${product.discountPercent}% OFF',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
-                    ),
-                  // Out of stock overlay
                   if (!product.inStock)
                     Positioned.fill(
                       child: Container(
                         color: Colors.white70,
                         child: const Center(
-                          child: Text('Out of Stock', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
+                          child: Text('Out of Stock',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
                         ),
                       ),
                     ),
                 ],
               ),
             ),
+
+            // ─── Details ───
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
-              child: Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(product.brand.isNotEmpty ? product.brand : product.category,
-                  style: TextStyle(fontSize: 11, color: Colors.grey[500]), maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('₹${product.price.toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
-                  if (product.hasDiscount) ...[
-                    const SizedBox(width: 4),
-                    Text('₹${product.originalPrice.toStringAsFixed(0)}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[400], decoration: TextDecoration.lineThrough)),
-                  ],
+                  // Delivery-time chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F0F0),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.bolt, size: 11, color: Colors.grey[700]),
+                      const SizedBox(width: 2),
+                      Text('10 MINS',
+                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.grey[700])),
+                    ]),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.2)),
+                  const SizedBox(height: 2),
+                  Text(product.brand.isNotEmpty ? product.brand : product.category,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                  const SizedBox(height: 8),
+                  // Price + ADD button row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('₹${product.price.toStringAsFixed(0)}',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+                            if (product.hasDiscount)
+                              Text('₹${product.originalPrice.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[400],
+                                      decoration: TextDecoration.lineThrough)),
+                          ],
+                        ),
+                      ),
+                      if (product.inStock) _addButton(product),
+                    ],
+                  ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _addButton(Product product) {
+    final qty = _cart.quantityOf(product.id);
+    if (qty == 0) {
+      return SizedBox(
+        height: 34,
+        child: OutlinedButton(
+          onPressed: () => _cart.addProduct(product, 1),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _green,
+            backgroundColor: const Color(0xFFF3FBF4),
+            side: const BorderSide(color: _green, width: 1.3),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: const Text('ADD', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        ),
+      );
+    }
+    return Container(
+      height: 34,
+      decoration: BoxDecoration(color: _green, borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        children: [
+          _stepBtn(Icons.remove, () => _cart.decrement(product.id)),
+          Container(
+            constraints: const BoxConstraints(minWidth: 20),
+            alignment: Alignment.center,
+            child: Text('$qty',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+          _stepBtn(Icons.add, () => _cart.increment(product.id)),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepBtn(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+        child: Icon(icon, size: 16, color: Colors.white),
       ),
     );
   }
