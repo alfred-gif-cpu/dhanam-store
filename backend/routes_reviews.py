@@ -13,6 +13,7 @@ router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
 reviews_collection = db["reviews"]
 users_collection = db["users"]
+orders_collection = db["orders"]
 
 # A value that looks like a phone number must never be shown publicly.
 _PHONE_RE = re.compile(r"^\+?\d[\d\s\-]{6,}$")
@@ -25,6 +26,16 @@ _BANNED_WORDS = {
     "fuck", "shit", "bitch", "asshole", "bastard", "cunt", "whore", "slut",
     "randi", "chutiya", "madarchod", "behenchod", "bhosdi", "gandu",
 }
+
+
+async def _has_delivered_purchase(user_id: str, product_id: str) -> bool:
+    """A review is only allowed for products the user has actually received."""
+    order = await orders_collection.find_one({
+        "$or": [{"customer_id": user_id}, {"user_id": user_id}],
+        "items.product_id": product_id,
+        "order_status": "Delivered",
+    })
+    return order is not None
 
 
 def _validate_review_text(comment: str) -> str:
@@ -92,6 +103,12 @@ async def create_review(req: CreateReviewRequest, user: dict = Depends(get_curre
     user_id = user["id"]
     user_name = (user.get("name") or "").strip() or "Customer"
 
+    if not await _has_delivered_purchase(user_id, req.product_id):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only review products from orders that have been delivered to you",
+        )
+
     existing = await reviews_collection.find_one({
         "product_id": req.product_id,
         "user_id": user_id,
@@ -122,6 +139,12 @@ async def create_review(req: CreateReviewRequest, user: dict = Depends(get_curre
     }
     result = await reviews_collection.insert_one(review)
     return {"status": "created", "id": str(result.inserted_id)}
+
+
+@router.get("/can-review/{product_id}")
+async def can_review(product_id: str, user: dict = Depends(get_current_user)):
+    eligible = await _has_delivered_purchase(user["id"], product_id)
+    return {"eligible": eligible}
 
 
 @router.get("/product/{product_id}")

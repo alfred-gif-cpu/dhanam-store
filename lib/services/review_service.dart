@@ -14,6 +14,21 @@ class ReviewService {
     return jsonDecode(body) as Map<String, dynamic>;
   }
 
+  Future<bool> canReview(String productId) async {
+    final token = AuthService().token;
+    if (token == null) return false;
+    try {
+      final request = await _client.getUrl(Uri.parse('$_baseUrl/reviews/can-review/$productId'));
+      request.headers.set('Authorization', 'Bearer $token');
+      final response = await request.close();
+      if (response.statusCode >= 400) return false;
+      final body = await response.transform(utf8.decoder).join();
+      return (jsonDecode(body) as Map<String, dynamic>)['eligible'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> submitReview({
     required String productId,
     required int rating,

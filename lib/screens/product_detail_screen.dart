@@ -28,6 +28,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   List<dynamic> _reviews = [];
   Map<String, dynamic> _reviewStats = {};
   bool _reviewsLoading = true;
+  bool _canReview = false;
 
   Product get product => widget.product;
 
@@ -39,6 +40,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     RecentlyViewedService().add(product.id);
     _loadRelated();
     _loadReviews();
+    _loadCanReview();
     // Dismiss any leftover SnackBar from the previous product page —
     // SnackBars anchor to the root Navigator's overlay, so a message
     // shown just before navigating here (e.g. "Added ... to cart" on a
@@ -72,7 +74,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  Future<void> _loadCanReview() async {
+    final eligible = await _reviewService.canReview(product.id);
+    if (mounted) setState(() => _canReview = eligible);
+  }
+
   static const int _minReviewLength = 10;
+
+  void _showCannotReviewMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('You can write a review once this product has been delivered to you')),
+    );
+  }
 
   Future<void> _showWriteReviewDialog() async {
     int selectedRating = 5;
@@ -494,9 +507,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             children: [
               const Text('Ratings & Reviews', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               TextButton.icon(
-                onPressed: _showWriteReviewDialog,
-                icon: const Icon(Icons.rate_review_outlined, size: 18),
-                label: const Text('Write'),
+                onPressed: _canReview ? _showWriteReviewDialog : _showCannotReviewMessage,
+                icon: Icon(Icons.rate_review_outlined, size: 18, color: _canReview ? null : Colors.grey[400]),
+                label: Text('Write', style: TextStyle(color: _canReview ? null : Colors.grey[400])),
               ),
             ],
           ),
