@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/product.dart';
 import '../services/api_service.dart';
-import '../services/auth_service.dart';
 import '../services/cart_service.dart';
 import '../services/recently_viewed_service.dart';
 import '../services/review_service.dart';
@@ -73,10 +72,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  static const int _minReviewLength = 10;
+
   Future<void> _showWriteReviewDialog() async {
     int selectedRating = 5;
     final titleCtrl = TextEditingController();
     final commentCtrl = TextEditingController();
+    String? commentError;
 
     final submitted = await showModalBottomSheet<bool>(
       context: context,
@@ -122,10 +124,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               TextField(
                 controller: commentCtrl,
                 maxLines: 3,
+                onChanged: (_) { if (commentError != null) setSheetState(() => commentError = null); },
                 decoration: InputDecoration(
-                  hintText: 'Share your experience...',
+                  hintText: 'Share your experience (min $_minReviewLength characters)...',
                   filled: true,
                   fillColor: Colors.grey[100],
+                  errorText: commentError,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
               ),
@@ -134,7 +138,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx, true),
+                  onPressed: () {
+                    final text = commentCtrl.text.trim();
+                    if (text.length < _minReviewLength) {
+                      setSheetState(() => commentError = 'Please write at least $_minReviewLength characters describing your experience');
+                      return;
+                    }
+                    Navigator.pop(ctx, true);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -152,11 +163,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     if (submitted == true) {
       try {
-        final auth = AuthService();
         await _reviewService.submitReview(
           productId: product.id,
-          userId: auth.userId,
-          userName: auth.name.trim().isNotEmpty ? auth.name.trim() : 'Customer',
           rating: selectedRating,
           title: titleCtrl.text.trim(),
           comment: commentCtrl.text.trim(),

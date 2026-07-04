@@ -1,10 +1,11 @@
 import re
 import logging
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Body
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, field_validator
 from bson import ObjectId
 from database import db
+from auth import get_current_user
 
 log = logging.getLogger(__name__)
 
@@ -15,6 +16,29 @@ users_collection = db["users"]
 
 # A value that looks like a phone number must never be shown publicly.
 _PHONE_RE = re.compile(r"^\+?\d[\d\s\-]{6,}$")
+
+# Basic content-quality guards — not a substitute for moderation, but stops
+# the common abuse cases: empty/one-word reviews, keyboard-mash spam, and
+# a short list of slurs/profanity.
+_REPEATED_CHAR_RE = re.compile(r"(.)\1{4,}")
+_BANNED_WORDS = {
+    "fuck", "shit", "bitch", "asshole", "bastard", "cunt", "whore", "slut",
+    "randi", "chutiya", "madarchod", "behenchod", "bhosdi", "gandu",
+}
+
+
+def _validate_review_text(comment: str) -> str:
+    text = comment.strip()
+    if len(text) < 10:
+        raise HTTPException(status_code=400, detail="Please write at least 10 characters describing your experience")
+    if len(text) > 1000:
+        raise HTTPException(status_code=400, detail="Review is too long (max 1000 characters)")
+    if _REPEATED_CHAR_RE.search(text):
+        raise HTTPException(status_code=400, detail="Review looks like spam. Please write a genuine review")
+    words = re.findall(r"[a-zA-Z']+", text.lower())
+    if any(bad in w for w in words for bad in _BANNED_WORDS):
+        raise HTTPException(status_code=400, detail="Review contains inappropriate language. Please revise")
+    return text
 
 
 async def _account_names(reviews: list[dict]) -> dict:
@@ -44,11 +68,14 @@ def _display_name(account_name: str, stored_name: str) -> str:
 
 class CreateReviewRequest(BaseModel):
     product_id: str
-    user_id: str
-    user_name: str = "Customer"
     rating: int
     title: str = ""
-    comment: str = ""
+    comment: str
+
+    @field_validator("title")
+    @classmethod
+    def _clean_title(cls, v: str) -> str:
+        return v.strip()[:100]
 
 
 def serialize(doc: dict) -> dict:
@@ -57,13 +84,17 @@ def serialize(doc: dict) -> dict:
 
 
 @router.post("/")
-async def create_review(req: CreateReviewRequest):
+async def create_review(req: CreateReviewRequest, user: dict = Depends(get_current_user)):
     if req.rating < 1 or req.rating > 5:
         raise HTTPException(status_code=400, detail="Rating must be 1-5")
 
+    comment = _validate_review_text(req.comment)
+    user_id = user["id"]
+    user_name = (user.get("name") or "").strip() or "Customer"
+
     existing = await reviews_collection.find_one({
         "product_id": req.product_id,
-        "user_id": req.user_id,
+        "user_id": user_id,
     })
     if existing:
         await reviews_collection.update_one(
@@ -71,8 +102,8 @@ async def create_review(req: CreateReviewRequest):
             {"$set": {
                 "rating": req.rating,
                 "title": req.title,
-                "comment": req.comment,
-                "user_name": req.user_name,
+                "comment": comment,
+                "user_name": user_name,
                 "updated_at": datetime.utcnow().isoformat(),
             }},
         )
@@ -80,11 +111,11 @@ async def create_review(req: CreateReviewRequest):
 
     review = {
         "product_id": req.product_id,
-        "user_id": req.user_id,
-        "user_name": req.user_name,
+        "user_id": user_id,
+        "user_name": user_name,
         "rating": req.rating,
         "title": req.title,
-        "comment": req.comment,
+        "comment": comment,
         "helpful_count": 0,
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat(),
@@ -134,11 +165,11 @@ async def get_product_reviews(product_id: str, limit: int = 20, skip: int = 0):
 
 
 @router.delete("/{review_id}")
-async def delete_review(review_id: str, user_id: str = Body(..., embed=True)):
+async def delete_review(review_id: str, user: dict = Depends(get_current_user)):
     review = await reviews_collection.find_one({"_id": ObjectId(review_id)})
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
-    if review["user_id"] != user_id:
+    if review["user_id"] != user["id"]:
         raise HTTPException(status_code=403, detail="Not your review")
     await reviews_collection.delete_one({"_id": ObjectId(review_id)})
     return {"status": "deleted"}
