@@ -61,7 +61,13 @@ class _HomeScreenState extends State<HomeScreen> {
       const ProfileScreen(),
     ];
 
-    return Scaffold(
+    return PopScope(
+      canPop: _navIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        setState(() => _navIndex = 0);
+      },
+      child: Scaffold(
       body: IndexedStack(index: _navIndex, children: screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _navIndex,
@@ -89,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
         ],
+      ),
       ),
     );
   }
