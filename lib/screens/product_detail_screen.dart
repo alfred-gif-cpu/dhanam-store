@@ -382,10 +382,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: Row(
                   children: [
                     _qtyButton(Icons.remove, _quantity > 1 ? () => setState(() => _quantity--) : null),
-                    SizedBox(
-                      width: 44,
-                      child: Text('$_quantity', textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    GestureDetector(
+                      onTap: () => _editQuantity(product),
+                      child: SizedBox(
+                        width: 44,
+                        child: Text('$_quantity', textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.dotted)),
+                      ),
                     ),
                     _qtyButton(Icons.add, _quantity < product.stock ? () => setState(() => _quantity++) : null),
                   ],
@@ -734,6 +737,40 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Icon(icon, size: 20, color: onTap != null ? Colors.black87 : Colors.grey[400]),
       ),
     );
+  }
+
+  Future<void> _editQuantity(Product product) async {
+    final controller = TextEditingController(text: '$_quantity');
+    final maxQty = product.stock > 0 ? product.stock : 1;
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Enter quantity'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            helperText: 'Max $maxQty available',
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, int.tryParse(v)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text)),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result > 0) {
+      setState(() => _quantity = result.clamp(1, maxQty));
+    }
   }
 }
 
