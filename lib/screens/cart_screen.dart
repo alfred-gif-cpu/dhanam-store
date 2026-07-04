@@ -289,9 +289,10 @@ class _BillPanel extends StatelessWidget {
           // Continue shopping
           Expanded(child: SizedBox(height: 52, child: OutlinedButton.icon(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-            label: const Text('Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            icon: const Icon(Icons.shopping_bag_outlined, size: 16),
+            label: const Text('Continue', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.visible),
             style: OutlinedButton.styleFrom(foregroundColor: Colors.blue,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               side: const BorderSide(color: Colors.blue, width: 1.5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
           ))),
