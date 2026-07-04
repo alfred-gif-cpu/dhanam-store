@@ -22,7 +22,12 @@ ThemeData appTheme() {
     useMaterial3: true,
     colorSchemeSeed: AppColors.primary,
     scaffoldBackgroundColor: AppColors.surface,
-    fontFamily: 'Roboto',
+    // Named "AppSans" (not "Roboto") deliberately — some Android skins
+    // (MIUI etc.) intercept any font family literally named "Roboto" to
+    // apply a system-wide theme font, even overriding an app's own
+    // bundled asset registered under that same name. A unique family
+    // name sidesteps that interception entirely.
+    fontFamily: 'AppSans',
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.white,
       foregroundColor: AppColors.textPrimary,

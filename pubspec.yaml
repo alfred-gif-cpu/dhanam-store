@@ -97,7 +97,7 @@ flutter:
   # https://flutter.dev/to/asset-from-package
 
   fonts:
-    - family: Roboto
+    - family: AppSans
       fonts:
         - asset: assets/fonts/Roboto-Regular.ttf
         - asset: assets/fonts/Roboto-Medium.ttf
