@@ -58,6 +58,19 @@ class DhanamStoreApp extends StatelessWidget {
       title: 'Dhanam Stores',
       theme: appTheme(),
       navigatorKey: NotificationService.navigatorKey,
+      // Some devices ship with a large system font/display-size setting
+      // that inflates text well beyond what our fixed-width rows (chips,
+      // pill badges, bottom action buttons) are laid out for, clipping
+      // their labels. Clamp the scale to a safe range instead of
+      // disabling it outright, so accessibility text scaling still works
+      // but can't break the layout.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(textScaler: mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15)),
+          child: child!,
+        );
+      },
       home: AuthService().isLoggedIn ? const HomeScreen() : const LoginScreen(),
     );
   }

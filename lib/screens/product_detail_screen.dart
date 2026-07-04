@@ -322,21 +322,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Category + Brand row
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(20)),
                     child: Text(product.category, style: TextStyle(fontSize: 12, color: Colors.blue[700], fontWeight: FontWeight.w600)),
                   ),
-                  if (product.brand.isNotEmpty) ...[
-                    const SizedBox(width: 8),
+                  if (product.brand.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(20)),
                       child: Text(product.brand, style: TextStyle(fontSize: 12, color: Colors.blue[700], fontWeight: FontWeight.w600)),
                     ),
-                  ],
                 ],
               ),
               const SizedBox(height: 14),
@@ -374,14 +374,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               const SizedBox(height: 16),
 
               // Stock + delivery
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   _infoPill(
                     icon: product.inStock ? Icons.check_circle : Icons.cancel,
                     color: product.inStock ? Colors.blue : Colors.red,
                     text: product.inStock ? '${product.stock} in stock' : 'Out of stock',
                   ),
-                  const SizedBox(width: 12),
                   _infoPill(icon: Icons.bolt, color: Colors.orange, text: '10 min delivery'),
                 ],
               ),
@@ -708,7 +709,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: OutlinedButton.icon(
                 onPressed: product.inStock ? _addToCart : null,
                 icon: const Icon(Icons.shopping_cart_outlined, size: 20),
-                label: const Text('Add to Cart', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Add to Cart', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.blue,
                   side: const BorderSide(color: Colors.blue, width: 1.5),
@@ -725,7 +729,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: ElevatedButton.icon(
                 onPressed: product.inStock ? _buyNow : null,
                 icon: const Icon(Icons.bolt, size: 20),
-                label: const Text('Buy Now', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Buy Now', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
