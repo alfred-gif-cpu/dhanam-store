@@ -8,6 +8,11 @@ class Product {
   final String image;
   final int stock;
   final String description;
+  // `price` is already GST-inclusive at this item's own rate (e.g. 5% for
+  // most groceries, 0% for some). gstRate is only needed to break the tax
+  // portion out for display/invoicing — it must never be added again on
+  // top of price.
+  final double gstRate;
 
   Product({
     required this.id,
@@ -19,6 +24,7 @@ class Product {
     required this.image,
     required this.stock,
     required this.description,
+    this.gstRate = 0,
   });
 
   int get discountPercent {
@@ -42,6 +48,7 @@ class Product {
       image: json['image'] ?? '',
       stock: (json['stock'] ?? json['stock_quantity'] ?? 0).toInt(),
       description: json['description'] ?? '',
+      gstRate: (json['gst'] ?? 0).toDouble(),
     );
   }
 }

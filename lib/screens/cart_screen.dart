@@ -330,7 +330,7 @@ class _BillPanel extends StatelessWidget {
           const SizedBox(height: 16),
           _row('Item total (${cart.itemCount} items)', '₹${cart.subtotal.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
-          _row('GST (18%)', '₹${cart.gstAmount.toStringAsFixed(2)}'),
+          _row('GST included', '₹${cart.gstAmount.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Row(children: [

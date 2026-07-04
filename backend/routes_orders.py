@@ -70,19 +70,43 @@ def _now() -> str:
 
 # ─── Create Order ─────────────────────────────────────────
 
+async def _gst_rates_by_product(product_ids: list[str]) -> dict[str, float]:
+    """Look up each product's own GST rate from the DB — never trust a
+    client-sent rate, even though it only affects the informational
+    breakdown (item prices are already GST-inclusive and drive the total)."""
+    oids = [ObjectId(pid) for pid in product_ids if ObjectId.is_valid(pid)]
+    if not oids:
+        return {}
+    rates: dict[str, float] = {}
+    cursor = products_collection.find({"_id": {"$in": oids}}, {"gst": 1})
+    async for doc in cursor:
+        rates[str(doc["_id"])] = doc.get("gst", 0) or 0
+    return rates
+
+
 @router.post("/orders/create")
 async def create_order(data: CreateOrderRequest):
+    gst_rates = await _gst_rates_by_product([i.product_id for i in data.items])
+
     items = []
+    gst_included = 0.0
     for item in data.items:
         d = item.model_dump()
-        d["subtotal"] = round(item.price * item.quantity, 2)
+        item_subtotal = round(item.price * item.quantity, 2)
+        d["subtotal"] = item_subtotal
         items.append(d)
+        rate = gst_rates.get(item.product_id, 0)
+        if rate > 0:
+            gst_included += item_subtotal * rate / (100 + rate)
 
+    # `price` is already GST-inclusive per item (5% for most groceries, 0%
+    # for some) — `gst` below is only the tax portion broken out for
+    # display/invoicing and must NOT be added again into total_amount.
     subtotal = round(sum(i["subtotal"] for i in items), 2)
-    gst = round(subtotal * 0.18, 2)
+    gst = round(gst_included, 2)
     delivery_fee = 0 if subtotal >= 499 else 30
     discount = 0
-    total_amount = round(subtotal + gst + delivery_fee - discount, 2)
+    total_amount = round(subtotal + delivery_fee - discount, 2)
 
     now = _now()
     order_id = await _next_order_id()
@@ -415,8 +439,8 @@ def _build_invoice_pdf(order: dict) -> bytes:
     sum_val_w = pw * 0.30
     pdf.set_font("Helvetica", "", 10)
     for label, val in [
-        ("Subtotal", order.get("subtotal", 0)),
-        ("GST (18%)", order.get("gst", 0)),
+        ("Subtotal (incl. GST)", order.get("subtotal", 0)),
+        ("GST included", order.get("gst", 0)),
         ("Delivery Fee", order.get("delivery_fee", 0)),
     ]:
         pdf.cell(sum_label_w, 7, label, align="R")

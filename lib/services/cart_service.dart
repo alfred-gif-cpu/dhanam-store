@@ -30,15 +30,17 @@ class CartService extends ChangeNotifier {
   bool get isEmpty => _items.isEmpty;
   bool get isNotEmpty => _items.isNotEmpty;
 
-  static const double gstRate = 0.18;
   static const double freeDeliveryThreshold = 499;
   static const double deliveryFee = 30;
 
   double get subtotal => _items.fold(0.0, (sum, item) => sum + item.total);
   double get totalSavings => _items.fold(0.0, (sum, item) => sum + item.savings);
-  double get gstAmount => subtotal * gstRate;
+  // Informational only — each item's `price` already includes GST at its
+  // own rate (5% for most groceries, 0% for some). This breaks that
+  // embedded tax out for display; it must NOT be added to grandTotal.
+  double get gstAmount => _items.fold(0.0, (sum, item) => sum + item.gstIncluded);
   double get deliveryCharge => subtotal >= freeDeliveryThreshold ? 0 : deliveryFee;
-  double get grandTotal => subtotal + gstAmount + deliveryCharge;
+  double get grandTotal => subtotal + deliveryCharge;
   double get amountForFreeDelivery => subtotal >= freeDeliveryThreshold ? 0 : freeDeliveryThreshold - subtotal;
 
   String get _userId => AuthService().isLoggedIn ? AuthService().userId : 'guest';
@@ -147,6 +149,7 @@ class CartService extends ChangeNotifier {
         category: product.category,
         price: product.price,
         originalPrice: product.originalPrice,
+        gstRate: product.gstRate,
         quantity: quantity,
       ));
     }

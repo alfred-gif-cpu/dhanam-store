@@ -5,6 +5,8 @@ class CartItem {
   final String category;
   final double price;
   final double originalPrice;
+  // See Product.gstRate — price already includes this rate's tax.
+  final double gstRate;
   int quantity;
 
   CartItem({
@@ -14,11 +16,15 @@ class CartItem {
     this.category = '',
     required this.price,
     this.originalPrice = 0,
+    this.gstRate = 0,
     required this.quantity,
   });
 
   double get total => price * quantity;
   double get savings => originalPrice > price ? (originalPrice - price) * quantity : 0;
+  // The portion of `total` that is GST, extracted from a tax-inclusive
+  // price: if price P includes tax rate r%, the tax amount is P*r/(100+r).
+  double get gstIncluded => gstRate > 0 ? total * gstRate / (100 + gstRate) : 0;
 
   Map<String, dynamic> toJson() => {
         'productId': productId,
@@ -27,6 +33,7 @@ class CartItem {
         'category': category,
         'price': price,
         'originalPrice': originalPrice,
+        'gstRate': gstRate,
         'quantity': quantity,
       };
 
@@ -38,6 +45,7 @@ class CartItem {
       category: json['category'] ?? '',
       price: (json['price'] as num).toDouble(),
       originalPrice: (json['originalPrice'] ?? 0 as num).toDouble(),
+      gstRate: (json['gstRate'] ?? 0 as num).toDouble(),
       quantity: json['quantity'] as int,
     );
   }
