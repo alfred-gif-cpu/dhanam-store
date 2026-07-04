@@ -8,7 +8,7 @@ import '../services/recently_viewed_service.dart';
 import '../services/review_service.dart';
 import '../services/wishlist_service.dart';
 import '../widgets/product_image.dart';
-import 'checkout_screen.dart';
+import 'cart_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -200,7 +200,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   void _buyNow() {
     _cart.addProduct(product, _quantity);
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen()));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
   }
 
   @override
