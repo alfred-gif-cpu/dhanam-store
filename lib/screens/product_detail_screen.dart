@@ -40,6 +40,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     RecentlyViewedService().add(product.id);
     _loadRelated();
     _loadReviews();
+    // Dismiss any leftover SnackBar from the previous product page —
+    // SnackBars anchor to the root Navigator's overlay, so a message
+    // shown just before navigating here (e.g. "Added ... to cart" on a
+    // related product) would otherwise keep floating over this screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
+    });
   }
 
   @override
