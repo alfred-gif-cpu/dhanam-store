@@ -66,8 +66,7 @@ By using the Dhanam Store app, you agree to these Terms of Service. If you do no
 - You must provide an accurate delivery address
 
 4. Pricing
-- All prices are in Indian Rupees (INR) and include applicable taxes
-- GST (18%) is applied to all orders
+- All prices are in Indian Rupees (INR) and are inclusive of applicable GST at the rate for each product
 - Delivery is free for orders above ₹499; otherwise a ₹30 delivery fee applies
 - Prices may change without prior notice
 

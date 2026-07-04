@@ -136,8 +136,8 @@ class _State extends State<OrderDetailScreen> {
 
         // Bill
         _section('Bill Details', [
-          _billRow('Subtotal', '₹${(o['subtotal'] ?? 0).toStringAsFixed(2)}'),
-          _billRow('GST (18%)', '₹${(o['gst'] ?? 0).toStringAsFixed(2)}'),
+          _billRow('Subtotal (incl. GST)', '₹${(o['subtotal'] ?? 0).toStringAsFixed(2)}'),
+          _billRow('GST included', '₹${(o['gst'] ?? 0).toStringAsFixed(2)}'),
           _billRow('Delivery', (o['delivery_fee'] ?? 0) == 0 ? 'FREE' : '₹${o['delivery_fee'].toStringAsFixed(0)}'),
           if ((o['discount'] ?? 0) > 0) _billRow('Discount', '-₹${o['discount'].toStringAsFixed(0)}'),
           const Divider(height: 16),

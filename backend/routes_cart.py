@@ -6,8 +6,8 @@ from database import db
 router = APIRouter(tags=["Cart"])
 
 carts_col = db["carts"]
+products_collection = db["products"]
 
-GST_RATE = 0.18
 FREE_DELIVERY_THRESHOLD = 499
 DELIVERY_FEE = 30
 
@@ -21,16 +21,37 @@ def _now() -> str:
     return datetime.utcnow().isoformat()
 
 
-def _recalculate(cart: dict) -> dict:
+async def _gst_rates_by_product(product_ids: list[str]) -> dict[str, float]:
+    """Each item's own GST rate, looked up from the DB (never trusted from
+    a client payload) — used only to break out the tax already included
+    in `price`, never to add tax on top of it."""
+    oids = [ObjectId(pid) for pid in product_ids if ObjectId.is_valid(pid)]
+    if not oids:
+        return {}
+    rates: dict[str, float] = {}
+    cursor = products_collection.find({"_id": {"$in": oids}}, {"gst": 1})
+    async for doc in cursor:
+        rates[str(doc["_id"])] = doc.get("gst", 0) or 0
+    return rates
+
+
+def _recalculate(cart: dict, gst_rates: dict[str, float] | None = None) -> dict:
+    gst_rates = gst_rates or {}
     items = cart.get("items", [])
     for item in items:
         item["subtotal"] = round(item["price"] * item["quantity"], 2)
 
+    # `price` is already GST-inclusive per item (5% for most groceries, 0%
+    # for some) — `gst` below is only the tax portion broken out for
+    # display and must NOT be added again into grand_total.
     subtotal = round(sum(i["subtotal"] for i in items), 2)
-    gst = round(subtotal * GST_RATE, 2)
+    gst = round(sum(
+        i["subtotal"] * gst_rates.get(i["product_id"], 0) / (100 + gst_rates.get(i["product_id"], 0))
+        for i in items if gst_rates.get(i["product_id"], 0) > 0
+    ), 2)
     delivery_fee = 0 if subtotal >= FREE_DELIVERY_THRESHOLD else DELIVERY_FEE
     discount = cart.get("discount", 0)
-    grand_total = round(subtotal + gst + delivery_fee - discount, 2)
+    grand_total = round(subtotal + delivery_fee - discount, 2)
 
     cart.update({
         "items": items,
@@ -49,6 +70,11 @@ def _recalculate(cart: dict) -> dict:
         "updated_at": _now(),
     })
     return cart
+
+
+async def _recalc(cart: dict) -> dict:
+    rates = await _gst_rates_by_product([i["product_id"] for i in cart.get("items", [])])
+    return _recalculate(cart, rates)
 
 
 async def _get_or_create_cart(customer_id: str) -> dict:
@@ -71,7 +97,7 @@ async def _get_or_create_cart(customer_id: str) -> dict:
 @router.get("/cart")
 async def get_cart(customer_id: str = Query(...)):
     cart = await _get_or_create_cart(customer_id)
-    return serialize(_recalculate(cart))
+    return serialize(await _recalc(cart))
 
 
 @router.post("/cart/add")
@@ -107,7 +133,7 @@ async def add_to_cart(
         })
 
     cart["items"] = items
-    cart = _recalculate(cart)
+    cart = await _recalc(cart)
     await carts_col.update_one({"customer_id": customer_id}, {"$set": cart})
     return serialize(cart)
 
@@ -130,7 +156,7 @@ async def update_cart_item(
         item["quantity"] = quantity
 
     cart["items"] = items
-    cart = _recalculate(cart)
+    cart = await _recalc(cart)
     await carts_col.update_one({"customer_id": customer_id}, {"$set": cart})
     return serialize(cart)
 
@@ -139,7 +165,7 @@ async def update_cart_item(
 async def remove_from_cart(product_id: str, customer_id: str = Query(...)):
     cart = await _get_or_create_cart(customer_id)
     cart["items"] = [i for i in cart.get("items", []) if i["product_id"] != product_id]
-    cart = _recalculate(cart)
+    cart = await _recalc(cart)
     await carts_col.update_one({"customer_id": customer_id}, {"$set": cart})
     return serialize(cart)
 
@@ -149,7 +175,7 @@ async def clear_cart(customer_id: str = Query(...)):
     cart = await _get_or_create_cart(customer_id)
     cart["items"] = []
     cart["discount"] = 0
-    cart = _recalculate(cart)
+    cart = await _recalc(cart)
     await carts_col.update_one({"customer_id": customer_id}, {"$set": cart})
     return serialize(cart)
 
@@ -158,6 +184,6 @@ async def clear_cart(customer_id: str = Query(...)):
 async def sync_cart(customer_id: str = Body(...), items: list = Body(...)):
     cart = await _get_or_create_cart(customer_id)
     cart["items"] = items
-    cart = _recalculate(cart)
+    cart = await _recalc(cart)
     await carts_col.update_one({"customer_id": customer_id}, {"$set": cart})
     return serialize(cart)
