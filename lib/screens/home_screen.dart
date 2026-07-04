@@ -370,7 +370,7 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _bestsellers.length > 6 ? 6 : _bestsellers.length,
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2, childAspectRatio: 0.72, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                            crossAxisCount: 2, childAspectRatio: 0.568, crossAxisSpacing: 10, mainAxisSpacing: 10),
                           itemBuilder: (_, i) => ProductCard(product: _bestsellers[i]),
                         ),
                       ),

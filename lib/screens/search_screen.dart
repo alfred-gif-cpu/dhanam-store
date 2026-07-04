@@ -356,7 +356,7 @@ class _SearchScreenState extends State<SearchScreen> {
               padding: const EdgeInsets.all(12),
               itemCount: _results.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: cols, childAspectRatio: 0.72, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                  crossAxisCount: cols, childAspectRatio: 0.568, crossAxisSpacing: 10, mainAxisSpacing: 10),
               itemBuilder: (context, index) => ProductCard(product: _results[index]),
             );
           }),

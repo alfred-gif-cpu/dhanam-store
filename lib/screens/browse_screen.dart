@@ -147,7 +147,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       return GridView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: _products.length,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: cols, childAspectRatio: 0.72, crossAxisSpacing: 10, mainAxisSpacing: 10),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: cols, childAspectRatio: 0.568, crossAxisSpacing: 10, mainAxisSpacing: 10),
         itemBuilder: (context, index) => ProductCard(product: _products[index]),
       );
     });
