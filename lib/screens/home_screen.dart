@@ -16,6 +16,7 @@ import '../widgets/section_header.dart';
 import '../widgets/shimmer_loading.dart';
 import 'cart_screen.dart';
 import 'browse_screen.dart';
+import 'product_list_screen.dart';
 import 'search_screen.dart';
 import 'wishlist_screen.dart';
 import 'profile_screen.dart';
@@ -343,7 +344,12 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
 
                     // Featured
                     if (_featured.isNotEmpty) ...[
-                      const SectionHeader(title: 'Featured Products'),
+                      SectionHeader(
+                        title: 'Featured Products',
+                        onViewAll: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => ProductListScreen(title: 'Featured Products', products: _featured),
+                        )),
+                      ),
                       HorizontalProductList(products: _featured),
                     ],
 
@@ -355,6 +361,13 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin, 
                           const Icon(Icons.trending_up, size: 22, color: AppColors.accent),
                           const SizedBox(width: 6),
                           const Text('Trending Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => ProductListScreen(title: 'Trending Now', products: _trending),
+                            )),
+                            child: Text('View All', style: TextStyle(fontSize: 14, color: Colors.blue[700], fontWeight: FontWeight.w600)),
+                          ),
                         ]),
                       ),
                       HorizontalProductList(products: _trending),

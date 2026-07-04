@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../screens/product_list_screen.dart';
 import 'product_card.dart';
 
 class FlashDealSection extends StatefulWidget {
@@ -50,14 +51,22 @@ class _FlashDealSectionState extends State<FlashDealSection> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
           child: Row(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.bolt, size: 18, color: Colors.yellow),
-                SizedBox(width: 4),
-                Text('Flash Deals', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-              ]),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => ProductListScreen(title: 'Flash Deals', products: widget.products),
+              )),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.bolt, size: 18, color: Colors.yellow),
+                  SizedBox(width: 4),
+                  Text('Flash Deals', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  SizedBox(width: 4),
+                  Icon(Icons.chevron_right, size: 18, color: Colors.white),
+                ]),
+              ),
             ),
             const SizedBox(width: 10),
             Container(
