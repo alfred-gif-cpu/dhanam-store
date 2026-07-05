@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/admin_auth_service.dart';
 
 class SecureProductsScreen extends StatefulWidget {
@@ -64,24 +66,25 @@ class _State extends State<SecureProductsScreen> {
       builder: (ctx) => _ProductForm(
         isEdit: isEdit,
         productId: product?['id'],
+        initialImageUrl: (product?['image'] ?? product?['image_url'] ?? '').toString(),
         name: name, brand: brand, price: price, mrp: mrp, stock: stock, description: description,
         category: category,
         onSave: (data) async {
-          try {
-            if (isEdit) {
-              await _auth.putAdmin('/admin/products/${product['id']}', data);
-            } else {
-              await _auth.postAdmin('/admin/products', data);
-            }
-            if (ctx.mounted) Navigator.pop(ctx);
-            _load();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          if (isEdit) {
+            await _auth.putAdmin('/admin/products/${product['id']}', data);
+            return product['id'] as String;
+          } else {
+            final result = await _auth.postAdmin('/admin/products', data);
+            return result['id'] as String;
+          }
+        },
+        onDone: () {
+          if (ctx.mounted) Navigator.pop(ctx);
+          _load();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(isEdit ? 'Product updated' : 'Product added'),
               backgroundColor: Colors.blue, behavior: SnackBarBehavior.floating));
-            }
-          } catch (e) {
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
           }
         },
       ),
@@ -262,14 +265,17 @@ class _State extends State<SecureProductsScreen> {
 class _ProductForm extends StatefulWidget {
   final bool isEdit;
   final String? productId;
+  final String initialImageUrl;
   final TextEditingController name, brand, price, mrp, stock, description;
   final String category;
-  final Future<void> Function(Map<String, dynamic>) onSave;
+  final Future<String> Function(Map<String, dynamic>) onSave;
+  final VoidCallback onDone;
 
   const _ProductForm({
-    required this.isEdit, this.productId,
+    required this.isEdit, this.productId, this.initialImageUrl = '',
     required this.name, required this.brand, required this.price, required this.mrp,
-    required this.stock, required this.description, required this.category, required this.onSave,
+    required this.stock, required this.description, required this.category,
+    required this.onSave, required this.onDone,
   });
 
   @override
@@ -279,6 +285,7 @@ class _ProductForm extends StatefulWidget {
 class _ProductFormState extends State<_ProductForm> {
   late String _category;
   bool _saving = false;
+  File? _pickedImage;
   final _categories = [
     'Baby Care', 'Bakery & Snacks', 'Beverages', 'Chocolates & Candies', 'Cooking Oils',
     'Dairy & Fats', 'Dry Fruits & Nuts', 'Electronics', 'Health & Nutrition', 'Healthcare',
@@ -294,6 +301,11 @@ class _ProductFormState extends State<_ProductForm> {
     _category = widget.category.isNotEmpty && _categories.contains(widget.category)
         ? widget.category
         : _categories.first;
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85);
+    if (picked != null) setState(() => _pickedImage = File(picked.path));
   }
 
   Future<void> _save() async {
@@ -313,8 +325,17 @@ class _ProductFormState extends State<_ProductForm> {
       data['featured'] = false;
       data['sold_count'] = 0;
     }
-    await widget.onSave(data);
-    if (mounted) setState(() => _saving = false);
+    try {
+      final productId = await widget.onSave(data);
+      if (_pickedImage != null) {
+        await AdminAuthService().uploadProductImage(productId, _pickedImage!);
+      }
+      widget.onDone();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -327,6 +348,49 @@ class _ProductFormState extends State<_ProductForm> {
         Text(widget.isEdit ? 'Edit Product' : 'Add New Product',
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         const SizedBox(height: 20),
+
+        // Product photo
+        Center(
+          child: GestureDetector(
+            onTap: _pickImage,
+            child: Stack(
+              children: [
+                Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _pickedImage != null
+                      ? Image.file(_pickedImage!, fit: BoxFit.cover)
+                      : widget.initialImageUrl.isNotEmpty
+                          ? Image.network(widget.initialImageUrl, fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Icon(Icons.image, color: Colors.grey[400], size: 32))
+                          : Icon(Icons.add_a_photo_outlined, color: Colors.grey[400], size: 32),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
+                    child: const Icon(Icons.edit, color: Colors.white, size: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Center(
+          child: TextButton(
+            onPressed: _pickImage,
+            child: Text(_pickedImage != null || widget.initialImageUrl.isNotEmpty ? 'Change photo' : 'Add photo'),
+          ),
+        ),
+        const SizedBox(height: 8),
 
         _field(widget.name, 'Product Name *', Icons.shopping_bag_outlined),
         const SizedBox(height: 12),

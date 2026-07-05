@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
 
@@ -133,6 +134,19 @@ class AdminAuthService extends ChangeNotifier {
     final res = await req.close();
     final data = jsonDecode(await res.transform(utf8.decoder).join());
     if (res.statusCode >= 400) throw Exception(data['detail'] ?? 'Failed');
+  }
+
+  /// Uploads a product photo and returns the new image URL.
+  Future<String> uploadProductImage(String productId, File imageFile) async {
+    final uri = Uri.parse('$_baseUrl/admin/products/$productId/image');
+    final request = http.MultipartRequest('POST', uri);
+    if (_token != null) request.headers['Authorization'] = 'Bearer $_token';
+    request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode >= 400) throw Exception(data['detail'] ?? 'Image upload failed');
+    return data['image_url'] as String;
   }
 
   Future<void> logout() async {
