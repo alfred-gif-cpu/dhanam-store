@@ -75,14 +75,14 @@ class _State extends State<AdminLoginScreen> {
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white, fontFamily: 'AppSans'),
               decoration: _inputDec('Email', Icons.email_outlined),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _password,
               obscureText: _obscure,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white, fontFamily: 'AppSans'),
               onSubmitted: (_) => _login(),
               decoration: _inputDec('Password', Icons.lock_outline).copyWith(
                 suffixIcon: IconButton(

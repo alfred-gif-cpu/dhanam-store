@@ -65,7 +65,7 @@ class _State extends State<AdminChangePasswordScreen> {
   }
 
   Widget _field(TextEditingController c, String label) => TextField(
-    controller: c, obscureText: true, style: const TextStyle(color: Colors.white),
+    controller: c, obscureText: true, style: const TextStyle(color: Colors.white, fontFamily: 'AppSans'),
     decoration: InputDecoration(labelText: label, labelStyle: const TextStyle(color: Colors.white54),
       prefixIcon: const Icon(Icons.lock_outline, color: Colors.white54),
       filled: true, fillColor: Colors.white.withValues(alpha: 0.1),

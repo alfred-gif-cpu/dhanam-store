@@ -158,7 +158,7 @@ class _OtpScreenState extends State<OtpScreen> {
           textInputAction: TextInputAction.done,
           onChanged: (_) => setState(() => _error = null),
           onSubmitted: (_) => _submitName(),
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, fontFamily: 'AppSans'),
           decoration: InputDecoration(
             hintText: 'Full name',
             prefixIcon: const Icon(Icons.person_outline),
@@ -227,7 +227,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   maxLength: 1,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onChanged: (v) => _onDigitChanged(i, v),
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'AppSans'),
                   decoration: InputDecoration(
                     counterText: '',
                     filled: true,

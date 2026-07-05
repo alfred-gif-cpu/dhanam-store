@@ -790,7 +790,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           autofocus: true,
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'AppSans'),
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             helperText: 'Max $maxQty available',
