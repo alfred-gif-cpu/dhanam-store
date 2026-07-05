@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/admin_auth_service.dart';
 
 class AdminInventoryScreen extends StatefulWidget {
-  const AdminInventoryScreen({super.key});
+  final String initialFilter;
+  const AdminInventoryScreen({super.key, this.initialFilter = ''});
 
   @override
   State<AdminInventoryScreen> createState() => _State();
@@ -17,7 +18,7 @@ class _State extends State<AdminInventoryScreen> {
   final _filters = {'': 'All', 'low': 'Low Stock', 'out': 'Out of Stock', 'in': 'In Stock'};
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() { super.initState(); _filter = widget.initialFilter; _load(); }
 
   Future<void> _load() async {
     setState(() => _loading = true);

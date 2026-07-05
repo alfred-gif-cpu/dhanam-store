@@ -3,6 +3,7 @@ import '../../services/admin_auth_service.dart';
 import 'admin_login_screen.dart';
 import 'admin_inventory_screen.dart';
 import 'admin_audit_logs_screen.dart';
+import 'admin_order_analytics_screen.dart';
 import 'admin_orders_screen.dart';
 import 'secure_products_screen.dart';
 import 'staff_screen.dart';
@@ -97,9 +98,11 @@ class _State extends State<SecureAdminDashboard> {
 
       // Revenue
       Row(children: [
-        Expanded(child: _revenueCard('Today', s['revenue_today'] ?? 0, Colors.blue)),
+        Expanded(child: _revenueCard('Today', s['revenue_today'] ?? 0, Colors.blue,
+            () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrderAnalyticsScreen())))),
         const SizedBox(width: 12),
-        Expanded(child: _revenueCard('This Month', s['revenue_this_month'] ?? 0, Colors.blue)),
+        Expanded(child: _revenueCard('This Month', s['revenue_this_month'] ?? 0, Colors.blue,
+            () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrderAnalyticsScreen())))),
       ]),
       const SizedBox(height: 12),
 
@@ -107,11 +110,13 @@ class _State extends State<SecureAdminDashboard> {
       if ((s['low_stock'] ?? 0) > 0 || (s['out_of_stock'] ?? 0) > 0)
         Row(children: [
           if ((s['low_stock'] ?? 0) > 0)
-            Expanded(child: _alert('Low Stock', '${s['low_stock']}', Colors.orange)),
+            Expanded(child: _alert('Low Stock', '${s['low_stock']}', Colors.orange,
+                () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminInventoryScreen(initialFilter: 'low'))))),
           if ((s['low_stock'] ?? 0) > 0 && (s['out_of_stock'] ?? 0) > 0)
             const SizedBox(width: 12),
           if ((s['out_of_stock'] ?? 0) > 0)
-            Expanded(child: _alert('Out of Stock', '${s['out_of_stock']}', Colors.red)),
+            Expanded(child: _alert('Out of Stock', '${s['out_of_stock']}', Colors.red,
+                () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminInventoryScreen(initialFilter: 'out'))))),
         ]),
       const SizedBox(height: 20),
 
@@ -167,27 +172,35 @@ class _State extends State<SecureAdminDashboard> {
     ]),
   );
 
-  Widget _revenueCard(String label, num value, Color color) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withValues(alpha: 0.2))),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: TextStyle(fontSize: 12, color: color)),
-      const SizedBox(height: 4),
-      Text('₹${value.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-    ]),
+  Widget _revenueCard(String label, num value, Color color, [VoidCallback? onTap]) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withValues(alpha: 0.2))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: TextStyle(fontSize: 12, color: color)),
+        const SizedBox(height: 4),
+        Text('₹${value.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+      ]),
+    ),
   );
 
-  Widget _alert(String label, String value, Color color) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: color.withValues(alpha: 0.3))),
-    child: Row(children: [
-      Icon(Icons.warning_amber, color: color, size: 22),
-      const SizedBox(width: 8),
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: TextStyle(fontSize: 11, color: color)),
+  Widget _alert(String label, String value, Color color, [VoidCallback? onTap]) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(14),
+    child: Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: color.withValues(alpha: 0.3))),
+      child: Row(children: [
+        Icon(Icons.warning_amber, color: color, size: 22),
+        const SizedBox(width: 8),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          Text(label, style: TextStyle(fontSize: 11, color: color)),
+        ]),
       ]),
-    ]),
+    ),
   );
 
   Widget _action(IconData icon, String title, String sub, Color color, VoidCallback onTap) => Container(
