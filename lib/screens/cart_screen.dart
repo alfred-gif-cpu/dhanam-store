@@ -290,7 +290,10 @@ class _BillPanel extends StatelessWidget {
           Expanded(child: SizedBox(height: 52, child: OutlinedButton.icon(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.shopping_bag_outlined, size: 16),
-            label: const Text('Continue', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.visible),
+            label: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('Continue', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            ),
             style: OutlinedButton.styleFrom(foregroundColor: Colors.blue,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               side: const BorderSide(color: Colors.blue, width: 1.5),
@@ -302,16 +305,19 @@ class _BillPanel extends StatelessWidget {
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen())),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Text('Checkout', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(8)),
-                child: Text('₹${cart.grandTotal.toStringAsFixed(0)}',
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-              ),
-            ]),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Text('Checkout', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(8)),
+                  child: Text('₹${cart.grandTotal.toStringAsFixed(0)}',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                ),
+              ]),
+            ),
           ))),
         ]),
       ]),

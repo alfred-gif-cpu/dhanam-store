@@ -206,7 +206,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Text(steps[i], style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? Colors.blue[800] : Colors.grey[500])),
+                Flexible(child: Text(steps[i], maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? Colors.blue[800] : Colors.grey[500]))),
                 if (i < steps.length - 1)
                   Expanded(child: Container(height: 2, margin: const EdgeInsets.symmetric(horizontal: 4), color: done ? Colors.blue : Colors.grey[300])),
               ],
@@ -271,7 +271,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        Text(addr.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        Flexible(child: Text(addr.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
                         if (selected) ...[
                           const SizedBox(width: 8),
                           Container(
@@ -453,7 +453,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+        Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, color: Colors.grey[600]))),
+        const SizedBox(width: 8),
         Text(value, style: TextStyle(fontSize: 14, color: valueColor)),
       ]),
     );

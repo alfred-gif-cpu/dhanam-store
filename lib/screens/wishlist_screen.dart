@@ -74,7 +74,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
               child: ElevatedButton.icon(
                 onPressed: () => HomeScreen.switchTab(1),
                 icon: const Icon(Icons.shopping_bag_outlined),
-                label: const Text('Explore Products', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Explore Products', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
@@ -222,7 +225,10 @@ class _WishlistItemCard extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: product.inStock ? onAddToCart : null,
                             icon: const Icon(Icons.shopping_cart_outlined, size: 16),
-                            label: Text(product.inStock ? 'Add to Cart' : 'Out of Stock', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(product.inStock ? 'Add to Cart' : 'Out of Stock', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,

@@ -112,7 +112,7 @@ class _State extends State<OrderDetailScreen> {
             ])),
             if (status != 'Cancelled' && status != 'Delivered')
               TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: widget.orderId))),
-                child: const Text('Track', style: TextStyle(fontWeight: FontWeight.bold))),
+                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Track', style: TextStyle(fontWeight: FontWeight.bold)))),
           ]),
         ),
         const SizedBox(height: 16),

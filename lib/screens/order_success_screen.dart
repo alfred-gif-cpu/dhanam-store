@@ -118,11 +118,12 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with TickerProv
                       _detailRow(Icons.payment, 'Payment', _paymentLabel),
                       _divider(),
                       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Row(children: [
+                        Flexible(child: Row(children: [
                           Icon(Icons.currency_rupee, size: 20, color: Colors.blue[700]),
                           const SizedBox(width: 10),
-                          const Text('Total Paid', style: TextStyle(fontSize: 14)),
-                        ]),
+                          const Flexible(child: Text('Total Paid', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14))),
+                        ])),
+                        const SizedBox(width: 8),
                         Text('₹${widget.grandTotal.toStringAsFixed(2)}',
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
                       ]),

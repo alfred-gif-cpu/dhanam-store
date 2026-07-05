@@ -50,7 +50,7 @@ class _FlashDealSectionState extends State<FlashDealSection> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-          child: Row(children: [
+          child: Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
             InkWell(
               borderRadius: BorderRadius.circular(8),
               onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -68,7 +68,6 @@ class _FlashDealSectionState extends State<FlashDealSection> {
                 ]),
               ),
             ),
-            const SizedBox(width: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(6)),

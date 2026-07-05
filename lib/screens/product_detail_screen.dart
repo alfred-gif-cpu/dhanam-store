@@ -506,11 +506,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Ratings & Reviews', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Flexible(child: Text('Ratings & Reviews', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
               TextButton.icon(
                 onPressed: _canReview ? _showWriteReviewDialog : _showCannotReviewMessage,
                 icon: Icon(Icons.rate_review_outlined, size: 18, color: _canReview ? null : Colors.grey[400]),
-                label: Text('Write', style: TextStyle(color: _canReview ? null : Colors.grey[400])),
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Write', style: TextStyle(color: _canReview ? null : Colors.grey[400])),
+                ),
               ),
             ],
           ),
