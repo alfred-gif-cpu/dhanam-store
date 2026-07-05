@@ -4,10 +4,6 @@ import 'orders_screen.dart';
 import 'address/address_list_screen.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart';
-import '../services/admin_auth_service.dart';
-import 'admin/admin_login_screen.dart';
-import 'admin/secure_admin_dashboard.dart';
-import 'admin/delivery_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -113,27 +109,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _tile(context, Icons.headset_mic_outlined, 'Help & Support', 'Get help with your orders', null),
           _tile(context, Icons.info_outline, 'About', 'App version 2.0.0', null),
           const SizedBox(height: 10),
-          // Staff / Owner login
-          Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(color: Colors.indigo[50], borderRadius: BorderRadius.circular(14)),
-            child: ListTile(
-              leading: Icon(Icons.store_mall_directory_outlined, color: Colors.indigo[700]),
-              title: const Text('Staff Login', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.indigo)),
-              subtitle: Text('Owner & delivery staff', style: TextStyle(fontSize: 12, color: Colors.indigo[300])),
-              trailing: const Icon(Icons.chevron_right, color: Colors.indigo),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              onTap: () {
-                final admin = AdminAuthService();
-                if (admin.isLoggedIn) {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) =>
-                      admin.isDelivery ? const DeliveryDashboardScreen() : const SecureAdminDashboard()));
-                } else {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminLoginScreen()));
-                }
-              },
-            ),
-          ),
           // Logout
           Container(
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
