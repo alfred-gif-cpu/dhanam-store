@@ -232,9 +232,12 @@ class _CartItemCard extends StatelessWidget {
                 border: Border.all(color: Colors.blue[200]!)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 _qtyBtn(Icons.remove, () => cart.decrement(item.productId)),
-                Container(
-                  constraints: const BoxConstraints(minWidth: 34), alignment: Alignment.center,
-                  child: Text('${item.quantity}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue[800])),
+                GestureDetector(
+                  onTap: () => _editQuantity(context),
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 34), alignment: Alignment.center,
+                    child: Text('${item.quantity}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue[800])),
+                  ),
                 ),
                 _qtyBtn(Icons.add, () => cart.increment(item.productId)),
               ]),
@@ -252,6 +255,34 @@ class _CartItemCard extends StatelessWidget {
     onTap: onTap, borderRadius: BorderRadius.circular(8),
     child: Padding(padding: const EdgeInsets.all(7), child: Icon(icon, size: 18, color: Colors.blue[700])),
   );
+
+  Future<void> _editQuantity(BuildContext context) async {
+    final controller = TextEditingController(text: '${item.quantity}');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Enter quantity'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'AppSans'),
+          decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+          onSubmitted: (v) => Navigator.pop(ctx, int.tryParse(v)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text)),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (result != null) cart.updateQuantity(item.productId, result);
+  }
 }
 
 // ─── Bill Panel ──────────────────────────────────────────

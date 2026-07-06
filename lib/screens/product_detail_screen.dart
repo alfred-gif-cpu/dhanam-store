@@ -413,10 +413,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     _qtyButton(Icons.remove, _quantity > 1 ? () => setState(() => _quantity--) : null),
                     GestureDetector(
                       onTap: () => _editQuantity(product),
-                      child: SizedBox(
-                        width: 44,
-                        child: Text('$_quantity', textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.dotted)),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[100]!),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('$_quantity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 4),
+                            Icon(Icons.edit, size: 13, color: Colors.blue[400]),
+                          ],
+                        ),
                       ),
                     ),
                     _qtyButton(Icons.add, _quantity < product.stock ? () => setState(() => _quantity++) : null),
