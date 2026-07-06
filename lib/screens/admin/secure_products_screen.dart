@@ -242,10 +242,12 @@ class _State extends State<SecureProductsScreen> {
                       })),
         ),
 
-        // Pagination
+        // Pagination — bottom padding clears the "Add Product" FAB, which
+        // otherwise floats on top of (and intercepts taps on) this row.
         if (!_loading && _pages > 1)
           Container(
-            padding: const EdgeInsets.all(8),
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 76),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               IconButton(onPressed: _page > 1 ? () { _page--; _load(); } : null, icon: const Icon(Icons.chevron_left)),
               Text('$_page / $_pages', style: const TextStyle(fontWeight: FontWeight.w600)),
