@@ -130,6 +130,23 @@ class _State extends State<SecureProductsScreen> {
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Add Product', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
+      // Scaffold automatically keeps the FAB clear of a bottomNavigationBar,
+      // so the pagination row (below) no longer needs manual padding to
+      // avoid being covered by it.
+      bottomNavigationBar: (!_loading && _pages > 1)
+          ? Container(
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: SafeArea(
+                top: false,
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  IconButton(onPressed: _page > 1 ? () { _page--; _load(); } : null, icon: const Icon(Icons.chevron_left)),
+                  Text('$_page / $_pages', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  IconButton(onPressed: _page < _pages ? () { _page++; _load(); } : null, icon: const Icon(Icons.chevron_right)),
+                ]),
+              ),
+            )
+          : null,
       body: Column(children: [
         // Search
         Padding(
@@ -241,19 +258,6 @@ class _State extends State<SecureProductsScreen> {
                         );
                       })),
         ),
-
-        // Pagination — bottom padding clears the "Add Product" FAB, which
-        // otherwise floats on top of (and intercepts taps on) this row.
-        if (!_loading && _pages > 1)
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 76),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              IconButton(onPressed: _page > 1 ? () { _page--; _load(); } : null, icon: const Icon(Icons.chevron_left)),
-              Text('$_page / $_pages', style: const TextStyle(fontWeight: FontWeight.w600)),
-              IconButton(onPressed: _page < _pages ? () { _page++; _load(); } : null, icon: const Icon(Icons.chevron_right)),
-            ]),
-          ),
       ]),
     );
   }
