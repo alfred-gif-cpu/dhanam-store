@@ -59,24 +59,34 @@ class _State extends State<SecureAdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Admin Dashboard', style: TextStyle(fontSize: 18)),
-          Text(_auth.email, style: TextStyle(fontSize: 11, color: Colors.indigo[200])),
-        ]),
-        backgroundColor: Colors.indigo[800],
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
-          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
-        ],
+    return PopScope(
+      // This is the top of the admin section's navigator stack, so a back
+      // press here would otherwise silently exit (and effectively end) the
+      // admin session with no warning. Intercept it and reuse the same
+      // confirm-to-logout dialog as the explicit logout button.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _logout();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: AppBar(
+          title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Admin Dashboard', style: TextStyle(fontSize: 18)),
+            Text(_auth.email, style: TextStyle(fontSize: 11, color: Colors.indigo[200])),
+          ]),
+          backgroundColor: Colors.indigo[800],
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+            IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
+          ],
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(onRefresh: _load, child: _buildBody()),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
   }
 
