@@ -225,6 +225,15 @@ class _OtpScreenState extends State<OtpScreen> {
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   maxLength: 1,
+                  // A row of six maxLength:1 fields is the classic OTP-box
+                  // pattern that some OEM keyboards (and Android's Autofill
+                  // framework) specifically detect and render their own
+                  // styled character preview over — bypassing this
+                  // TextField's actual text style entirely. Opting out of
+                  // autofill/suggestions here stops that overlay so our
+                  // own rendering (with the correct font) is what shows.
+                  autofillHints: const [],
+                  enableSuggestions: false,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onChanged: (v) => _onDigitChanged(i, v),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'AppSans'),
