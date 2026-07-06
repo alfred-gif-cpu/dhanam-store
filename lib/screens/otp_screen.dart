@@ -13,8 +13,8 @@ class OtpScreen extends StatefulWidget {
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  final _codeController = TextEditingController();
+  final _codeFocus = FocusNode();
   final _nameController = TextEditingController();
   final _nameFocus = FocusNode();
   bool _verifying = false;
@@ -28,17 +28,13 @@ class _OtpScreenState extends State<OtpScreen> {
   void initState() {
     super.initState();
     _startTimer();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNodes[0].requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _codeFocus.requestFocus());
   }
 
   @override
   void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
-    }
-    for (final f in _focusNodes) {
-      f.dispose();
-    }
+    _codeController.dispose();
+    _codeFocus.dispose();
     _nameController.dispose();
     _nameFocus.dispose();
     _timer?.cancel();
@@ -54,17 +50,11 @@ class _OtpScreenState extends State<OtpScreen> {
     });
   }
 
-  String get _otp => _controllers.map((c) => c.text).join();
+  String get _otp => _codeController.text;
 
-  void _onDigitChanged(int index, String value) {
-    if (value.length == 1 && index < 5) {
-      _focusNodes[index + 1].requestFocus();
-    }
-    if (value.isEmpty && index > 0) {
-      _focusNodes[index - 1].requestFocus();
-    }
+  void _onCodeChanged(String value) {
     setState(() => _error = null);
-    if (_otp.length == 6) _verify();
+    if (value.length == 6) _verify();
   }
 
   Future<void> _verify() async {
@@ -88,10 +78,8 @@ class _OtpScreenState extends State<OtpScreen> {
       setState(() {
         _error = errorMsg;
         _verifying = false;
-        for (final c in _controllers) {
-          c.clear();
-        }
-        _focusNodes[0].requestFocus();
+        _codeController.clear();
+        _codeFocus.requestFocus();
       });
     }
   }
@@ -212,42 +200,72 @@ class _OtpScreenState extends State<OtpScreen> {
             )),
             const SizedBox(height: 36),
 
-            // OTP boxes (6 digits for Firebase)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(6, (i) => Container(
-                width: 48,
-                height: 58,
-                margin: EdgeInsets.only(right: i < 5 ? 8 : 0),
-                child: TextField(
-                  controller: _controllers[i],
-                  focusNode: _focusNodes[i],
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  maxLength: 1,
-                  // A row of six maxLength:1 fields is the classic OTP-box
-                  // pattern that some OEM keyboards (and Android's Autofill
-                  // framework) specifically detect and render their own
-                  // styled character preview over — bypassing this
-                  // TextField's actual text style entirely. Opting out of
-                  // autofill/suggestions here stops that overlay so our
-                  // own rendering (with the correct font) is what shows.
-                  autofillHints: const [],
-                  enableSuggestions: false,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (v) => _onDigitChanged(i, v),
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'AppSans'),
-                  decoration: InputDecoration(
-                    counterText: '',
-                    filled: true,
-                    fillColor: _focusNodes[i].hasFocus ? Colors.blue[50] : Colors.grey[100],
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.blue, width: 2)),
+            // OTP entry. The six boxes are DISPLAY-ONLY (plain Text widgets,
+            // which render correctly everywhere in the app) — input goes to a
+            // single invisible TextField stacked over them. Per-box
+            // TextFields kept corrupting the typed digit's glyphs on some
+            // devices no matter what (custom font, autofill opt-out, and
+            // renderer changes all failed to fix it), so the editable text
+            // is now never what's on screen: OEM keyboard heuristics,
+            // autofill overlays, and the input theme's contentPadding
+            // (32px horizontal — wider than a 48px box can spare) can no
+            // longer affect what the user sees.
+            SizedBox(
+              height: 58,
+              child: Stack(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(6, (i) {
+                      final code = _codeController.text;
+                      final active = _codeFocus.hasFocus && i == code.length.clamp(0, 5);
+                      return Container(
+                        width: 48,
+                        height: 58,
+                        margin: EdgeInsets.only(right: i < 5 ? 8 : 0),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: active ? Colors.blue[50] : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: active ? Border.all(color: Colors.blue, width: 2) : null,
+                        ),
+                        child: Text(
+                          i < code.length ? code[i] : '',
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'AppSans', color: Colors.black87),
+                        ),
+                      );
+                    }),
                   ),
-                ),
-              )),
+                  // Invisible input layer: full-size so the IME treats it as a
+                  // normal visible field and taps anywhere on the boxes focus it.
+                  Positioned.fill(
+                    child: TextField(
+                      controller: _codeController,
+                      focusNode: _codeFocus,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      autofillHints: const [],
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      showCursor: false,
+                      enableInteractiveSelection: false,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: _onCodeChanged,
+                      style: const TextStyle(color: Colors.transparent, fontSize: 1),
+                      cursorColor: Colors.transparent,
+                      decoration: const InputDecoration(
+                        counterText: '',
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             if (_error != null) ...[
