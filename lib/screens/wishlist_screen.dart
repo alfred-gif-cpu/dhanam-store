@@ -118,6 +118,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           onDismissed: (_) => _wishlist.toggle(product),
           child: _WishlistItemCard(
             product: product,
+            cart: _cart,
             onRemove: () => _wishlist.toggle(product),
             onAddToCart: () {
               _cart.addProduct(product, 1);
@@ -138,16 +139,75 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
 class _WishlistItemCard extends StatelessWidget {
   final Product product;
+  final CartService cart;
   final VoidCallback onRemove;
   final VoidCallback onAddToCart;
   final VoidCallback onTap;
 
   const _WishlistItemCard({
     required this.product,
+    required this.cart,
     required this.onRemove,
     required this.onAddToCart,
     required this.onTap,
   });
+
+  Future<void> _editQuantity(BuildContext context) async {
+    final controller = TextEditingController(text: '${cart.quantityOf(product.id)}');
+    final maxQty = product.stock > 0 ? product.stock : 1;
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Enter quantity'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'AppSans'),
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            helperText: 'Max $maxQty available',
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, int.tryParse(v)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text)), child: const Text('OK')),
+        ],
+      ),
+    );
+    if (result != null) cart.updateQuantity(product.id, result.clamp(0, maxQty));
+  }
+
+  Widget _qtyStepper(BuildContext context, int qty) {
+    return Expanded(
+      child: Container(
+        height: 34,
+        decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(10)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            InkWell(
+              onTap: () => cart.decrement(product.id),
+              child: const Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Icon(Icons.remove, size: 16, color: Colors.white)),
+            ),
+            GestureDetector(
+              onTap: () => _editQuantity(context),
+              child: Text('$qty', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+            InkWell(
+              onTap: () => cart.increment(product.id),
+              child: const Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Icon(Icons.add, size: 16, color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -216,31 +276,35 @@ class _WishlistItemCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Action buttons
+                  // Action buttons — "Add to Cart" until it's in the cart,
+                  // then a quantity stepper (tap the number to type a count).
                   Row(
                     children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 34,
-                          child: ElevatedButton.icon(
-                            onPressed: product.inStock ? onAddToCart : null,
-                            icon: const Icon(Icons.shopping_cart_outlined, size: 16),
-                            label: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(product.inStock ? 'Add to Cart' : 'Out of Stock', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: Colors.grey[200],
-                              disabledForegroundColor: Colors.grey[500],
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                      if (product.inStock && cart.quantityOf(product.id) > 0)
+                        _qtyStepper(context, cart.quantityOf(product.id))
+                      else
+                        Expanded(
+                          child: SizedBox(
+                            height: 34,
+                            child: ElevatedButton.icon(
+                              onPressed: product.inStock ? onAddToCart : null,
+                              icon: const Icon(Icons.shopping_cart_outlined, size: 16),
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(product.inStock ? 'Add to Cart' : 'Out of Stock', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: Colors.grey[200],
+                                disabledForegroundColor: Colors.grey[500],
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
                             ),
                           ),
                         ),
-                      ),
                       const SizedBox(width: 8),
                       SizedBox(
                         height: 34,

@@ -6,7 +6,8 @@ import '../services/search_history_service.dart';
 import '../widgets/product_card.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final String? initialQuery;
+  const SearchScreen({super.key, this.initialQuery});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -30,7 +31,11 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _history.load().then((_) => setState(() {}));
-    _focusNode.requestFocus();
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _executeSearch(widget.initialQuery!);
+    } else {
+      _focusNode.requestFocus();
+    }
   }
 
   @override
@@ -80,7 +85,9 @@ class _SearchScreenState extends State<SearchScreen> {
       _activeQuery = query;
       _suggestions = null;
       _controller.text = query;
-      _controller.selection = TextSelection.fromPosition(TextPosition(offset: query.length));
+      _controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: query.length),
+      );
     });
 
     try {
@@ -130,17 +137,38 @@ class _SearchScreenState extends State<SearchScreen> {
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       hintText: 'Search products, brands, categories...',
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 15),
+                      hintStyle: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 15,
+                      ),
                       prefixIcon: const Icon(Icons.search, size: 22),
                       suffixIcon: _controller.text.isNotEmpty
-                          ? IconButton(icon: Icon(Icons.close, color: Colors.grey[500]), onPressed: _clearSearch)
+                          ? IconButton(
+                              icon: Icon(Icons.close, color: Colors.grey[500]),
+                              onPressed: _clearSearch,
+                            )
                           : null,
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey[300]!)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.blue, width: 2)),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 0,
+                        horizontal: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: Colors.blue,
+                          width: 2,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -158,7 +186,9 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_searched) return _buildResults();
 
     // Show suggestions dropdown
-    if (_suggestions != null && !_suggestions!.isEmpty) return _buildSuggestions();
+    if (_suggestions != null && !_suggestions!.isEmpty) {
+      return _buildSuggestions();
+    }
 
     // Show recent searches + popular
     return _buildIdleState();
@@ -175,10 +205,19 @@ class _SearchScreenState extends State<SearchScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Recent searches', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Recent searches',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 GestureDetector(
-                  onTap: () async { await _history.clear(); setState(() {}); },
-                  child: Text('Clear all', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                  onTap: () async {
+                    await _history.clear();
+                    setState(() {});
+                  },
+                  child: Text(
+                    'Clear all',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                  ),
                 ),
               ],
             ),
@@ -189,7 +228,10 @@ class _SearchScreenState extends State<SearchScreen> {
         // Trending / popular
         const Padding(
           padding: EdgeInsets.only(top: 20, bottom: 12),
-          child: Text('Popular searches', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          child: Text(
+            'Popular searches',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
         ),
         Wrap(
           spacing: 8,
@@ -221,7 +263,10 @@ class _SearchScreenState extends State<SearchScreen> {
       title: Text(query, style: const TextStyle(fontSize: 14)),
       trailing: IconButton(
         icon: Icon(Icons.close, size: 16, color: Colors.grey[400]),
-        onPressed: () async { await _history.remove(query); setState(() {}); },
+        onPressed: () async {
+          await _history.remove(query);
+          setState(() {});
+        },
       ),
       onTap: () => _executeSearch(query),
     );
@@ -244,38 +289,58 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         // Product name suggestions
-        ...s.names.map((name) => _suggestionTile(
-          icon: Icons.search,
-          text: name,
-          onTap: () => _executeSearch(name),
-        )),
+        ...s.names.map(
+          (name) => _suggestionTile(
+            icon: Icons.search,
+            text: name,
+            onTap: () => _executeSearch(name),
+          ),
+        ),
 
         // Brand suggestions
         if (s.brands.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 4),
-            child: Text('Brands', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+            child: Text(
+              'Brands',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          ...s.brands.map((brand) => _suggestionTile(
-            icon: Icons.storefront,
-            text: brand,
-            subtitle: 'Brand',
-            onTap: () => _executeSearch(brand),
-          )),
+          ...s.brands.map(
+            (brand) => _suggestionTile(
+              icon: Icons.storefront,
+              text: brand,
+              subtitle: 'Brand',
+              onTap: () => _executeSearch(brand),
+            ),
+          ),
         ],
 
         // Category suggestions
         if (s.categories.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 4),
-            child: Text('Categories', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+            child: Text(
+              'Categories',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          ...s.categories.map((cat) => _suggestionTile(
-            icon: Icons.category,
-            text: cat,
-            subtitle: 'Category',
-            onTap: () => _executeSearch(cat),
-          )),
+          ...s.categories.map(
+            (cat) => _suggestionTile(
+              icon: Icons.category,
+              text: cat,
+              subtitle: 'Category',
+              onTap: () => _executeSearch(cat),
+            ),
+          ),
         ],
       ],
     );
@@ -297,8 +362,13 @@ class _SearchScreenState extends State<SearchScreen> {
           style: TextStyle(fontSize: 14, color: Colors.grey[800]),
           children: [
             TextSpan(text: text.substring(0, matchStart)),
-            TextSpan(text: text.substring(matchStart, matchStart + query.length),
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+            TextSpan(
+              text: text.substring(matchStart, matchStart + query.length),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
             TextSpan(text: text.substring(matchStart + query.length)),
           ],
         ),
@@ -315,8 +385,14 @@ class _SearchScreenState extends State<SearchScreen> {
       trailing: subtitle != null
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-              child: Text(subtitle, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                subtitle,
+                style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+              ),
             )
           : Icon(Icons.north_west, size: 16, color: Colors.grey[400]),
       onTap: onTap,
@@ -330,13 +406,26 @@ class _SearchScreenState extends State<SearchScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text('No results for "$_activeQuery"', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey[700])),
-            const SizedBox(height: 8),
-            Text('Try a different spelling or keyword', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off, size: 64, color: Colors.grey[300]),
+              const SizedBox(height: 16),
+              Text(
+                'No results for "$_activeQuery"',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Try a different spelling or keyword',
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -346,20 +435,33 @@ class _SearchScreenState extends State<SearchScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: Text('$_total results for "$_activeQuery"',
-              style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+          child: Text(
+            '$_total results for "$_activeQuery"',
+            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          ),
         ),
         Expanded(
-          child: LayoutBuilder(builder: (context, constraints) {
-            final cols = constraints.maxWidth > 900 ? 4 : constraints.maxWidth > 600 ? 3 : 2;
-            return GridView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _results.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: cols, childAspectRatio: 0.568, crossAxisSpacing: 10, mainAxisSpacing: 10),
-              itemBuilder: (context, index) => ProductCard(product: _results[index]),
-            );
-          }),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = constraints.maxWidth > 900
+                  ? 4
+                  : constraints.maxWidth > 600
+                  ? 3
+                  : 2;
+              return GridView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: _results.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: cols,
+                  childAspectRatio: 0.568,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemBuilder: (context, index) =>
+                    ProductCard(product: _results[index]),
+              );
+            },
+          ),
         ),
       ],
     );

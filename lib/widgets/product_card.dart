@@ -210,16 +210,51 @@ class _ProductCardState extends State<ProductCard> {
       child: Row(
         children: [
           _stepBtn(Icons.remove, () => _cart.decrement(product.id)),
-          Container(
-            constraints: const BoxConstraints(minWidth: 20),
-            alignment: Alignment.center,
-            child: Text('$qty',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+          GestureDetector(
+            onTap: () => _editQuantity(product),
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 20),
+              alignment: Alignment.center,
+              child: Text('$qty',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
           ),
           _stepBtn(Icons.add, () => _cart.increment(product.id)),
         ],
       ),
     );
+  }
+
+  Future<void> _editQuantity(Product product) async {
+    final controller = TextEditingController(text: '${_cart.quantityOf(product.id)}');
+    final maxQty = product.stock > 0 ? product.stock : 1;
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Enter quantity'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'AppSans'),
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            helperText: 'Max $maxQty available',
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, int.tryParse(v)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text)),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (result != null) _cart.updateQuantity(product.id, result.clamp(0, maxQty));
   }
 
   Widget _stepBtn(IconData icon, VoidCallback onTap) {

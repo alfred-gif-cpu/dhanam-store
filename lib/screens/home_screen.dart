@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/banner.dart';
 import '../models/category.dart';
 import '../models/product.dart';
@@ -54,6 +55,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _refresh() => setState(() {});
 
+  Future<void> _confirmExit() async {
+    final exit = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Exit app?'),
+        content: const Text('Are you sure you want to exit?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Exit', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
+    if (exit == true) SystemNavigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screens = [
@@ -64,10 +81,19 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return PopScope(
-      canPop: _navIndex == 0,
+      // This is the root screen for a logged-in customer, so a back press
+      // here would otherwise silently exit the app with no warning (or, if
+      // not on the Home tab, silently drop them out of the app instead of
+      // just returning to Home). Always intercept: switch to Home first if
+      // elsewhere, otherwise confirm before actually exiting.
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        setState(() => _navIndex = 0);
+        if (_navIndex != 0) {
+          setState(() => _navIndex = 0);
+        } else {
+          _confirmExit();
+        }
       },
       child: Scaffold(
         body: IndexedStack(index: _navIndex, children: screens),
@@ -315,40 +341,52 @@ class _HomeTabState extends State<_HomeTab>
                   MaterialPageRoute(builder: (_) => const SearchScreen()),
                 ),
               ),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.shopping_cart_outlined,
-                      color: AppColors.textPrimary,
-                    ),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CartScreen()),
-                    ),
-                  ),
-                  if (_cart.itemCount > 0)
-                    Positioned(
-                      top: 6,
-                      right: 4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: AppColors.accent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '${_cart.itemCount}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+              InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                ),
+                // The icon + badge used to be an IconButton with a Positioned
+                // badge drawn on top of it separately — visually one cluster,
+                // but only the smaller IconButton itself was tappable, so
+                // taps landing on/near the badge (or just outside the small
+                // default icon size) didn't register. Wrapping both in one
+                // InkWell with generous padding makes the whole visual
+                // cluster a single, larger, reliable tap target.
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(
+                        Icons.shopping_cart_outlined,
+                        color: AppColors.textPrimary,
+                        size: 30,
+                      ),
+                      if (_cart.itemCount > 0)
+                        Positioned(
+                          top: -4,
+                          right: -6,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: AppColors.accent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${_cart.itemCount}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

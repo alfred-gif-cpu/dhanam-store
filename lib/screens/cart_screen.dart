@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/cart_item.dart';
+import '../services/api_service.dart';
 import '../services/cart_service.dart';
 import '../widgets/product_image.dart';
 import 'checkout_screen.dart';
+import 'product_detail_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -17,7 +19,13 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() { super.initState(); _cart.addListener(_r); }
   @override
-  void dispose() { _cart.removeListener(_r); super.dispose(); }
+  void dispose() {
+    // Same fix as product_detail_screen: don't let a "removed"/"undo"
+    // SnackBar from this screen keep floating after navigating away.
+    ScaffoldMessenger.of(context).clearSnackBars();
+    _cart.removeListener(_r);
+    super.dispose();
+  }
   void _r() => setState(() {});
 
   @override
@@ -191,6 +199,41 @@ class _CartItemCard extends StatelessWidget {
   final CartService cart;
   const _CartItemCard({required this.item, required this.cart});
 
+  void _remove(BuildContext context) {
+    final removed = item;
+    cart.remove(item.productId);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${removed.name} removed'),
+      behavior: SnackBarBehavior.floating,
+      action: SnackBarAction(label: 'UNDO', textColor: Colors.yellow,
+          onPressed: () => cart.updateQuantity(removed.productId, removed.quantity)),
+    ));
+  }
+
+  // The cart only stores a lightweight CartItem, not a full Product, so
+  // tapping through to the detail page needs a fetch by id first. Show a
+  // brief loading dialog while it loads, then navigate.
+  Future<void> _openProduct(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final product = await ApiService().getProduct(item.productId);
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss loader
+      Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)));
+    } catch (_) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss loader
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not open product'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -199,19 +242,35 @@ class _CartItemCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white, borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
-      child: Row(children: [
-        // Image
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: SizedBox(width: 80, height: 80,
-            child: ProductImage(imageUrl: item.image, category: item.category)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Image (tap to open the product detail page)
+        GestureDetector(
+          onTap: () => _openProduct(context),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(width: 80, height: 80,
+              child: ProductImage(imageUrl: item.image, category: item.category)),
+          ),
         ),
         const SizedBox(width: 14),
 
         // Details
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(item.name, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          Row(children: [
+            Expanded(child: GestureDetector(
+              onTap: () => _openProduct(context),
+              child: Text(item.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            )),
+            InkWell(
+              onTap: () => _remove(context),
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.delete_outline, size: 20, color: Colors.grey[400]),
+              ),
+            ),
+          ]),
           const SizedBox(height: 4),
           Row(children: [
             Text('₹${item.price.toStringAsFixed(0)}', style: TextStyle(fontSize: 14, color: Colors.grey[700])),
