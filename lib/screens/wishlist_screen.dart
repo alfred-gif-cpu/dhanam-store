@@ -120,15 +120,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
             product: product,
             cart: _cart,
             onRemove: () => _wishlist.toggle(product),
-            onAddToCart: () {
-              _cart.addProduct(product, 1);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('${product.name} added to cart'),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                action: SnackBarAction(label: 'UNDO', textColor: Colors.yellow, onPressed: () => _cart.remove(product.id)),
-              ));
-            },
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product))),
           ),
         );
@@ -137,24 +128,36 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 }
 
-class _WishlistItemCard extends StatelessWidget {
+class _WishlistItemCard extends StatefulWidget {
   final Product product;
   final CartService cart;
   final VoidCallback onRemove;
-  final VoidCallback onAddToCart;
   final VoidCallback onTap;
 
   const _WishlistItemCard({
     required this.product,
     required this.cart,
     required this.onRemove,
-    required this.onAddToCart,
     required this.onTap,
   });
 
-  Future<void> _editQuantity(BuildContext context) async {
-    final controller = TextEditingController(text: '${cart.quantityOf(product.id)}');
-    final maxQty = product.stock > 0 ? product.stock : 1;
+  @override
+  State<_WishlistItemCard> createState() => _WishlistItemCardState();
+}
+
+class _WishlistItemCardState extends State<_WishlistItemCard> {
+  // Local quantity chosen before adding — like the product detail page, so
+  // the user picks a count and then presses a persistent "Add to Cart"
+  // button, rather than the button turning into a live stepper.
+  int _qty = 1;
+
+  Product get product => widget.product;
+  CartService get cart => widget.cart;
+
+  int get _maxQty => product.stock > 0 ? product.stock : 1;
+
+  Future<void> _editQuantity() async {
+    final controller = TextEditingController(text: '$_qty');
     final result = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -168,7 +171,7 @@ class _WishlistItemCard extends StatelessWidget {
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'AppSans'),
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            helperText: 'Max $maxQty available',
+            helperText: 'Max $_maxQty available',
           ),
           onSubmitted: (v) => Navigator.pop(ctx, int.tryParse(v)),
         ),
@@ -178,33 +181,57 @@ class _WishlistItemCard extends StatelessWidget {
         ],
       ),
     );
-    if (result != null) cart.updateQuantity(product.id, result.clamp(0, maxQty));
+    if (result != null) setState(() => _qty = result.clamp(1, _maxQty));
   }
 
-  Widget _qtyStepper(BuildContext context, int qty) {
-    return Expanded(
-      child: Container(
-        height: 34,
-        decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(10)),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            InkWell(
-              onTap: () => cart.decrement(product.id),
-              child: const Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Icon(Icons.remove, size: 16, color: Colors.white)),
+  void _addToCart() {
+    final prev = cart.quantityOf(product.id);
+    cart.addProduct(product, _qty);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Added $_qty × ${product.name} to cart'),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      action: SnackBarAction(
+        label: 'UNDO',
+        textColor: Colors.yellow,
+        onPressed: () => cart.updateQuantity(product.id, prev),
+      ),
+    ));
+  }
+
+  Widget _qtySelector() {
+    return Container(
+      height: 34,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: _qty > 1 ? () => setState(() => _qty--) : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Icon(Icons.remove, size: 16, color: _qty > 1 ? Colors.blue[700] : Colors.grey[300]),
             ),
-            GestureDetector(
-              onTap: () => _editQuantity(context),
-              child: Text('$qty', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+          GestureDetector(
+            onTap: _editQuantity,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 26),
+              alignment: Alignment.center,
+              child: Text('$_qty', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue[800])),
             ),
-            InkWell(
-              onTap: () => cart.increment(product.id),
-              child: const Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Icon(Icons.add, size: 16, color: Colors.white)),
+          ),
+          InkWell(
+            onTap: _qty < _maxQty ? () => setState(() => _qty++) : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Icon(Icons.add, size: 16, color: _qty < _maxQty ? Colors.blue[700] : Colors.grey[300]),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -212,7 +239,7 @@ class _WishlistItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
@@ -276,41 +303,42 @@ class _WishlistItemCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Action buttons — "Add to Cart" until it's in the cart,
-                  // then a quantity stepper (tap the number to type a count).
+                  // Pick a quantity, then a persistent "Add to Cart" button
+                  // commits that count (matches the product detail page).
+                  if (product.inStock) ...[
+                    _qtySelector(),
+                    const SizedBox(height: 8),
+                  ],
                   Row(
                     children: [
-                      if (product.inStock && cart.quantityOf(product.id) > 0)
-                        _qtyStepper(context, cart.quantityOf(product.id))
-                      else
-                        Expanded(
-                          child: SizedBox(
-                            height: 34,
-                            child: ElevatedButton.icon(
-                              onPressed: product.inStock ? onAddToCart : null,
-                              icon: const Icon(Icons.shopping_cart_outlined, size: 16),
-                              label: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(product.inStock ? 'Add to Cart' : 'Out of Stock', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: Colors.grey[200],
-                                disabledForegroundColor: Colors.grey[500],
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                              ),
+                      Expanded(
+                        child: SizedBox(
+                          height: 34,
+                          child: ElevatedButton.icon(
+                            onPressed: product.inStock ? _addToCart : null,
+                            icon: const Icon(Icons.shopping_cart_outlined, size: 16),
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(product.inStock ? 'Add to Cart' : 'Out of Stock', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.grey[200],
+                              disabledForegroundColor: Colors.grey[500],
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
                             ),
                           ),
                         ),
+                      ),
                       const SizedBox(width: 8),
                       SizedBox(
                         height: 34,
                         width: 34,
                         child: IconButton.outlined(
-                          onPressed: onRemove,
+                          onPressed: widget.onRemove,
                           icon: const Icon(Icons.close, size: 16),
                           padding: EdgeInsets.zero,
                           style: IconButton.styleFrom(

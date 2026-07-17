@@ -727,7 +727,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         // Ratings & Reviews
         _buildReviewsSection(),
 
-        // Related products
+        // Related products — reuse the shared HorizontalProductList /
+        // ProductCard (same as "Recently Viewed") so the cards render
+        // correctly instead of the old fixed-height custom card that clipped.
         if (_related.isNotEmpty) ...[
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
@@ -736,27 +738,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
-          SizedBox(
-            height: 220,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _related.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, index) => _RelatedCard(
-                product: _related[index],
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ProductDetailScreen(product: _related[index]),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
+          HorizontalProductList(products: _related),
         ],
 
         // Recent searches
@@ -1332,94 +1314,3 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 }
 
-class _RelatedCard extends StatelessWidget {
-  final Product product;
-  final VoidCallback onTap;
-
-  const _RelatedCard({required this.product, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 140,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    height: 130,
-                    width: 140,
-                    child: ProductImage(
-                      imageUrl: product.image,
-                      category: product.category,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                if (product.hasDiscount)
-                  Positioned(
-                    top: 4,
-                    left: 4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${product.discountPercent}%',
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              product.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Text(
-                  '₹${product.price.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-                if (product.hasDiscount) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    '₹${product.originalPrice.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[400],
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

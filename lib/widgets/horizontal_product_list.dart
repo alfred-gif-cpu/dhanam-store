@@ -9,7 +9,10 @@ class HorizontalProductList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 278,
+      // Tall enough for a 2-line product name plus the price+ADD row at the
+      // 158px card width — 278 clipped the bottom row by ~16px when a name
+      // wrapped to two lines (e.g. "Ambika Appalam No.6").
+      height: 296,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
