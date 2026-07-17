@@ -460,7 +460,8 @@ async function vCustomers(p){
       return '<tr><td><b>' + esc(c.name || '—') + '</b>' + (joined ? '<div class="sb muted">joined ' + esc(joined) + '</div>' : '') + '</td>' +
         '<td>' + esc(c.phone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
         '<td><span class="pill ' + (active?'g':'r') + '">' + (active?'Active':'Blocked') + '</span></td>' +
-        '<td class="right"><button class="btn btn-sm ' + (active?'btn-danger':'btn-ghost') + '" onclick="toggleBlock(\'' + esc(c.id) + '\',' + active + ')">' + (active?'Block':'Unblock') + '</button></td></tr>';
+        '<td class="right"><button class="btn btn-sm ' + (active?'btn-danger':'btn-ghost') + '" onclick="toggleBlock(\'' + esc(c.id) + '\',' + active + ')">' + (active?'Block':'Unblock') + '</button> ' +
+        '<button class="btn btn-sm btn-ghost" onclick="deleteCustomer(\'' + esc(c.id) + '\',\'' + esc(c.name || c.phone || '') + '\')">Delete</button></td></tr>';
     }).join('');
     $('view').innerHTML =
       '<div class="panel"><div class="panel-head"><h3>Customers</h3>' +
@@ -479,6 +480,11 @@ async function toggleBlock(cid, active){
   const act = active ? 'block' : 'unblock';
   if (!confirm(act === 'block' ? 'Block this customer? They will not be able to order.' : 'Unblock this customer?')) return;
   try{ await api('/admin/customers/' + encodeURIComponent(cid) + '/' + act, {method:'PUT'}); toast('Customer ' + act + 'ed'); vCustomers(); }
+  catch(e){ toast(e.message, true); }
+}
+async function deleteCustomer(cid, label){
+  if (!confirm('Permanently delete "' + label + '"?\n\nThis removes the account, addresses and wishlist. Accounts with orders cannot be deleted (block them instead). This cannot be undone.')) return;
+  try{ await api('/admin/customers/' + encodeURIComponent(cid), {method:'DELETE'}); toast('Customer deleted'); vCustomers(); }
   catch(e){ toast(e.message, true); }
 }
 

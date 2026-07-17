@@ -9,6 +9,7 @@ log = logging.getLogger(__name__)
 from database import (
     admins_collection, audit_logs_collection, products_collection,
     orders_collection, customers_collection, users_collection,
+    addresses_collection, wishlists_collection,
 )
 from admin_auth import (
     hash_password, verify_password, create_admin_token, get_current_admin,
@@ -373,6 +374,29 @@ async def unblock_customer(user_id: str, admin: dict = Depends(get_current_admin
     await users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_active": True}})
     await _log(admin["email"], "customer_unblocked", f"Unblocked customer: {user_id}")
     return {"status": "unblocked"}
+
+
+@router.delete("/customers/{user_id}")
+async def delete_customer(user_id: str, admin: dict = Depends(get_current_admin)):
+    _require_owner(admin)
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    # Refuse to delete accounts with order history — that would orphan real
+    # sales records. Block such accounts instead.
+    order_count = await orders_collection.count_documents({"user_id": user_id})
+    if order_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Customer has {order_count} order(s). Block the account instead of deleting it.",
+        )
+    await users_collection.delete_one({"_id": ObjectId(user_id)})
+    await addresses_collection.delete_many({"user_id": user_id})
+    await wishlists_collection.delete_many({"user_id": user_id})
+    await _log(admin["email"], "customer_deleted", f"Deleted customer {user.get('phone', '')} ({user_id})")
+    return {"status": "deleted"}
 
 
 # ─── Orders ───────────────────────────────────────────────
