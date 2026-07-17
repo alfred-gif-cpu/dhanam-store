@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, Query, HTTPException, Request, Body, Depends, File, UploadFile, Form
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -94,6 +94,15 @@ async def global_error_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.get("/panel", include_in_schema=False)
+@app.get("/panel/", include_in_schema=False)
+async def admin_panel():
+    """Serve the standalone web admin panel (talks to /admin/* APIs)."""
+    return FileResponse(str(STATIC_DIR / "panel" / "index.html"))
+
+
 app.include_router(customer_router, tags=["Customers"])
 app.include_router(orders_router, tags=["Orders V2"])
 app.include_router(admin_router)

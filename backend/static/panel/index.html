@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dhanam Stores — Admin Panel</title>
+<style>
+  :root{
+    --primary:#0D47A1; --primary-light:#1976D2; --primary-surface:#E3F2FD;
+    --accent:#FF9800; --surface:#F8F9FA; --card:#fff; --border:#E5E7EB;
+    --text:#1A1A2E; --text-2:#6B7280; --text-3:#9CA3AF;
+    --ok:#22C55E; --warn:#F59E0B; --err:#EF4444;
+    --radius:12px; --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--surface);color:var(--text);-webkit-font-smoothing:antialiased}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select{font:inherit;color:inherit}
+  a{color:var(--primary-light)}
+
+  /* ── Login ── */
+  #login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#0D47A1,#1565C0)}
+  .login-card{background:#fff;padding:40px;border-radius:16px;width:380px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .login-logo{width:64px;height:64px;border-radius:50%;background:var(--primary);display:grid;place-items:center;margin:0 auto 18px;font-size:28px}
+  .login-card h1{font-size:22px;text-align:center;margin-bottom:4px}
+  .login-card p.sub{text-align:center;color:var(--text-2);margin-bottom:26px;font-size:13px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px}
+  .field input{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:#fff}
+  .field input:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px var(--primary-surface)}
+  .btn{background:var(--primary);color:#fff;padding:11px 18px;border-radius:10px;font-weight:600;transition:opacity .15s}
+  .btn:hover{opacity:.9}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-full{width:100%;padding:12px}
+  .btn-sm{padding:6px 12px;border-radius:8px;font-size:13px}
+  .btn-ghost{background:#fff;border:1px solid var(--border);color:var(--text)}
+  .btn-danger{background:var(--err);color:#fff}
+  .err-box{background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px}
+
+  /* ── Shell ── */
+  #app{display:none;min-height:100vh}
+  .layout{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+  aside{background:#0F2A5C;color:#fff;padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .brand{padding:0 20px 20px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:14px}
+  .brand b{font-size:16px;display:block}
+  .brand span{font-size:11px;color:#93B4E8}
+  nav a{display:flex;align-items:center;gap:10px;padding:11px 20px;color:#C7D7F0;text-decoration:none;font-weight:500;font-size:14px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+  nav a.active{background:rgba(255,255,255,.1);color:#fff;border-left-color:var(--accent)}
+  nav a .ic{width:18px;text-align:center}
+
+  main{padding:0;overflow-x:hidden}
+  .topbar{background:#fff;border-bottom:1px solid var(--border);padding:14px 26px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+  .topbar h2{font-size:19px}
+  .who{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-2)}
+  .badge-role{background:var(--primary-surface);color:var(--primary);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
+  .content{padding:24px 26px}
+
+  /* ── Bits ── */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .card .k{font-size:12px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+  .card .v{font-size:26px;font-weight:700;margin-top:6px}
+  .card.accent .v{color:var(--primary)}
+  .card.warn .v{color:var(--warn)}
+  .card.err .v{color:var(--err)}
+  .card.ok .v{color:var(--ok)}
+
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .panel-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .panel-head h3{font-size:15px;margin-right:auto}
+  .search{padding:8px 12px;border:1px solid var(--border);border-radius:8px;min-width:220px}
+  .search:focus{outline:none;border-color:var(--primary-light)}
+  select.filter{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#fff}
+
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-2);padding:10px 14px;background:#FAFBFC;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid #F1F3F5;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#FAFBFC}
+  .thumb{width:40px;height:40px;border-radius:8px;object-fit:contain;background:#F3F4F6;flex:none}
+  .cell-prod{display:flex;align-items:center;gap:10px}
+  .cell-prod .nm{font-weight:600}
+  .cell-prod .sb{font-size:12px;color:var(--text-3)}
+  .muted{color:var(--text-3)}
+  .right{text-align:right}
+  .nowrap{white-space:nowrap}
+
+  .pill{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;white-space:nowrap}
+  .pill.g{background:#DCFCE7;color:#15803D}
+  .pill.r{background:#FEE2E2;color:#B91C1C}
+  .pill.y{background:#FEF3C7;color:#B45309}
+  .pill.b{background:var(--primary-surface);color:var(--primary)}
+  .pill.n{background:#F3F4F6;color:#4B5563}
+
+  .pager{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--text-2)}
+  .pager .grp{display:flex;gap:8px}
+
+  .empty{padding:48px;text-align:center;color:var(--text-3)}
+  .loading{padding:40px;text-align:center;color:var(--text-3)}
+
+  /* ── Modal ── */
+  .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);display:grid;place-items:center;z-index:100;padding:20px}
+  .modal{background:#fff;border-radius:14px;width:520px;max-width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,.3)}
+  .modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .modal-head h3{font-size:16px}
+  .modal-body{padding:20px}
+  .modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .close{font-size:22px;color:var(--text-3);line-height:1}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:200;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  .toast.err{background:var(--err)}
+
+  @media(max-width:900px){
+    .layout{grid-template-columns:1fr}
+    aside{position:static;height:auto}
+    nav{display:flex;overflow-x:auto}
+    nav a{white-space:nowrap;border-left:none;border-bottom:3px solid transparent}
+    nav a.active{border-left:none;border-bottom-color:var(--accent)}
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login">
+  <form class="login-card" id="loginForm">
+    <div class="login-logo">🏪</div>
+    <h1>Dhanam Stores</h1>
+    <p class="sub">Admin Panel</p>
+    <div id="loginErr"></div>
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn btn-full" id="loginBtn" type="submit">Sign In</button>
+  </form>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <div class="layout">
+    <aside>
+      <div class="brand"><b>Dhanam Stores</b><span>Admin Panel</span></div>
+      <nav id="nav">
+        <a href="#dashboard" data-v="dashboard"><span class="ic">📊</span>Dashboard</a>
+        <a href="#products"  data-v="products"><span class="ic">📦</span>Products</a>
+        <a href="#orders"    data-v="orders"><span class="ic">🧾</span>Orders</a>
+        <a href="#inventory" data-v="inventory"><span class="ic">📥</span>Inventory</a>
+        <a href="#customers" data-v="customers"><span class="ic">👥</span>Customers</a>
+        <a href="#staff"     data-v="staff" id="navStaff"><span class="ic">🚚</span>Staff</a>
+      </nav>
+    </aside>
+    <main>
+      <div class="topbar">
+        <h2 id="viewTitle">Dashboard</h2>
+        <div class="who">
+          <span id="whoName"></span>
+          <span class="badge-role" id="whoRole"></span>
+          <button class="btn btn-sm btn-ghost" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+      <div class="content" id="view"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+/* ═══════════ Core ═══════════ */
+const S = { token:localStorage.getItem('dh_admin_token')||'', name:'', role:'', view:'dashboard' };
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => '₹' + Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:0});
+const $ = id => document.getElementById(id);
+
+function toast(msg, isErr){
+  const t = document.createElement('div');
+  t.className = 'toast' + (isErr ? ' err' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2600);
+}
+
+async function api(path, opts={}){
+  const o = {...opts, headers:{...(opts.headers||{})}};
+  if (S.token) o.headers['Authorization'] = 'Bearer ' + S.token;
+  if (o.body && !(o.body instanceof FormData)){
+    o.headers['Content-Type'] = 'application/json';
+    o.body = JSON.stringify(o.body);
+  }
+  const r = await fetch(path, o);
+  if (r.status === 401){ logout(); throw new Error('Session expired — please sign in again'); }
+  let data = null;
+  try { data = await r.json(); } catch(_){}
+  if (!r.ok) throw new Error((data && (data.detail || data.message)) || ('Request failed (' + r.status + ')'));
+  return data;
+}
+
+/* ═══════════ Auth ═══════════ */
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…';
+  $('loginErr').innerHTML = '';
+  try{
+    const d = await api('/admin/login', { method:'POST', body:{ email:$('email').value.trim(), password:$('password').value } });
+    S.token = d.token; S.name = d.name || 'Admin'; S.role = d.role || 'owner';
+    localStorage.setItem('dh_admin_token', S.token);
+    localStorage.setItem('dh_admin_name', S.name);
+    localStorage.setItem('dh_admin_role', S.role);
+    if (d.must_change_password) toast('Note: you should change your password in the mobile app.');
+    boot();
+  }catch(err){
+    $('loginErr').innerHTML = '<div class="err-box">' + esc(err.message) + '</div>';
+  }finally{ btn.disabled = false; btn.textContent = 'Sign In'; }
+});
+
+function logout(){
+  S.token=''; localStorage.removeItem('dh_admin_token');
+  localStorage.removeItem('dh_admin_name'); localStorage.removeItem('dh_admin_role');
+  $('app').style.display='none'; $('login').style.display='grid';
+}
+$('logoutBtn').addEventListener('click', logout);
+
+function boot(){
+  S.name = S.name || localStorage.getItem('dh_admin_name') || 'Admin';
+  S.role = S.role || localStorage.getItem('dh_admin_role') || 'owner';
+  $('login').style.display='none'; $('app').style.display='block';
+  $('whoName').textContent = S.name;
+  $('whoRole').textContent = S.role;
+  $('navStaff').style.display = S.role === 'owner' ? '' : 'none';
+  route();
+}
+
+/* ═══════════ Router ═══════════ */
+const TITLES = {dashboard:'Dashboard',products:'Products',orders:'Orders',inventory:'Inventory',customers:'Customers',staff:'Staff'};
+function route(){
+  const v = (location.hash || '#dashboard').slice(1);
+  S.view = TITLES[v] ? v : 'dashboard';
+  $('viewTitle').textContent = TITLES[S.view];
+  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.v === S.view));
+  $('view').innerHTML = '<div class="loading">Loading…</div>';
+  ({dashboard:vDashboard, products:vProducts, orders:vOrders, inventory:vInventory, customers:vCustomers, staff:vStaff})[S.view]();
+}
+window.addEventListener('hashchange', route);
+
+function fail(e){ $('view').innerHTML = '<div class="panel"><div class="empty">⚠️ ' + esc(e.message) + '</div></div>'; }
+function pager(p, pages, total, fn){
+  return '<div class="pager"><span>' + total + ' total · page ' + p + ' of ' + (pages||1) + '</span><span class="grp">' +
+    '<button class="btn btn-sm btn-ghost" ' + (p<=1?'disabled':'') + ' onclick="' + fn + '(' + (p-1) + ')">Prev</button>' +
+    '<button class="btn btn-sm btn-ghost" ' + (p>=(pages||1)?'disabled':'') + ' onclick="' + fn + '(' + (p+1) + ')">Next</button>' +
+    '</span></div>';
+}
+
+/* ═══════════ Dashboard ═══════════ */
+async function vDashboard(){
+  try{
+    const d = await api('/admin/dashboard');
+    const st = d.orders_by_status || {};
+    const stPills = Object.keys(st).length
+      ? Object.entries(st).map(([k,v]) => '<span class="pill ' + statusColor(k) + '" style="margin:0 6px 6px 0">' + esc(k) + ': ' + v + '</span>').join('')
+      : '<span class="muted">No orders yet</span>';
+    $('view').innerHTML =
+      '<div class="cards">' +
+        card('Revenue Today', money(d.revenue_today), 'accent') +
+        card('Revenue This Month', money(d.revenue_this_month), 'accent') +
+        card('Orders Today', d.orders_today, 'ok') +
+        card('Total Orders', d.total_orders) +
+        card('Products', d.total_products) +
+        card('Customers', d.total_customers) +
+        card('Low Stock', d.low_stock, 'warn') +
+        card('Out of Stock', d.out_of_stock, 'err') +
+      '</div>' +
+      '<div class="panel"><div class="panel-head"><h3>Orders by Status</h3></div>' +
+      '<div style="padding:16px">' + stPills + '</div></div>';
+  }catch(e){ fail(e); }
+}
+const card = (k,v,cls='') => '<div class="card ' + cls + '"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+
+function statusColor(s){
+  s = String(s||'').toLowerCase();
+  if (s.includes('deliver') && !s.includes('out')) return 'g';
+  if (s.includes('cancel')) return 'r';
+  if (s.includes('pend')) return 'y';
+  if (s.includes('out')) return 'b';
+  return 'n';
+}
+
+/* ═══════════ Products ═══════════ */
+let pP = 1, pQ = '';
+async function vProducts(p){
+  if (p) pP = p;
+  try{
+    const d = await api('/admin/products?page=' + pP + '&limit=20&q=' + encodeURIComponent(pQ));
+    const rows = d.products.map(x =>
+      '<tr>' +
+      '<td><div class="cell-prod">' + (x.image ? '<img class="thumb" src="' + esc(x.image) + '" onerror="this.style.visibility=\'hidden\'">' : '<div class="thumb"></div>') +
+        '<div><div class="nm">' + esc(x.name) + '</div><div class="sb">' + esc(x.brand || '—') + '</div></div></div></td>' +
+      '<td>' + esc(x.category || '—') + '</td>' +
+      '<td class="nowrap">' + money(x.price) + '</td>' +
+      '<td>' + stockPill(x.stock) + '</td>' +
+      '<td class="right nowrap">' +
+        '<button class="btn btn-sm btn-ghost" onclick="editProduct(\'' + x.id + '\')">Edit</button> ' +
+        '<button class="btn btn-sm btn-danger" onclick="delProduct(\'' + x.id + '\',\'' + esc(x.name).replace(/'/g,"\\'") + '\')">Delete</button>' +
+      '</td></tr>').join('');
+    $('view').innerHTML =
+      '<div class="panel"><div class="panel-head"><h3>Products</h3>' +
+      '<input class="search" id="pSearch" placeholder="Search name, brand, category…" value="' + esc(pQ) + '">' +
+      '<button class="btn btn-sm" onclick="editProduct()">+ Add Product</button></div>' +
+      (d.products.length ? '<table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th class="right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty">No products found</div>') +
+      pager(d.page, d.pages, d.total, 'vProducts') + '</div>';
+    const s = $('pSearch');
+    s.addEventListener('keydown', e => { if (e.key === 'Enter'){ pQ = s.value.trim(); pP = 1; vProducts(); } });
+  }catch(e){ fail(e); }
+}
+const stockPill = n => n > 0
+  ? (n < 10 ? '<span class="pill y">' + n + ' low</span>' : '<span class="pill g">' + n + '</span>')
+  : '<span class="pill r">Out</span>';
+
+async function delProduct(id, name){
+  if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+  try{ await api('/admin/products/' + id, {method:'DELETE'}); toast('Deleted'); vProducts(); }
+  catch(e){ toast(e.message, true); }
+}
+
+async function editProduct(id){
+  let p = {name:'',brand:'',category:'',price:'',stock:'',unit:'',gst:'',description:''};
+  if (id){
+    try{
+      const d = await api('/admin/products?page=1&limit=100&q=');
+      const found = d.products.find(x => x.id === id);
+      if (found) p = found;
+    }catch(e){ toast(e.message, true); return; }
+  }
+  modal((id?'Edit':'Add') + ' Product',
+    '<div class="grid2">' +
+      f('Name','m_name',p.name) + f('Brand','m_brand',p.brand) +
+      f('Category','m_category',p.category) + f('Unit (e.g. 500g)','m_unit',p.unit) +
+      f('Price (₹, GST-incl.)','m_price',p.price,'number') + f('Stock','m_stock',p.stock,'number') +
+      f('GST rate (%)','m_gst',p.gst,'number') + f('Original price (₹)','m_original',p.original_price||p.mrp||'','number') +
+    '</div>' +
+    f('Description','m_description',p.description) +
+    (id ? '<div class="field"><label>Product image</label><input type="file" id="m_image" accept="image/*"><div class="muted" style="font-size:12px;margin-top:4px">Optional — uploads after saving. Max 5MB.</div></div>' : '<div class="muted" style="font-size:12px">Save first, then re-open to upload an image.</div>'),
+    async () => {
+      const body = {
+        name:$('m_name').value.trim(), brand:$('m_brand').value.trim(),
+        category:$('m_category').value.trim(), unit:$('m_unit').value.trim(),
+        price:parseFloat($('m_price').value)||0, stock:parseInt($('m_stock').value)||0,
+        gst:parseFloat($('m_gst').value)||0, description:$('m_description').value.trim(),
+      };
+      const orig = parseFloat($('m_original').value); if (!isNaN(orig) && orig > 0) body.original_price = orig;
+      if (!body.name){ toast('Name is required', true); return false; }
+      const saved = id ? await api('/admin/products/' + id, {method:'PUT', body})
+                       : await api('/admin/products', {method:'POST', body});
+      const pid = id || (saved && saved.id);
+      const fileEl = $('m_image');
+      if (pid && fileEl && fileEl.files[0]){
+        const fd = new FormData(); fd.append('file', fileEl.files[0]);
+        try{ await api('/admin/products/' + pid + '/image', {method:'POST', body:fd}); }
+        catch(e){ toast('Saved, but image upload failed: ' + e.message, true); }
+      }
+      toast(id ? 'Product updated' : 'Product added');
+      vProducts();
+      return true;
+    });
+}
+const f = (label,id,val,type='text') =>
+  '<div class="field"><label for="' + id + '">' + label + '</label><input id="' + id + '" type="' + type + '" value="' + esc(val ?? '') + '"></div>';
+
+/* ═══════════ Orders ═══════════ */
+const ORDER_STATUSES = ['Pending','Confirmed','Packed','Out For Delivery','Delivered','Cancelled'];
+let oP = 1, oStatus = '', oQ = '';
+async function vOrders(p){
+  if (p) oP = p;
+  try{
+    const d = await api('/admin/orders?page=' + oP + '&limit=20&status=' + encodeURIComponent(oStatus) + '&q=' + encodeURIComponent(oQ));
+    const rows = d.orders.map(o => {
+      const st = o.order_status || 'Pending';
+      const total = o.grand_total ?? o.total_amount ?? 0;
+      const addr = o.delivery_address || {};
+      const items = (o.items || []).length;
+      return '<tr>' +
+        '<td><b>' + esc(o.order_id || o.id) + '</b><div class="sb muted">' + esc((o.created_at||'').replace('T',' ').slice(0,16)) + '</div></td>' +
+        '<td>' + esc(addr.name || o.customer_id || '—') + '<div class="sb muted">' + esc(addr.phone || '') + '</div></td>' +
+        '<td>' + items + ' item' + (items===1?'':'s') + '</td>' +
+        '<td class="nowrap"><b>' + money(total) + '</b></td>' +
+        '<td><span class="pill ' + statusColor(st) + '">' + esc(st) + '</span></td>' +
+        '<td class="right"><select class="filter" onchange="setStatus(\'' + esc(o.order_id || o.id) + '\', this.value)">' +
+          ORDER_STATUSES.map(s => '<option ' + (s===st?'selected':'') + '>' + s + '</option>').join('') +
+        '</select></td></tr>';
+    }).join('');
+    $('view').innerHTML =
+      '<div class="panel"><div class="panel-head"><h3>Orders</h3>' +
+      '<input class="search" id="oSearch" placeholder="Search order ID / customer…" value="' + esc(oQ) + '">' +
+      '<select class="filter" id="oFilter"><option value="">All statuses</option>' +
+        ORDER_STATUSES.map(s => '<option ' + (s===oStatus?'selected':'') + '>' + s + '</option>').join('') + '</select></div>' +
+      (d.orders.length ? '<table><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th class="right">Update</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty">No orders found</div>') +
+      pager(d.page, d.pages, d.total, 'vOrders') + '</div>';
+    $('oFilter').addEventListener('change', e => { oStatus = e.target.value; oP = 1; vOrders(); });
+    const s = $('oSearch');
+    s.addEventListener('keydown', e => { if (e.key === 'Enter'){ oQ = s.value.trim(); oP = 1; vOrders(); } });
+  }catch(e){ fail(e); }
+}
+async function setStatus(id, status){
+  try{ await api('/admin/orders/' + encodeURIComponent(id) + '/status', {method:'PUT', body:{status}});
+       toast('Order ' + id + ' → ' + status); vOrders(); }
+  catch(e){ toast(e.message, true); vOrders(); }
+}
+
+/* ═══════════ Inventory ═══════════ */
+let iP = 1, iFilter = '';
+async function vInventory(p){
+  if (p) iP = p;
+  try{
+    const d = await api('/admin/inventory?page=' + iP + '&limit=50&filter=' + iFilter);
+    const rows = d.items.map(x =>
+      '<tr><td><b>' + esc(x.name) + '</b></td><td>' + esc(x.category||'—') + '</td>' +
+      '<td class="nowrap">' + money(x.price) + '</td><td>' + stockPill(x.stock) + '</td>' +
+      '<td class="right nowrap">' +
+        '<button class="btn btn-sm btn-ghost" onclick="setStock(\'' + x.id + '\',' + x.stock + ')">Set stock</button> ' +
+        '<button class="btn btn-sm btn-ghost" onclick="recvStock(\'' + x.id + '\')">Receive</button>' +
+      '</td></tr>').join('');
+    $('view').innerHTML =
+      '<div class="panel"><div class="panel-head"><h3>Inventory</h3>' +
+      '<select class="filter" id="iFilter">' +
+        [['','All'],['low','Low stock (<10)'],['out','Out of stock'],['in','In stock (10+)']]
+          .map(([v,l]) => '<option value="' + v + '" ' + (v===iFilter?'selected':'') + '>' + l + '</option>').join('') +
+      '</select></div>' +
+      (d.items.length ? '<table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th class="right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty">Nothing here</div>') +
+      pager(d.page, d.pages, d.total, 'vInventory') + '</div>';
+    $('iFilter').addEventListener('change', e => { iFilter = e.target.value; iP = 1; vInventory(); });
+  }catch(e){ fail(e); }
+}
+async function setStock(id, cur){
+  const v = prompt('Set stock to:', cur); if (v === null) return;
+  const n = parseInt(v); if (isNaN(n) || n < 0){ toast('Enter a valid number', true); return; }
+  try{ await api('/admin/inventory/' + id, {method:'PUT', body:{stock:n}}); toast('Stock set to ' + n); vInventory(); }
+  catch(e){ toast(e.message, true); }
+}
+async function recvStock(id){
+  const v = prompt('Receive how many units?', '10'); if (v === null) return;
+  const n = parseInt(v); if (isNaN(n) || n <= 0){ toast('Enter a positive number', true); return; }
+  try{ await api('/admin/inventory/' + id + '/receive', {method:'PUT', body:{quantity:n}}); toast('Received ' + n + ' units'); vInventory(); }
+  catch(e){ toast(e.message, true); }
+}
+
+/* ═══════════ Customers ═══════════ */
+let cP = 1, cQ = '', cStatus = '';
+async function vCustomers(p){
+  if (p) cP = p;
+  try{
+    const d = await api('/admin/customers?page=' + cP + '&limit=20&q=' + encodeURIComponent(cQ) + '&status=' + cStatus);
+    const rows = d.customers.map(c => {
+      const active = c.is_active !== false;
+      return '<tr><td><b>' + esc(c.name || '—') + '</b><div class="sb muted">' + esc(c.customer_id || '') + '</div></td>' +
+        '<td>' + esc(c.phone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
+        '<td><span class="pill ' + (active?'g':'r') + '">' + (active?'Active':'Blocked') + '</span></td>' +
+        '<td class="right">' + (c.customer_id
+          ? '<button class="btn btn-sm ' + (active?'btn-danger':'btn-ghost') + '" onclick="toggleBlock(\'' + esc(c.customer_id) + '\',' + active + ')">' + (active?'Block':'Unblock') + '</button>'
+          : '<span class="muted">—</span>') + '</td></tr>';
+    }).join('');
+    $('view').innerHTML =
+      '<div class="panel"><div class="panel-head"><h3>Customers</h3>' +
+      '<input class="search" id="cSearch" placeholder="Search name, phone, email…" value="' + esc(cQ) + '">' +
+      '<select class="filter" id="cFilter">' +
+        [['','All'],['active','Active'],['blocked','Blocked']].map(([v,l]) => '<option value="' + v + '" ' + (v===cStatus?'selected':'') + '>' + l + '</option>').join('') +
+      '</select></div>' +
+      (d.customers.length ? '<table><thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Status</th><th class="right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty">No customers found</div>') +
+      pager(d.page, d.pages, d.total, 'vCustomers') + '</div>';
+    $('cFilter').addEventListener('change', e => { cStatus = e.target.value; cP = 1; vCustomers(); });
+    const s = $('cSearch');
+    s.addEventListener('keydown', e => { if (e.key === 'Enter'){ cQ = s.value.trim(); cP = 1; vCustomers(); } });
+  }catch(e){ fail(e); }
+}
+async function toggleBlock(cid, active){
+  const act = active ? 'block' : 'unblock';
+  if (!confirm(act === 'block' ? 'Block this customer? They will not be able to order.' : 'Unblock this customer?')) return;
+  try{ await api('/admin/customers/' + encodeURIComponent(cid) + '/' + act, {method:'PUT'}); toast('Customer ' + act + 'ed'); vCustomers(); }
+  catch(e){ toast(e.message, true); }
+}
+
+/* ═══════════ Staff ═══════════ */
+async function vStaff(){
+  if (S.role !== 'owner'){ $('view').innerHTML = '<div class="panel"><div class="empty">Only the owner can manage staff.</div></div>'; return; }
+  try{
+    const d = await api('/admin/staff');
+    const rows = (d.staff||[]).map(s =>
+      '<tr><td><b>' + esc(s.name||'—') + '</b></td><td>' + esc(s.email) + '</td><td>' + esc(s.phone||'—') + '</td>' +
+      '<td><span class="pill ' + (s.active!==false?'g':'n') + '">' + (s.active!==false?'Active':'Inactive') + '</span></td>' +
+      '<td class="right"><button class="btn btn-sm btn-danger" onclick="delStaff(\'' + s.id + '\',\'' + esc(s.email).replace(/'/g,"\\'") + '\')">Remove</button></td></tr>').join('');
+    $('view').innerHTML =
+      '<div class="panel"><div class="panel-head"><h3>Delivery Staff</h3><button class="btn btn-sm" onclick="addStaff()">+ Add Staff</button></div>' +
+      ((d.staff||[]).length ? '<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th class="right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty">No delivery staff yet</div>') +
+      '</div>';
+  }catch(e){ fail(e); }
+}
+function addStaff(){
+  modal('Add Delivery Staff',
+    f('Name','s_name','') + f('Email','s_email','','email') + f('Phone','s_phone','') + f('Password (min 6 chars)','s_pass','','password'),
+    async () => {
+      const body = {name:$('s_name').value.trim(), email:$('s_email').value.trim(), phone:$('s_phone').value.trim(), password:$('s_pass').value};
+      if (!body.name || !body.email || !body.password){ toast('Name, email and password are required', true); return false; }
+      if (body.password.length < 6){ toast('Password must be at least 6 characters', true); return false; }
+      await api('/admin/staff', {method:'POST', body});
+      toast('Staff added'); vStaff(); return true;
+    });
+}
+async function delStaff(id, email){
+  if (!confirm('Remove staff account ' + email + '?')) return;
+  try{ await api('/admin/staff/' + id, {method:'DELETE'}); toast('Staff removed'); vStaff(); }
+  catch(e){ toast(e.message, true); }
+}
+
+/* ═══════════ Modal ═══════════ */
+function modal(title, bodyHtml, onSave){
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = '<div class="modal"><div class="modal-head"><h3>' + esc(title) + '</h3><button class="close">&times;</button></div>' +
+    '<div class="modal-body">' + bodyHtml + '</div>' +
+    '<div class="modal-foot"><button class="btn btn-sm btn-ghost" data-x>Cancel</button><button class="btn btn-sm" data-save>Save</button></div></div>';
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.querySelector('.close').onclick = close;
+  bg.querySelector('[data-x]').onclick = close;
+  bg.onclick = e => { if (e.target === bg) close(); };
+  const saveBtn = bg.querySelector('[data-save]');
+  saveBtn.onclick = async () => {
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    try{ if (await onSave() !== false) close(); }
+    catch(e){ toast(e.message, true); }
+    finally{ saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+  };
+}
+
+/* ═══════════ Start ═══════════ */
+if (S.token) boot(); else $('login').style.display='grid';
+</script>
+</body>
+</html>
