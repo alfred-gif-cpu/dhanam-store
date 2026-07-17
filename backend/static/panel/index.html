@@ -456,12 +456,11 @@ async function vCustomers(p){
     const d = await api('/admin/customers?page=' + cP + '&limit=20&q=' + encodeURIComponent(cQ) + '&status=' + cStatus);
     const rows = d.customers.map(c => {
       const active = c.is_active !== false;
-      return '<tr><td><b>' + esc(c.name || '—') + '</b><div class="sb muted">' + esc(c.customer_id || '') + '</div></td>' +
+      const joined = (c.created_at || '').slice(0, 10);
+      return '<tr><td><b>' + esc(c.name || '—') + '</b>' + (joined ? '<div class="sb muted">joined ' + esc(joined) + '</div>' : '') + '</td>' +
         '<td>' + esc(c.phone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
         '<td><span class="pill ' + (active?'g':'r') + '">' + (active?'Active':'Blocked') + '</span></td>' +
-        '<td class="right">' + (c.customer_id
-          ? '<button class="btn btn-sm ' + (active?'btn-danger':'btn-ghost') + '" onclick="toggleBlock(\'' + esc(c.customer_id) + '\',' + active + ')">' + (active?'Block':'Unblock') + '</button>'
-          : '<span class="muted">—</span>') + '</td></tr>';
+        '<td class="right"><button class="btn btn-sm ' + (active?'btn-danger':'btn-ghost') + '" onclick="toggleBlock(\'' + esc(c.id) + '\',' + active + ')">' + (active?'Block':'Unblock') + '</button></td></tr>';
     }).join('');
     $('view').innerHTML =
       '<div class="panel"><div class="panel-head"><h3>Customers</h3>' +

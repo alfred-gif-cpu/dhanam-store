@@ -156,6 +156,8 @@ async def verify_otp_endpoint(request: Request, phone: str = Body(...), otp: str
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
     user = await users_collection.find_one({"phone": phone})
+    if user and user.get("is_active") is False:
+        raise HTTPException(status_code=403, detail="Your account has been blocked. Please contact the store.")
     is_new = user is None
     if is_new:
         result = await users_collection.insert_one({
@@ -180,6 +182,8 @@ async def firebase_login(request: Request, phone: str = Body(..., embed=True)):
         raise HTTPException(status_code=400, detail="Invalid phone number format")
 
     user = await users_collection.find_one({"phone": phone})
+    if user and user.get("is_active") is False:
+        raise HTTPException(status_code=403, detail="Your account has been blocked. Please contact the store.")
     is_new = user is None
     if is_new:
         result = await users_collection.insert_one({

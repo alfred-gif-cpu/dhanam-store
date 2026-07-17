@@ -155,8 +155,10 @@ async def admin_dashboard(admin: dict = Depends(get_current_admin)):
     month_start = datetime(now.year, now.month, 1).isoformat()
 
     total_products = await products_collection.count_documents({})
-    total_customers = await customers_collection.count_documents({})
-    total_users = await users_collection.count_documents({})
+    # Real customer accounts live in `users` (phone-OTP logins); the legacy
+    # `customers` collection is empty.
+    total_customers = await users_collection.count_documents({})
+    total_users = total_customers
     total_orders = await orders_collection.count_documents({})
 
     rev_today = 0.0
@@ -334,6 +336,8 @@ async def list_customers(
     status: str = Query(""),
     admin: dict = Depends(get_current_admin),
 ):
+    # Real customers are the phone-OTP accounts in `users` — the legacy
+    # `customers` collection is empty and nothing writes to it.
     skip = (page - 1) * limit
     query: dict = {}
     if q:
@@ -341,30 +345,33 @@ async def list_customers(
             {"name": {"$regex": re.escape(q), "$options": "i"}},
             {"phone": {"$regex": re.escape(q), "$options": "i"}},
             {"email": {"$regex": re.escape(q), "$options": "i"}},
-            {"customer_id": {"$regex": re.escape(q), "$options": "i"}},
         ]
     if status == "active":
-        query["is_active"] = True
+        query["is_active"] = {"$ne": False}
     elif status == "blocked":
         query["is_active"] = False
 
-    total = await customers_collection.count_documents(query)
-    cursor = customers_collection.find(query).sort("created_at", -1).skip(skip).limit(limit)
+    total = await users_collection.count_documents(query)
+    cursor = users_collection.find(query).sort("created_at", -1).skip(skip).limit(limit)
     customers = [serialize(c) async for c in cursor]
     return {"customers": customers, "total": total, "page": page, "pages": (total + limit - 1) // limit}
 
 
-@router.put("/customers/{customer_id}/block")
-async def block_customer(customer_id: str, admin: dict = Depends(get_current_admin)):
-    await customers_collection.update_one({"customer_id": customer_id}, {"$set": {"is_active": False}})
-    await _log(admin["email"], "customer_blocked", f"Blocked customer: {customer_id}")
+@router.put("/customers/{user_id}/block")
+async def block_customer(user_id: str, admin: dict = Depends(get_current_admin)):
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    await users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_active": False}})
+    await _log(admin["email"], "customer_blocked", f"Blocked customer: {user_id}")
     return {"status": "blocked"}
 
 
-@router.put("/customers/{customer_id}/unblock")
-async def unblock_customer(customer_id: str, admin: dict = Depends(get_current_admin)):
-    await customers_collection.update_one({"customer_id": customer_id}, {"$set": {"is_active": True}})
-    await _log(admin["email"], "customer_unblocked", f"Unblocked customer: {customer_id}")
+@router.put("/customers/{user_id}/unblock")
+async def unblock_customer(user_id: str, admin: dict = Depends(get_current_admin)):
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    await users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_active": True}})
+    await _log(admin["email"], "customer_unblocked", f"Unblocked customer: {user_id}")
     return {"status": "unblocked"}
 
 
