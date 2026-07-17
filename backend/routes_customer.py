@@ -263,52 +263,16 @@ async def wallet_transactions(customer_id: str, page: int = Query(1, ge=1), limi
 
 # ─── Admin: Customer Management ──────────────────────────
 
-@router.get("/admin/customers")
-async def admin_list_customers(
-    page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
-    q: str = Query(""),
-    status: str = Query(""),
-    _admin: dict = Depends(get_current_admin),
-):
-    skip = (page - 1) * limit
-    query: dict = {}
-    if q:
-        query["$or"] = [
-            {"name": {"$regex": q, "$options": "i"}},
-            {"phone": {"$regex": q, "$options": "i"}},
-            {"email": {"$regex": q, "$options": "i"}},
-            {"customer_id": {"$regex": q, "$options": "i"}},
-        ]
-    if status == "active":
-        query["is_active"] = True
-    elif status == "inactive":
-        query["is_active"] = False
-
-    total = await customers_collection.count_documents(query)
-    cursor = customers_collection.find(query).sort("created_at", -1).skip(skip).limit(limit)
-    customers = [serialize(c) async for c in cursor]
-    return {"customers": customers, "total": total, "page": page, "pages": (total + limit - 1) // limit}
-
-
+# NOTE: the customers list/block/unblock admin endpoints live in
+# routes_admin.py (they serve the real `users` collection). Duplicates that
+# used to live here queried the empty legacy `customers` collection and —
+# being registered first — shadowed the working ones.
 @router.get("/admin/customers/{customer_id}/orders")
 async def admin_customer_orders(customer_id: str, _admin: dict = Depends(get_current_admin)):
     cursor = orders_collection.find({"user_id": customer_id}).sort("created_at", -1)
     orders = [serialize(o) async for o in cursor]
     total_spending = sum(o.get("grand_total", 0) for o in orders)
     return {"orders": orders, "total_orders": len(orders), "total_spending": total_spending}
-
-
-@router.put("/admin/customers/{customer_id}/block")
-async def block_customer(customer_id: str, _admin: dict = Depends(get_current_admin)):
-    await customers_collection.update_one({"customer_id": customer_id}, {"$set": {"is_active": False, "updated_at": datetime.utcnow().isoformat()}})
-    return {"status": "blocked"}
-
-
-@router.put("/admin/customers/{customer_id}/activate")
-async def activate_customer(customer_id: str, _admin: dict = Depends(get_current_admin)):
-    await customers_collection.update_one({"customer_id": customer_id}, {"$set": {"is_active": True, "updated_at": datetime.utcnow().isoformat()}})
-    return {"status": "activated"}
 
 
 @router.get("/admin/customers/top-spenders")
