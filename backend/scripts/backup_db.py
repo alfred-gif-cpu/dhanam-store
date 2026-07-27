@@ -94,14 +94,73 @@ async def restore(path: Path) -> None:
     print(f"Restored {len(docs)} documents into '{collection_name}'")
 
 
+async def restore_all(dump_dir: Path, target_uri: str, database_name: str, assume_yes: bool) -> None:
+    """Load a whole dump into another cluster — used to move between Atlas
+    clusters, since a free M0 cannot change region in place."""
+    from motor.motor_asyncio import AsyncIOMotorClient
+
+    files = sorted(dump_dir.glob("*.json"))
+    if not files:
+        print(f"No .json files in {dump_dir}")
+        return
+
+    target = AsyncIOMotorClient(target_uri)[database_name]
+    await target.command("ping")
+    print(f"Connected to target database '{database_name}'\n")
+
+    plan = [(f, len(json.loads(f.read_text(encoding='utf-8')))) for f in files]
+    occupied = {}
+    for f, _ in plan:
+        n = await target[f.stem].count_documents({})
+        if n:
+            occupied[f.stem] = n
+
+    for f, count in plan:
+        existing = occupied.get(f.stem)
+        note = f"  (target already has {existing} — will be replaced)" if existing else ""
+        print(f"  {f.stem:26} {count:>7}{note}")
+
+    if occupied and not assume_yes:
+        print(f"\n{len(occupied)} target collection(s) already contain data and will be overwritten.")
+        if input("Type 'overwrite' to continue: ").strip() != "overwrite":
+            print("Aborted.")
+            return
+
+    print()
+    for f, _ in plan:
+        docs = [_decode(d) for d in json.loads(f.read_text(encoding="utf-8"))]
+        if not docs:
+            continue
+        await target[f.stem].delete_many({})
+        await target[f.stem].insert_many(docs)
+        print(f"  restored {f.stem} ({len(docs)})")
+
+    print(
+        "\nDone. Indexes are not copied — they are recreated by ensure_indexes()"
+        "\nthe first time the app starts against this cluster."
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", default="backups", help="destination directory")
     parser.add_argument("--keep", type=int, default=10, help="how many backups to retain (0 = keep all)")
     parser.add_argument("--restore", metavar="FILE", help="restore a single collection JSON file")
+    parser.add_argument("--restore-all", metavar="DIR", help="restore a whole dump (use with --uri to migrate clusters)")
+    parser.add_argument("--uri", help="target MongoDB URI for --restore-all (defaults to the configured one)")
+    parser.add_argument("--db", help="target database name (defaults to the configured one)")
+    parser.add_argument("--yes", action="store_true", help="skip the overwrite confirmation")
     args = parser.parse_args()
 
-    if args.restore:
+    if args.restore_all:
+        from config import settings
+        asyncio.run(restore_all(
+            Path(args.restore_all),
+            args.uri or settings.mongodb_uri,
+            args.db or settings.database_name,
+            args.yes,
+        ))
+    elif args.restore:
         asyncio.run(restore(Path(args.restore)))
     else:
         asyncio.run(backup(Path(args.out), args.keep))
