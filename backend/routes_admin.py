@@ -15,10 +15,9 @@ from admin_auth import (
     hash_password, verify_password, create_admin_token, get_current_admin,
 )
 from push_service import notify_delivery_ready
+from storage import read_image_upload, save_image, resolve_image_url, slugify
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
-
-STATIC_DIR = Path(__file__).parent / "static"
 
 
 def serialize(doc: dict) -> dict:
@@ -223,10 +222,7 @@ async def list_products(
     base_url = str(request.base_url).rstrip("/")
     async for p in cursor:
         p["id"] = str(p.pop("_id"))
-        img = p.get("image_url") or p.get("image") or ""
-        if img and not img.startswith("http"):
-            img = f"{base_url}/static/images/{img}"
-        p["image"] = img
+        p["image"] = resolve_image_url(p.get("image_url") or p.get("image") or "", base_url)
         products.append(p)
     return {"products": products, "total": total, "page": page, "pages": (total + limit - 1) // limit}
 
@@ -269,15 +265,14 @@ async def upload_image(product_id: str, request: Request, file: UploadFile = Fil
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    ext = Path(file.filename or "img.jpg").suffix or ".jpg"
-    slug = re.sub(r"[^a-z0-9]+", "-", product.get("name", "product").lower()).strip("-")
-    filename = f"{slug}{ext}"
-    (STATIC_DIR / "images").mkdir(parents=True, exist_ok=True)
-    (STATIC_DIR / "images" / filename).write_bytes(await file.read())
+    content, ext = await read_image_upload(file)
+    filename = f"{slugify(product.get('name', ''), 'product')}{ext}"
+    stored = save_image(content, filename)
 
-    await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": {"image_url": filename}})
+    await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": {"image_url": stored}})
     base_url = str(request.base_url).rstrip("/")
-    return {"status": "uploaded", "image_url": f"{base_url}/static/images/{filename}"}
+    await _log(admin["email"], "product_image_uploaded", f"Image for product: {product_id}")
+    return {"status": "uploaded", "image_url": resolve_image_url(stored, base_url)}
 
 
 # ─── Inventory ────────────────────────────────────────────

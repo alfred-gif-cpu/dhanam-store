@@ -60,3 +60,6 @@ backend/product_images.csv
 
 # Backups (local DB dumps)
 backend/backups/
+
+# Runtime uploads (volume-backed in production)
+backend/static/uploads/

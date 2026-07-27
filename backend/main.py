@@ -19,6 +19,7 @@ from database import (
 )
 from auth import generate_otp, verify_otp, create_token, get_current_user, verify_firebase_phone_token
 from admin_auth import get_current_admin
+from storage import UPLOAD_DIR, UPLOAD_PREFIX, resolve_image_url
 from config import settings
 
 log = logging.getLogger(__name__)
@@ -119,6 +120,9 @@ async def global_error_handler(request: Request, exc: Exception):
             pass
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
+# Mounted before /static so it wins for /static/uploads/* — UPLOAD_DIR is a
+# mounted volume in production and may live outside STATIC_DIR entirely.
+app.mount(f"/static/{UPLOAD_PREFIX}", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
@@ -312,11 +316,9 @@ def serialize_doc(doc: dict) -> dict:
 
 def serialize_product(product: dict, base_url: str = "") -> dict:
     product["id"] = str(product.pop("_id"))
-    image = product.get("image_url") or product.get("image") or ""
-    if image and not image.startswith("http"):
-        url = f"{base_url}/static/images/{image}"
-        image = url.replace("http://", "https://", 1) if "railway.app" in url else url
-    product["image"] = image
+    product["image"] = resolve_image_url(
+        product.get("image_url") or product.get("image") or "", base_url
+    )
     return product
 
 
@@ -491,9 +493,7 @@ async def get_banners(request: Request):
     banners = []
     async for b in cursor:
         b = serialize_doc(b)
-        img = b.get("image", "")
-        if img and not img.startswith("http"):
-            b["image"] = f"{base_url}/static/images/{img}"
+        b["image"] = resolve_image_url(b.get("image", ""), base_url)
         banners.append(b)
     return {"banners": banners}
 
@@ -709,34 +709,8 @@ async def toggle_featured(product_id: str, featured: bool = Body(..., embed=True
     return {"status": "updated", "featured": featured}
 
 
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
-
-@app.post("/admin/products/{product_id}/image")
-async def upload_product_image(product_id: str, request: Request, file: UploadFile = File(...), _admin: dict = Depends(get_current_admin)):
-    import re
-    if not ObjectId.is_valid(product_id):
-        raise HTTPException(status_code=400, detail="Invalid product ID")
-    product = await products_collection.find_one({"_id": ObjectId(product_id)})
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}")
-    content = await file.read()
-    if len(content) > MAX_IMAGE_SIZE:
-        raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
-    ext = Path(file.filename or "img.jpg").suffix or ".jpg"
-    if ext.lower() not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
-        raise HTTPException(status_code=400, detail="Invalid file extension")
-    slug = re.sub(r"[^a-z0-9]+", "-", product.get("name", "product").lower()).strip("-")
-    filename = f"{slug}{ext}"
-    filepath = STATIC_DIR / "images" / filename
-    filepath.write_bytes(content)
-
-    await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": {"image_url": filename}})
-    base_url = str(request.base_url).rstrip("/")
-    return {"status": "uploaded", "image_url": f"{base_url}/static/images/{filename}"}
+# Product image upload lives in routes_admin.py — that router registers first,
+# so a duplicate defined here would never receive a request.
 
 
 # ─── Admin: Categories ───────────────────────────────────

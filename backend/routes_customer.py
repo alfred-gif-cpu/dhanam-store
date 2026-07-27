@@ -6,10 +6,9 @@ from bson import ObjectId
 from auth import get_current_user
 from admin_auth import get_current_admin
 from database import customers_collection, orders_collection, wallet_transactions_collection, products_collection
+from storage import read_image_upload, save_image, resolve_image_url, slugify
 
 router = APIRouter()
-
-STATIC_DIR = Path(__file__).parent / "static"
 
 
 def serialize(doc: dict) -> dict:
@@ -86,14 +85,12 @@ async def upload_profile_image(customer_id: str, request: Request, file: UploadF
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    ext = Path(file.filename or "img.jpg").suffix or ".jpg"
-    filename = f"profile-{customer_id.lower()}{ext}"
-    (STATIC_DIR / "images" / "profiles").mkdir(parents=True, exist_ok=True)
-    filepath = STATIC_DIR / "images" / "profiles" / filename
-    filepath.write_bytes(await file.read())
+    content, ext = await read_image_upload(file)
+    filename = f"profile-{slugify(customer_id, 'customer')}{ext}"
+    stored = save_image(content, filename, subdir="profiles")
 
     base_url = str(request.base_url).rstrip("/")
-    image_url = f"{base_url}/static/images/profiles/{filename}"
+    image_url = resolve_image_url(stored, base_url)
     await customers_collection.update_one({"customer_id": customer_id}, {"$set": {"profile_image": image_url}})
     return {"status": "uploaded", "profile_image": image_url}
 
