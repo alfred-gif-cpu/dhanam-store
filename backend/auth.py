@@ -38,14 +38,32 @@ def _ensure_firebase_app() -> bool:
 def verify_firebase_phone_token(id_token: str) -> str:
     """Verify a Firebase ID token server-side and return the phone number
     Firebase itself attests to. Never trust a client-supplied phone number
-    for login — the token is the only proof of phone ownership."""
-    if not _ensure_firebase_app():
+    for login — the token is the only proof of phone ownership.
+
+    Credential/setup failures deliberately surface as 503 rather than 401:
+    a misconfigured server is not the caller's fault, and conflating the two
+    makes a total login outage look like ordinary bad-token traffic.
+    """
+    try:
+        ready = _ensure_firebase_app()
+    except Exception:
+        log.exception("Firebase credentials could not be loaded")
+        ready = False
+    if not ready:
         raise HTTPException(status_code=503, detail="Phone verification unavailable")
-    from firebase_admin import auth as firebase_auth
+
+    try:
+        from firebase_admin import auth as firebase_auth
+    except Exception:
+        log.exception("firebase_admin.auth import failed")
+        raise HTTPException(status_code=503, detail="Phone verification unavailable")
+
     try:
         decoded = firebase_auth.verify_id_token(id_token)
-    except Exception:
+    except Exception as e:
+        log.info("Rejected Firebase ID token: %s", type(e).__name__)
         raise HTTPException(status_code=401, detail="Invalid or expired verification token")
+
     phone = decoded.get("phone_number")
     if not phone:
         raise HTTPException(status_code=401, detail="Token is not phone-verified")
