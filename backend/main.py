@@ -87,6 +87,9 @@ app.add_middleware(
 )
 
 
+_CACHEABLE_IMAGE_EXTS = {"jpg", "jpeg", "png", "webp", "gif", "svg"}
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -94,6 +97,21 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    # Without Cache-Control the client revalidates every image on every screen.
+    # The 304 is small but the round trip is not — it costs a full RTT, which
+    # for customers in Hosur is most of the perceived load time.
+    path = request.url.path
+    if path.startswith("/static/"):
+        if path.startswith(f"/static/{UPLOAD_PREFIX}/"):
+            # An admin re-uploading a product photo reuses the same filename,
+            # so these must go stale quickly or the new photo never appears.
+            response.headers["Cache-Control"] = "public, max-age=300"
+        elif path.rsplit(".", 1)[-1].lower() in _CACHEABLE_IMAGE_EXTS:
+            # Catalog images ship with the build and only change on deploy.
+            response.headers["Cache-Control"] = "public, max-age=604800"
+        else:
+            response.headers["Cache-Control"] = "public, max-age=300"
     return response
 
 
