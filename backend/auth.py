@@ -23,15 +23,36 @@ def _ensure_firebase_app() -> bool:
     if firebase_admin._apps:
         return True
     from firebase_admin import credentials
+
     raw = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
     if raw:
-        cred = credentials.Certificate(json.loads(raw))
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as e:
+            # Usually the service-account JSON was pasted in a way that mangled
+            # the escaped newlines inside private_key.
+            log.error(
+                "FIREBASE_CREDENTIALS is set (%d chars) but is not valid JSON: %s",
+                len(raw), e,
+            )
+            return False
+        missing = [k for k in ("type", "project_id", "private_key", "client_email") if k not in parsed]
+        if missing:
+            log.error("FIREBASE_CREDENTIALS JSON is missing required keys: %s", missing)
+            return False
+        if "\\n" in parsed.get("private_key", "") and "\n" not in parsed.get("private_key", ""):
+            log.error("FIREBASE_CREDENTIALS private_key has literal \\n instead of real newlines")
+            return False
+        cred = credentials.Certificate(parsed)
     else:
         path = Path(__file__).parent / "firebase-credentials.json"
         if not path.exists():
+            log.error("No Firebase credentials: FIREBASE_CREDENTIALS unset and %s missing", path)
             return False
         cred = credentials.Certificate(str(path))
+
     firebase_admin.initialize_app(cred)
+    log.info("Firebase Admin initialized for phone-token verification")
     return True
 
 
