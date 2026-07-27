@@ -25,6 +25,7 @@ async def ensure_indexes():
     await orders_collection.create_index("order_status")
     await products_collection.create_index("category")
     await products_collection.create_index([("name", 1)])
+    await products_collection.create_index("search_text")
     await customers_collection.create_index("customer_id", unique=True, sparse=True)
     await customers_collection.create_index("phone", unique=True, sparse=True)
     await users_collection.create_index("phone", unique=True, sparse=True)

@@ -20,6 +20,12 @@ from database import (
 from auth import generate_otp, verify_otp, create_token, get_current_user, verify_firebase_phone_token
 from admin_auth import get_current_admin
 from storage import UPLOAD_DIR, UPLOAD_PREFIX, resolve_image_url
+from search_utils import (
+    build_query as build_search_query,
+    tokenize as search_tokens,
+    normalize as normalize_search,
+    build_search_text,
+)
 from config import settings
 
 log = logging.getLogger(__name__)
@@ -449,9 +455,8 @@ async def get_categories(request: Request):
 
 @app.get("/search/suggestions")
 async def search_suggestions(q: str = Query(..., min_length=1)):
-    regex = {"$regex": _escape_regex(q), "$options": "i"}
     pipeline = [
-        {"$match": {"$or": [{"name": regex}, {"brand": regex}, {"category": regex}]}},
+        {"$match": build_search_query(q)},
         {"$limit": 50},
         {"$group": {
             "_id": None,
@@ -460,18 +465,18 @@ async def search_suggestions(q: str = Query(..., min_length=1)):
             "categories": {"$addToSet": "$category"},
         }},
     ]
+    # Filter the grouped values the same normalized way, so a suggestion list
+    # never contradicts what the full search would return.
+    tokens = search_tokens(q)
+    def hits(value: str) -> bool:
+        n = normalize_search(value)
+        return bool(n) and all(t in n for t in tokens)
+
     results = {"names": [], "brands": [], "categories": []}
     async for doc in products_collection.aggregate(pipeline):
-        q_lower = q.lower()
-        results["names"] = sorted(
-            [n for n in doc.get("names", []) if q_lower in n.lower()]
-        )[:5]
-        results["brands"] = sorted(
-            {b for b in doc.get("brands", []) if b and q_lower in b.lower()}
-        )[:3]
-        results["categories"] = sorted(
-            {c for c in doc.get("categories", []) if c and q_lower in c.lower()}
-        )[:3]
+        results["names"] = sorted(n for n in doc.get("names", []) if hits(n))[:5]
+        results["brands"] = sorted({b for b in doc.get("brands", []) if b and hits(b)})[:3]
+        results["categories"] = sorted({c for c in doc.get("categories", []) if c and hits(c)})[:3]
     return results
 
 
@@ -484,12 +489,7 @@ async def search_products(
 ):
     base_url = str(request.base_url).rstrip("/")
     skip = (page - 1) * limit
-    escaped = _escape_regex(q)
-    query = {"$or": [
-        {"name": {"$regex": escaped, "$options": "i"}},
-        {"brand": {"$regex": escaped, "$options": "i"}},
-        {"category": {"$regex": escaped, "$options": "i"}},
-    ]}
+    query = build_search_query(q)
     total = await products_collection.count_documents(query)
     cursor = products_collection.find(query).skip(skip).limit(limit)
     products = [serialize_product(p, base_url) async for p in cursor]
