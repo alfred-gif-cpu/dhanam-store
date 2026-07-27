@@ -131,8 +131,14 @@ class AuthService extends ChangeNotifier {
   }
 
   /// After Firebase verifies the phone, call our backend to get a JWT.
+  /// Sends the Firebase ID token — the backend derives the phone number from
+  /// it, so a client can never claim to be an arbitrary number.
   Future<bool> _loginWithFirebasePhone(String phone) async {
-    final result = await _post('/auth/firebase-login', {'phone': phone});
+    final idToken = await _fbAuth.currentUser?.getIdToken();
+    if (idToken == null) {
+      throw Exception('Verification failed. Please try again.');
+    }
+    final result = await _post('/auth/firebase-login', {'id_token': idToken});
     _token = result['token'];
     _user = {'id': result['user_id'], 'phone': phone, 'name': '', 'email': ''};
 

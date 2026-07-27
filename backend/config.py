@@ -1,13 +1,18 @@
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_DEFAULT_JWT_SECRET = "dhanam-store-secret-change-in-production"
+
 class Settings(BaseSettings):
     mongodb_uri: str
     database_name: str = "dhanam_store"
-    jwt_secret: str = "dhanam-store-secret-change-in-production"
+    jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_expiry_hours: int = 720
     debug: bool = False
-    cors_origins: list[str] = ["*"]
+    # Same-origin by default: the admin panel is served by this app and the
+    # mobile client doesn't enforce CORS, so nothing legitimate needs a wildcard.
+    cors_origins: list[str] = []
+    sentry_dsn: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -17,9 +22,16 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-if "change-in-production" in settings.jwt_secret:
-    logging.getLogger(__name__).warning(
-        "JWT_SECRET is still the default — set a strong secret in .env before deploying"
+# The admin JWT secret is derived from this one (admin_auth.py), so leaving the
+# default in place outside local dev would let anyone forge an admin token.
+# Refuse to boot rather than serve traffic with a publicly-known signing key.
+if settings.jwt_secret == _DEFAULT_JWT_SECRET and not settings.debug:
+    raise RuntimeError(
+        "JWT_SECRET is still the built-in default. Set a strong, random JWT_SECRET "
+        "environment variable before starting the server (or set DEBUG=true for local dev)."
     )
 
-logging.getLogger(__name__).info("Connected to MongoDB: %s...", settings.mongodb_uri[:20])
+if settings.jwt_secret == _DEFAULT_JWT_SECRET:
+    logging.getLogger(__name__).warning(
+        "Running in DEBUG with the default JWT_SECRET — never do this in production"
+    )

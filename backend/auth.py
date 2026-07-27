@@ -1,4 +1,8 @@
+import os
+import json
 import random
+import logging
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -8,7 +12,44 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from config import settings
 from database import users_collection, otp_collection
 
+log = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
+
+
+def _ensure_firebase_app() -> bool:
+    """Initialize the Firebase Admin default app if it isn't already
+    (shared credential source with push_service.py's FCM setup)."""
+    import firebase_admin
+    if firebase_admin._apps:
+        return True
+    from firebase_admin import credentials
+    raw = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
+    if raw:
+        cred = credentials.Certificate(json.loads(raw))
+    else:
+        path = Path(__file__).parent / "firebase-credentials.json"
+        if not path.exists():
+            return False
+        cred = credentials.Certificate(str(path))
+    firebase_admin.initialize_app(cred)
+    return True
+
+
+def verify_firebase_phone_token(id_token: str) -> str:
+    """Verify a Firebase ID token server-side and return the phone number
+    Firebase itself attests to. Never trust a client-supplied phone number
+    for login — the token is the only proof of phone ownership."""
+    if not _ensure_firebase_app():
+        raise HTTPException(status_code=503, detail="Phone verification unavailable")
+    from firebase_admin import auth as firebase_auth
+    try:
+        decoded = firebase_auth.verify_id_token(id_token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired verification token")
+    phone = decoded.get("phone_number")
+    if not phone:
+        raise HTTPException(status_code=401, detail="Token is not phone-verified")
+    return phone
 
 
 async def generate_otp(phone: str) -> str:

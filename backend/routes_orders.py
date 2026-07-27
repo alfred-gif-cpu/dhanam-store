@@ -21,7 +21,6 @@ VALID_STATUSES = ["Pending", "Confirmed", "Packed", "Out For Delivery", "Deliver
 class OrderItem(BaseModel):
     product_id: str
     name: str = ""
-    price: float = Field(gt=0)
     quantity: int = Field(gt=0)
     image: str = ""
 
@@ -70,32 +69,41 @@ def _now() -> str:
 
 # ─── Create Order ─────────────────────────────────────────
 
-async def _gst_rates_by_product(product_ids: list[str]) -> dict[str, float]:
-    """Look up each product's own GST rate from the DB — never trust a
-    client-sent rate, even though it only affects the informational
-    breakdown (item prices are already GST-inclusive and drive the total)."""
+async def _products_by_id(product_ids: list[str]) -> dict[str, dict]:
+    """Fetch each ordered product from the DB. Prices and GST rates must come
+    from here, never from the client payload — otherwise a caller hitting the
+    API directly could set its own price and pay whatever it likes."""
     oids = [ObjectId(pid) for pid in product_ids if ObjectId.is_valid(pid)]
     if not oids:
         return {}
-    rates: dict[str, float] = {}
-    cursor = products_collection.find({"_id": {"$in": oids}}, {"gst": 1})
+    found: dict[str, dict] = {}
+    cursor = products_collection.find({"_id": {"$in": oids}}, {"price": 1, "gst": 1, "name": 1})
     async for doc in cursor:
-        rates[str(doc["_id"])] = doc.get("gst", 0) or 0
-    return rates
+        found[str(doc["_id"])] = doc
+    return found
 
 
 @router.post("/orders/create")
 async def create_order(data: CreateOrderRequest):
-    gst_rates = await _gst_rates_by_product([i.product_id for i in data.items])
+    products = await _products_by_id([i.product_id for i in data.items])
 
     items = []
     gst_included = 0.0
     for item in data.items:
+        product = products.get(item.product_id)
+        if not product:
+            raise HTTPException(status_code=400, detail=f"Product not available: {item.name or item.product_id}")
+        price = float(product.get("price") or 0)
+        if price <= 0:
+            raise HTTPException(status_code=400, detail=f"Product not purchasable: {product.get('name', item.product_id)}")
+
         d = item.model_dump()
-        item_subtotal = round(item.price * item.quantity, 2)
+        d["price"] = price
+        d["name"] = product.get("name") or item.name
+        item_subtotal = round(price * item.quantity, 2)
         d["subtotal"] = item_subtotal
         items.append(d)
-        rate = gst_rates.get(item.product_id, 0)
+        rate = product.get("gst", 0) or 0
         if rate > 0:
             gst_included += item_subtotal * rate / (100 + rate)
 

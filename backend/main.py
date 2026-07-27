@@ -17,11 +17,29 @@ from database import (
     addresses_collection, wishlists_collection, users_collection,
     otp_collection, ensure_indexes,
 )
-from auth import generate_otp, verify_otp, create_token, get_current_user
+from auth import generate_otp, verify_otp, create_token, get_current_user, verify_firebase_phone_token
 from admin_auth import get_current_admin
 from config import settings
 
 log = logging.getLogger(__name__)
+
+
+# Error tracking: activates only when SENTRY_DSN is configured, so local dev
+# and any deploy without it run unchanged.
+if settings.sentry_dsn:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            traces_sample_rate=0.1,
+            # Order payloads and auth bodies carry customer phone numbers and
+            # addresses — never ship request bodies or headers to Sentry.
+            send_default_pii=False,
+            max_request_body_size="never",
+        )
+        log.info("Sentry error tracking enabled")
+    except Exception as e:
+        log.warning("Sentry init failed, continuing without it: %s", e)
 
 
 def _client_ip(request: Request) -> str:
@@ -91,6 +109,14 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 @app.exception_handler(Exception)
 async def global_error_handler(request: Request, exc: Exception):
     log.error("Unhandled error on %s %s: %s", request.method, request.url.path, traceback.format_exc())
+    # This catch-all swallows the exception before it reaches Sentry's ASGI
+    # layer, so report it explicitly.
+    if settings.sentry_dsn:
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        except Exception:
+            pass
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -176,10 +202,8 @@ async def verify_otp_endpoint(request: Request, phone: str = Body(...), otp: str
 
 @app.post("/auth/firebase-login")
 @limiter.limit("10/minute")
-async def firebase_login(request: Request, phone: str = Body(..., embed=True)):
-    phone = (phone or "").strip()
-    if not _PHONE_RE.match(phone.replace(" ", "")):
-        raise HTTPException(status_code=400, detail="Invalid phone number format")
+async def firebase_login(request: Request, id_token: str = Body(..., embed=True)):
+    phone = verify_firebase_phone_token(id_token)
 
     user = await users_collection.find_one({"phone": phone})
     if user and user.get("is_active") is False:
@@ -556,26 +580,6 @@ async def delete_address(address_id: str):
 
 
 # ─── Orders / Checkout ────────────────────────────────────
-
-@app.post("/orders")
-async def create_order(order: dict = Body(...)):
-    import random, string
-    order_number = "DH" + "".join(random.choices(string.digits, k=8))
-    order["order_number"] = order_number
-    order["status"] = "confirmed"
-    order["created_at"] = datetime.utcnow().isoformat()
-    order["updated_at"] = order["created_at"]
-    order["timeline"] = [
-        {"status": "confirmed", "time": order["created_at"], "message": "Order confirmed"},
-    ]
-    result = await orders_collection.insert_one(order)
-    return {
-        "id": str(result.inserted_id),
-        "order_number": order_number,
-        "status": "confirmed",
-        "estimated_delivery": order.get("delivery_slot", ""),
-    }
-
 
 @app.get("/orders/{user_id}")
 async def get_orders(user_id: str):
