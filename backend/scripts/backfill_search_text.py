@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pymongo import UpdateOne  # noqa: E402
 
 from database import products_collection  # noqa: E402
-from search_utils import build_search_text  # noqa: E402
+from search_utils import build_search_text, build_search_words  # noqa: E402
 
 
 async def run(apply: bool) -> None:
@@ -32,15 +32,20 @@ async def run(apply: bool) -> None:
     empty = []
     samples = []
 
-    async for p in products_collection.find({}, {"name": 1, "brand": 1, "category": 1, "search_text": 1}):
+    projection = {"name": 1, "brand": 1, "category": 1, "search_text": 1, "search_words": 1}
+    async for p in products_collection.find({}, projection):
         want = build_search_text(p)
+        want_words = build_search_words(p)
         if not want:
             empty.append(p.get("name", str(p["_id"])))
             continue
-        if p.get("search_text") == want:
+        if p.get("search_text") == want and p.get("search_words") == want_words:
             unchanged += 1
             continue
-        ops.append(UpdateOne({"_id": p["_id"]}, {"$set": {"search_text": want}}))
+        ops.append(UpdateOne(
+            {"_id": p["_id"]},
+            {"$set": {"search_text": want, "search_words": want_words}},
+        ))
         if len(samples) < 8:
             samples.append((p.get("name", ""), want))
 
@@ -62,7 +67,8 @@ async def run(apply: bool) -> None:
         print(f"\nmodified {result.modified_count} documents")
 
     await products_collection.create_index("search_text")
-    print("index on search_text ensured")
+    await products_collection.create_index("search_words")
+    print("indexes on search_text/search_words ensured")
 
 
 def main() -> None:

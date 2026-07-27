@@ -16,7 +16,7 @@ from admin_auth import (
 )
 from push_service import notify_delivery_ready
 from storage import read_image_upload, save_image, resolve_image_url, slugify
-from search_utils import build_search_text
+from search_utils import build_search_text, build_search_words
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -232,6 +232,7 @@ async def list_products(
 async def create_product(product: dict = Body(...), admin: dict = Depends(get_current_admin)):
     product["created_at"] = _now()
     product["search_text"] = build_search_text(product)
+    product["search_words"] = build_search_words(product)
     result = await products_collection.insert_one(product)
     await _log(admin["email"], "product_added", f"Added: {product.get('name', '')}")
     return {"id": str(result.inserted_id), "status": "created"}
@@ -250,7 +251,9 @@ async def update_product(product_id: str, data: dict = Body(...), admin: dict = 
     # unfindable under its new name.
     if any(f in data for f in ("name", "brand", "category")):
         existing = await products_collection.find_one({"_id": ObjectId(product_id)}) or {}
-        data["search_text"] = build_search_text({**existing, **data})
+        merged = {**existing, **data}
+        data["search_text"] = build_search_text(merged)
+        data["search_words"] = build_search_words(merged)
 
     await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": data})
     await _log(admin["email"], "product_edited", f"Edited product: {product_id}")
