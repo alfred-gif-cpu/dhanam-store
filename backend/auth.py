@@ -126,6 +126,22 @@ def create_token(user_id: str, phone: str) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
+def create_invoice_token(order_id: str, user_id: str) -> str:
+    """Short-lived token granting access to one order's invoice PDF.
+
+    Scoped to a single order and expiring in five minutes, because it travels
+    in a URL to the system browser where it can land in history.
+    """
+    payload = {
+        "sub": user_id,
+        "phone": "",
+        "scope": "invoice",
+        "order_id": order_id,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
+
+
 def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])

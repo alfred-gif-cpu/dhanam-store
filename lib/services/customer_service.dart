@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
+import 'auth_service.dart';
 
 class CustomerService extends ChangeNotifier {
   static const _key = 'customer_data';
@@ -30,12 +31,16 @@ class CustomerService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> _get(String path) async {
     final req = await _client.getUrl(Uri.parse('$_baseUrl$path'));
+    final t = AuthService().token;
+    if (t != null) req.headers.set('Authorization', 'Bearer $t');
     final res = await req.close();
     return jsonDecode(await res.transform(utf8.decoder).join());
   }
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final req = await _client.postUrl(Uri.parse('$_baseUrl$path'));
+    final t = AuthService().token;
+    if (t != null) req.headers.set('Authorization', 'Bearer $t');
     req.headers.contentType = ContentType.json;
     req.write(jsonEncode(body));
     final res = await req.close();
@@ -46,6 +51,8 @@ class CustomerService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> _put(String path, Map<String, dynamic> body) async {
     final req = await _client.putUrl(Uri.parse('$_baseUrl$path'));
+    final t = AuthService().token;
+    if (t != null) req.headers.set('Authorization', 'Bearer $t');
     req.headers.contentType = ContentType.json;
     req.write(jsonEncode(body));
     final res = await req.close();
@@ -56,6 +63,8 @@ class CustomerService extends ChangeNotifier {
 
   Future<void> _delete(String path) async {
     final req = await _client.deleteUrl(Uri.parse('$_baseUrl$path'));
+    final t = AuthService().token;
+    if (t != null) req.headers.set('Authorization', 'Bearer $t');
     await (await req.close()).drain();
   }
 

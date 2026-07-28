@@ -199,7 +199,7 @@ async def delete_review(review_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{review_id}/helpful")
-async def mark_helpful(review_id: str):
+async def mark_helpful(review_id: str, _user: dict = Depends(get_current_user)):
     result = await reviews_collection.update_one(
         {"_id": ObjectId(review_id)},
         {"$inc": {"helpful_count": 1}},

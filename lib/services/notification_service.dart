@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../config.dart';
+import 'auth_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
@@ -129,6 +130,8 @@ class NotificationService {
     try {
       final client = HttpClient();
       final request = await client.postUrl(Uri.parse('$_baseUrl/notifications/register'));
+      final t = AuthService().token;
+      if (t != null) request.headers.set('Authorization', 'Bearer $t');
       request.headers.contentType = ContentType.json;
       request.write(jsonEncode({'token': token}));
       await request.close();

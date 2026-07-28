@@ -87,6 +87,8 @@ class CartService extends ChangeNotifier {
     if (_userId == 'guest') return;
     try {
       final req = await _client.postUrl(Uri.parse('$_baseUrl/cart/sync'));
+      final t = AuthService().token;
+      if (t != null) req.headers.set('Authorization', 'Bearer $t');
       req.headers.contentType = ContentType.json;
       req.write(jsonEncode({
         'customer_id': _userId,
@@ -109,6 +111,8 @@ class CartService extends ChangeNotifier {
     if (_userId == 'guest') return;
     try {
       final req = await _client.getUrl(Uri.parse('$_baseUrl/cart?customer_id=$_userId'));
+      final t = AuthService().token;
+      if (t != null) req.headers.set('Authorization', 'Bearer $t');
       final res = await req.close();
       final data = jsonDecode(await res.transform(utf8.decoder).join());
       final serverItems = (data['items'] as List?) ?? [];
@@ -207,6 +211,11 @@ class CartService extends ChangeNotifier {
     _saveLocal();
     if (_userId != 'guest') {
       _client.deleteUrl(Uri.parse('$_baseUrl/cart/clear?customer_id=$_userId'))
+          .then((r) {
+            final t = AuthService().token;
+            if (t != null) r.headers.set('Authorization', 'Bearer $t');
+            return r;
+          })
           .then((req) => req.close()).then((res) => res.drain()).catchError((_) {});
     }
   }

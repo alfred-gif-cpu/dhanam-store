@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Body, Depends
 from pydantic import BaseModel
 from database import db
 from admin_auth import get_current_admin
+from auth import get_current_user
 
 log = logging.getLogger(__name__)
 
@@ -27,12 +28,12 @@ class SendNotificationRequest(BaseModel):
 
 
 @router.post("/register")
-async def register_token(req: RegisterTokenRequest):
+async def register_token(req: RegisterTokenRequest, user: dict = Depends(get_current_user)):
     await fcm_tokens_collection.update_one(
         {"token": req.token},
         {"$set": {
             "token": req.token,
-            "user_id": req.user_id,
+            "user_id": user["id"],
             "updated_at": datetime.utcnow().isoformat(),
         }},
         upsert=True,
@@ -106,7 +107,9 @@ async def send_notification(req: SendNotificationRequest, _admin: dict = Depends
 
 
 @router.get("/history/{user_id}")
-async def get_notifications(user_id: str):
+async def get_notifications(user_id: str, user: dict = Depends(get_current_user)):
+    if user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     notifs = await notifications_collection.find(
         {"$or": [{"user_id": user_id}, {"user_id": ""}, {"topic": {"$ne": ""}}]}
     ).sort("created_at", -1).to_list(50)

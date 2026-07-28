@@ -183,10 +183,17 @@ class _State extends State<OrderDetailScreen> {
         // Invoice
         SizedBox(height: 48, child: OutlinedButton.icon(
           onPressed: () async {
-            final url = Uri.parse('${AppConfig.baseUrl}/orders/${widget.orderId}/invoice');
-            if (await canLaunchUrl(url)) {
-              await launchUrl(url, mode: LaunchMode.externalApplication);
-            } else if (mounted) {
+            // The invoice opens in the system browser, which cannot send our
+            // auth header, so ask the backend for a short-lived signed link.
+            try {
+              final res = await OrderService().invoiceLink(widget.orderId);
+              final url = Uri.parse('${AppConfig.baseUrl}${res['url']}');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+                return;
+              }
+            } catch (_) {}
+            if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Could not open invoice'), behavior: SnackBarBehavior.floating));
             }

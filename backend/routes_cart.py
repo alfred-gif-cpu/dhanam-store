@@ -1,7 +1,8 @@
 from datetime import datetime
-from fastapi import APIRouter, Query, HTTPException, Body
+from fastapi import APIRouter, Query, HTTPException, Body, Depends
 from bson import ObjectId
 from database import db
+from auth import get_current_user
 
 router = APIRouter(tags=["Cart"])
 
@@ -95,8 +96,8 @@ async def _get_or_create_cart(customer_id: str) -> dict:
 
 
 @router.get("/cart")
-async def get_cart(customer_id: str = Query(...)):
-    cart = await _get_or_create_cart(customer_id)
+async def get_cart(customer_id: str = Query(""), user: dict = Depends(get_current_user)):
+    cart = await _get_or_create_cart(user["id"])
     return serialize(await _recalc(cart))
 
 
@@ -110,7 +111,9 @@ async def add_to_cart(
     quantity: int = Body(1),
     image: str = Body(""),
     category: str = Body(""),
+    user: dict = Depends(get_current_user),
 ):
+    customer_id = user["id"]
     if quantity < 1:
         raise HTTPException(status_code=400, detail="Quantity must be at least 1")
 
@@ -143,7 +146,9 @@ async def update_cart_item(
     customer_id: str = Body(...),
     product_id: str = Body(...),
     quantity: int = Body(...),
+    user: dict = Depends(get_current_user),
 ):
+    customer_id = user["id"]
     cart = await _get_or_create_cart(customer_id)
     items = cart.get("items", [])
 
@@ -162,7 +167,8 @@ async def update_cart_item(
 
 
 @router.delete("/cart/remove/{product_id}")
-async def remove_from_cart(product_id: str, customer_id: str = Query(...)):
+async def remove_from_cart(product_id: str, customer_id: str = Query(""), user: dict = Depends(get_current_user)):
+    customer_id = user["id"]
     cart = await _get_or_create_cart(customer_id)
     cart["items"] = [i for i in cart.get("items", []) if i["product_id"] != product_id]
     cart = await _recalc(cart)
@@ -171,7 +177,8 @@ async def remove_from_cart(product_id: str, customer_id: str = Query(...)):
 
 
 @router.delete("/cart/clear")
-async def clear_cart(customer_id: str = Query(...)):
+async def clear_cart(customer_id: str = Query(""), user: dict = Depends(get_current_user)):
+    customer_id = user["id"]
     cart = await _get_or_create_cart(customer_id)
     cart["items"] = []
     cart["discount"] = 0
@@ -181,7 +188,8 @@ async def clear_cart(customer_id: str = Query(...)):
 
 
 @router.post("/cart/sync")
-async def sync_cart(customer_id: str = Body(...), items: list = Body(...)):
+async def sync_cart(customer_id: str = Body(""), items: list = Body(...), user: dict = Depends(get_current_user)):
+    customer_id = user["id"]
     cart = await _get_or_create_cart(customer_id)
     cart["items"] = items
     cart = await _recalc(cart)

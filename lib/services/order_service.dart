@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import '../config.dart';
+import 'auth_service.dart';
 
 class OrderService {
   static final String _baseUrl = AppConfig.baseUrl;
@@ -8,12 +9,16 @@ class OrderService {
 
   Future<Map<String, dynamic>> _get(String path) async {
     final req = await _client.getUrl(Uri.parse('$_baseUrl$path'));
+    final t = AuthService().token;
+    if (t != null) req.headers.set('Authorization', 'Bearer $t');
     final res = await req.close();
     return jsonDecode(await res.transform(utf8.decoder).join());
   }
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final req = await _client.postUrl(Uri.parse('$_baseUrl$path'));
+    final t = AuthService().token;
+    if (t != null) req.headers.set('Authorization', 'Bearer $t');
     req.headers.contentType = ContentType.json;
     req.write(jsonEncode(body));
     final res = await req.close();
@@ -24,6 +29,8 @@ class OrderService {
 
   Future<Map<String, dynamic>> _put(String path, Map<String, dynamic> body) async {
     final req = await _client.putUrl(Uri.parse('$_baseUrl$path'));
+    final t = AuthService().token;
+    if (t != null) req.headers.set('Authorization', 'Bearer $t');
     req.headers.contentType = ContentType.json;
     req.write(jsonEncode(body));
     final res = await req.close();
@@ -43,5 +50,6 @@ class OrderService {
       _put('/orders/$orderId/cancel', {'reason': reason});
   Future<Map<String, dynamic>> trackOrder(String orderId) => _get('/orders/$orderId/track');
   Future<Map<String, dynamic>> reorder(String orderId) => _post('/orders/$orderId/reorder', {});
+  Future<Map<String, dynamic>> invoiceLink(String orderId) => _get('/orders/$orderId/invoice-link');
   Future<Map<String, dynamic>> getAnalytics() => _get('/admin/orders/analytics');
 }

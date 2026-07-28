@@ -28,7 +28,7 @@ async def _next_customer_id() -> str:
 # ─── Registration & Profile ──────────────────────────────
 
 @router.post("/customers/register")
-async def register_customer(data: dict = Body(...)):
+async def register_customer(data: dict = Body(...), _user: dict = Depends(get_current_user)):
     phone = data.get("phone", "").strip()
     if not phone or len(phone) < 10:
         raise HTTPException(status_code=400, detail="Valid phone number required")
@@ -61,7 +61,7 @@ async def register_customer(data: dict = Body(...)):
 
 
 @router.get("/customers/{customer_id}")
-async def get_customer(customer_id: str):
+async def get_customer(customer_id: str, _user: dict = Depends(get_current_user)):
     customer = await customers_collection.find_one(
         {"$or": [{"customer_id": customer_id}, {"_id": ObjectId(customer_id) if ObjectId.is_valid(customer_id) else "x"}]}
     )
@@ -71,7 +71,7 @@ async def get_customer(customer_id: str):
 
 
 @router.put("/customers/{customer_id}")
-async def update_customer(customer_id: str, data: dict = Body(...)):
+async def update_customer(customer_id: str, data: dict = Body(...), _user: dict = Depends(get_current_user)):
     allowed = {"name", "email", "date_of_birth", "gender"}
     update = {k: v for k, v in data.items() if k in allowed}
     update["updated_at"] = datetime.utcnow().isoformat()
@@ -80,7 +80,7 @@ async def update_customer(customer_id: str, data: dict = Body(...)):
 
 
 @router.post("/customers/{customer_id}/profile-image")
-async def upload_profile_image(customer_id: str, request: Request, file: UploadFile = File(...)):
+async def upload_profile_image(customer_id: str, request: Request, file: UploadFile = File(...), _user: dict = Depends(get_current_user)):
     customer = await customers_collection.find_one({"customer_id": customer_id})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -98,7 +98,7 @@ async def upload_profile_image(customer_id: str, request: Request, file: UploadF
 # ─── Addresses ────────────────────────────────────────────
 
 @router.post("/customers/{customer_id}/addresses")
-async def add_address(customer_id: str, address: dict = Body(...)):
+async def add_address(customer_id: str, address: dict = Body(...), _user: dict = Depends(get_current_user)):
     required = ["house_no", "street", "city", "state", "pincode"]
     for field in required:
         if not address.get(field):
@@ -119,7 +119,7 @@ async def add_address(customer_id: str, address: dict = Body(...)):
 
 
 @router.put("/customers/{customer_id}/addresses/{address_id}")
-async def edit_address(customer_id: str, address_id: str, data: dict = Body(...)):
+async def edit_address(customer_id: str, address_id: str, data: dict = Body(...), _user: dict = Depends(get_current_user)):
     update_fields = {}
     for k, v in data.items():
         update_fields[f"addresses.$.{k}"] = v
@@ -132,7 +132,7 @@ async def edit_address(customer_id: str, address_id: str, data: dict = Body(...)
 
 
 @router.delete("/customers/{customer_id}/addresses/{address_id}")
-async def delete_address(customer_id: str, address_id: str):
+async def delete_address(customer_id: str, address_id: str, _user: dict = Depends(get_current_user)):
     await customers_collection.update_one(
         {"customer_id": customer_id},
         {"$pull": {"addresses": {"id": address_id}}},
@@ -141,7 +141,7 @@ async def delete_address(customer_id: str, address_id: str):
 
 
 @router.put("/customers/{customer_id}/addresses/{address_id}/default")
-async def set_default_address(customer_id: str, address_id: str):
+async def set_default_address(customer_id: str, address_id: str, _user: dict = Depends(get_current_user)):
     await customers_collection.update_one(
         {"customer_id": customer_id},
         {"$set": {"addresses.$[].is_default": False}},
@@ -156,7 +156,7 @@ async def set_default_address(customer_id: str, address_id: str):
 # ─── Order History, Wishlist, Cart ────────────────────────
 
 @router.get("/customers/{customer_id}/orders")
-async def customer_orders(customer_id: str, page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=100)):
+async def customer_orders(customer_id: str, page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=100), _user: dict = Depends(get_current_user)):
     skip = (page - 1) * limit
     customer = await customers_collection.find_one({"customer_id": customer_id}, {"order_history": 1})
     if not customer:
@@ -170,7 +170,7 @@ async def customer_orders(customer_id: str, page: int = Query(1, ge=1), limit: i
 
 
 @router.get("/customers/{customer_id}/wishlist")
-async def customer_wishlist(customer_id: str):
+async def customer_wishlist(customer_id: str, _user: dict = Depends(get_current_user)):
     customer = await customers_collection.find_one({"customer_id": customer_id}, {"wishlist": 1})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -178,7 +178,7 @@ async def customer_wishlist(customer_id: str):
 
 
 @router.get("/customers/{customer_id}/cart")
-async def customer_cart(customer_id: str):
+async def customer_cart(customer_id: str, _user: dict = Depends(get_current_user)):
     customer = await customers_collection.find_one({"customer_id": customer_id}, {"cart": 1})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -250,7 +250,7 @@ async def wallet_debit(customer_id: str, amount: float = Body(..., embed=True), 
 
 
 @router.get("/customers/{customer_id}/wallet/transactions")
-async def wallet_transactions(customer_id: str, page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=50)):
+async def wallet_transactions(customer_id: str, page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=50), _user: dict = Depends(get_current_user)):
     skip = (page - 1) * limit
     total = await wallet_transactions_collection.count_documents({"customer_id": customer_id})
     cursor = wallet_transactions_collection.find({"customer_id": customer_id}).sort("created_at", -1).skip(skip).limit(limit)
