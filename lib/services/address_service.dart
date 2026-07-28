@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../config.dart';
 import '../models/address.dart';
+import 'auth_service.dart';
 
 class AddressService {
   static final String _baseUrl = AppConfig.baseUrl;
@@ -19,6 +20,11 @@ class AddressService {
     } else {
       req = await _client.getUrl(uri);
     }
+
+    // Addresses are per-account data: the backend derives the owner from this
+    // token and ignores any customer_id we send, so every call must carry it.
+    final token = AuthService().token;
+    if (token != null) req.headers.set('Authorization', 'Bearer $token');
 
     if (body != null) {
       req.headers.contentType = ContentType.json;

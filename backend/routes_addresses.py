@@ -1,7 +1,8 @@
 from datetime import datetime
-from fastapi import APIRouter, Query, HTTPException, Body
+from fastapi import APIRouter, Query, HTTPException, Body, Depends
 from bson import ObjectId
 from database import db
+from auth import get_current_user
 
 router = APIRouter(tags=["Addresses"])
 
@@ -11,6 +12,21 @@ addresses_col = db["customer_addresses"]
 def serialize(doc: dict) -> dict:
     doc["id"] = str(doc.pop("_id"))
     return doc
+
+
+async def _owned_address(address_id: str, user: dict) -> dict:
+    """Fetch an address, but only if it belongs to the caller.
+
+    A non-owned address returns 404 rather than 403: telling an attacker that
+    an id exists but belongs to someone else is itself a disclosure, and
+    ObjectIds are partly sequential so they can be walked.
+    """
+    if not ObjectId.is_valid(address_id):
+        raise HTTPException(status_code=400, detail="Invalid address ID")
+    addr = await addresses_col.find_one({"_id": ObjectId(address_id)})
+    if not addr or addr.get("customer_id") != user["id"]:
+        raise HTTPException(status_code=404, detail="Address not found")
+    return addr
 
 
 def _now() -> str:
@@ -31,10 +47,10 @@ def _validate(data: dict):
 
 
 @router.post("/addresses")
-async def add_address(data: dict = Body(...)):
-    customer_id = data.get("customer_id", "")
-    if not customer_id:
-        raise HTTPException(status_code=400, detail="customer_id is required")
+async def add_address(data: dict = Body(...), user: dict = Depends(get_current_user)):
+    # Taken from the verified token, not the body: a client-supplied
+    # customer_id would let anyone file an address under another account.
+    customer_id = user["id"]
 
     _validate(data)
 
@@ -70,30 +86,27 @@ async def add_address(data: dict = Body(...)):
 
 
 @router.get("/addresses")
-async def get_addresses(customer_id: str = Query(...)):
-    cursor = addresses_col.find({"customer_id": customer_id}).sort("is_default", -1)
+async def get_addresses(
+    customer_id: str = Query("", description="ignored; kept so older clients still work"),
+    user: dict = Depends(get_current_user),
+):
+    # The query parameter is deliberately ignored — callers only ever get
+    # their own addresses, whatever they ask for.
+    cursor = addresses_col.find({"customer_id": user["id"]}).sort("is_default", -1)
     addresses = [serialize(a) async for a in cursor]
     return {"addresses": addresses, "total": len(addresses)}
 
 
 @router.get("/addresses/{address_id}")
-async def get_address(address_id: str):
-    if not ObjectId.is_valid(address_id):
-        raise HTTPException(status_code=400, detail="Invalid address ID")
-    addr = await addresses_col.find_one({"_id": ObjectId(address_id)})
-    if not addr:
-        raise HTTPException(status_code=404, detail="Address not found")
-    return serialize(addr)
+async def get_address(address_id: str, user: dict = Depends(get_current_user)):
+    return serialize(await _owned_address(address_id, user))
 
 
 @router.put("/addresses/{address_id}")
-async def update_address(address_id: str, data: dict = Body(...)):
-    if not ObjectId.is_valid(address_id):
-        raise HTTPException(status_code=400, detail="Invalid address ID")
-
-    addr = await addresses_col.find_one({"_id": ObjectId(address_id)})
-    if not addr:
-        raise HTTPException(status_code=404, detail="Address not found")
+async def update_address(
+    address_id: str, data: dict = Body(...), user: dict = Depends(get_current_user)
+):
+    await _owned_address(address_id, user)
 
     allowed = {"label", "name", "phone", "house_no", "street", "landmark", "area",
                "city", "state", "pincode", "latitude", "longitude"}
@@ -105,13 +118,8 @@ async def update_address(address_id: str, data: dict = Body(...)):
 
 
 @router.delete("/addresses/{address_id}")
-async def delete_address(address_id: str):
-    if not ObjectId.is_valid(address_id):
-        raise HTTPException(status_code=400, detail="Invalid address ID")
-
-    addr = await addresses_col.find_one({"_id": ObjectId(address_id)})
-    if not addr:
-        raise HTTPException(status_code=404, detail="Address not found")
+async def delete_address(address_id: str, user: dict = Depends(get_current_user)):
+    addr = await _owned_address(address_id, user)
 
     await addresses_col.delete_one({"_id": ObjectId(address_id)})
 
@@ -124,13 +132,8 @@ async def delete_address(address_id: str):
 
 
 @router.put("/addresses/{address_id}/default")
-async def set_default(address_id: str):
-    if not ObjectId.is_valid(address_id):
-        raise HTTPException(status_code=400, detail="Invalid address ID")
-
-    addr = await addresses_col.find_one({"_id": ObjectId(address_id)})
-    if not addr:
-        raise HTTPException(status_code=404, detail="Address not found")
+async def set_default(address_id: str, user: dict = Depends(get_current_user)):
+    addr = await _owned_address(address_id, user)
 
     await addresses_col.update_many(
         {"customer_id": addr["customer_id"]},

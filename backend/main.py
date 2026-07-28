@@ -576,28 +576,9 @@ async def add_address(user_id: str, address: dict = Body(...), user: dict = Depe
     return {"id": str(result.inserted_id), "status": "created"}
 
 
-@app.put("/addresses/{address_id}")
-async def update_address(address_id: str, address: dict = Body(...)):
-    if not ObjectId.is_valid(address_id):
-        raise HTTPException(status_code=400, detail="Invalid address ID")
-    address.pop("_id", None)
-    address.pop("id", None)
-    await addresses_collection.update_one(
-        {"_id": ObjectId(address_id)},
-        {"$set": address},
-    )
-    return {"status": "updated"}
-
-
-@app.delete("/addresses/{address_id}")
-async def delete_address(address_id: str):
-    if not ObjectId.is_valid(address_id):
-        raise HTTPException(status_code=400, detail="Invalid address ID")
-    await addresses_collection.delete_one({"_id": ObjectId(address_id)})
-    return {"status": "deleted"}
-
-
-# ─── Orders / Checkout ────────────────────────────────────
+# Addresses, admin product writes and admin order routes live in their own
+# routers, which register first and therefore win. Duplicates here were dead
+# code that twice hid a fix applied to the wrong copy.
 
 @app.get("/orders/{user_id}")
 async def get_orders(user_id: str):
@@ -693,31 +674,9 @@ class _ProductUpdate(_BM):
         extra = "allow"
 
 
-@app.post("/admin/products")
-async def create_product(request: Request, product: _ProductCreate, _admin: dict = Depends(get_current_admin)):
-    data = product.model_dump(exclude_none=True)
-    data["created_at"] = datetime.utcnow().isoformat()
-    result = await products_collection.insert_one(data)
-    return {"id": str(result.inserted_id), "status": "created"}
-
-
-@app.put("/admin/products/{product_id}")
-async def update_product(product_id: str, product: _ProductUpdate, _admin: dict = Depends(get_current_admin)):
-    if not ObjectId.is_valid(product_id):
-        raise HTTPException(status_code=400, detail="Invalid product ID")
-    data = product.model_dump(exclude_none=True)
-    data["updated_at"] = datetime.utcnow().isoformat()
-    await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": data})
-    return {"status": "updated"}
-
-
-@app.delete("/admin/products/{product_id}")
-async def delete_product(product_id: str, _admin: dict = Depends(get_current_admin)):
-    if not ObjectId.is_valid(product_id):
-        raise HTTPException(status_code=400, detail="Invalid product ID")
-    await products_collection.delete_one({"_id": ObjectId(product_id)})
-    return {"status": "deleted"}
-
+# Addresses, admin product writes and admin order routes live in their own
+# routers, which register first and therefore win. Duplicates here were dead
+# code that twice hid a fix applied to the wrong copy.
 
 @app.put("/admin/products/{product_id}/featured")
 async def toggle_featured(product_id: str, featured: bool = Body(..., embed=True), _admin: dict = Depends(get_current_admin)):
@@ -753,37 +712,9 @@ async def delete_category(category_name: str, _admin: dict = Depends(get_current
 
 # ─── Admin: Orders ────────────────────────────────────────
 
-@app.get("/admin/orders")
-async def admin_orders(
-    page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
-    status: str | None = None,
-    _admin: dict = Depends(get_current_admin),
-):
-    skip = (page - 1) * limit
-    query = {"status": status} if status else {}
-    total = await orders_collection.count_documents(query)
-    cursor = orders_collection.find(query).sort("created_at", -1).skip(skip).limit(limit)
-    orders = [serialize_doc(o) async for o in cursor]
-    return {"orders": orders, "total": total, "page": page, "pages": (total + limit - 1) // limit}
-
-
-@app.put("/admin/orders/{order_id}/status")
-async def update_order_status(order_id: str, status: str = Body(..., embed=True), _admin: dict = Depends(get_current_admin)):
-    if not ObjectId.is_valid(order_id):
-        raise HTTPException(status_code=400, detail="Invalid order ID")
-    now = datetime.utcnow().isoformat()
-    await orders_collection.update_one(
-        {"_id": ObjectId(order_id)},
-        {
-            "$set": {"status": status, "updated_at": now},
-            "$push": {"timeline": {"status": status, "time": now, "message": f"Order {status}"}},
-        },
-    )
-    return {"status": status}
-
-
-# ─── Admin: Users ─────────────────────────────────────────
+# Addresses, admin product writes and admin order routes live in their own
+# routers, which register first and therefore win. Duplicates here were dead
+# code that twice hid a fix applied to the wrong copy.
 
 @app.get("/admin/users")
 async def admin_users(
