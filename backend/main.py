@@ -581,7 +581,9 @@ async def add_address(user_id: str, address: dict = Body(...), user: dict = Depe
 # code that twice hid a fix applied to the wrong copy.
 
 @app.get("/orders/{user_id}")
-async def get_orders(user_id: str):
+async def get_orders(user_id: str, user: dict = Depends(get_current_user)):
+    if user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     cursor = orders_collection.find(
         {"$or": [{"user_id": user_id}, {"customer_id": user_id}]}
     ).sort("created_at", -1)
@@ -590,11 +592,13 @@ async def get_orders(user_id: str):
 
 
 @app.get("/orders/detail/{order_id}")
-async def get_order_detail(order_id: str):
+async def get_order_detail(order_id: str, user: dict = Depends(get_current_user)):
     if not ObjectId.is_valid(order_id):
         raise HTTPException(status_code=400, detail="Invalid order ID")
     order = await orders_collection.find_one({"_id": ObjectId(order_id)})
-    if not order:
+    # 404 rather than 403 for someone else's order: confirming an id exists is
+    # itself a disclosure, and order ids are sequential.
+    if not order or user["id"] not in (order.get("user_id"), order.get("customer_id")):
         raise HTTPException(status_code=404, detail="Order not found")
     return serialize_doc(order)
 

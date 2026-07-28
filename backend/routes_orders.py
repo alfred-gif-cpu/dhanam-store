@@ -3,12 +3,13 @@ import re
 import logging
 from datetime import datetime, timedelta
 from typing import Literal
-from fastapi import APIRouter, Query, HTTPException, Body
+from fastapi import APIRouter, Query, HTTPException, Body, Depends
 from fastapi.responses import StreamingResponse
 from bson import ObjectId
 from fpdf import FPDF
 from pydantic import BaseModel, Field
 from database import orders_collection, products_collection, customers_collection, users_collection
+from admin_auth import get_current_admin
 
 log = logging.getLogger(__name__)
 from push_service import notify_new_order
@@ -220,7 +221,7 @@ async def cancel_order(order_id: str, reason: str = Body("Customer requested", e
 # ─── Update Status ────────────────────────────────────────
 
 @router.put("/orders/{order_id}/status")
-async def update_order_status(order_id: str, status: str = Body(..., embed=True)):
+async def update_order_status(order_id: str, status: str = Body(..., embed=True), _admin: dict = Depends(get_current_admin)):
     if status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {VALID_STATUSES}")
 
@@ -259,7 +260,7 @@ async def track_order(order_id: str):
 
 
 @router.put("/orders/{order_id}/assign-partner")
-async def assign_delivery_partner(order_id: str, partner_name: str = Body(..., embed=True)):
+async def assign_delivery_partner(order_id: str, partner_name: str = Body(..., embed=True), _admin: dict = Depends(get_current_admin)):
     now = _now()
     await orders_collection.update_one(
         {"order_id": order_id},
@@ -271,7 +272,7 @@ async def assign_delivery_partner(order_id: str, partner_name: str = Body(..., e
 # ─── Filtered Lists ──────────────────────────────────────
 
 @router.get("/orders/active")
-async def get_active_orders(page: int = Query(1, ge=1), limit: int = Query(20)):
+async def get_active_orders(page: int = Query(1, ge=1), limit: int = Query(20), _admin: dict = Depends(get_current_admin)):
     skip = (page - 1) * limit
     query = {"order_status": {"$in": ["Pending", "Confirmed", "Packed", "Out For Delivery"]}}
     total = await orders_collection.count_documents(query)
@@ -280,7 +281,7 @@ async def get_active_orders(page: int = Query(1, ge=1), limit: int = Query(20)):
 
 
 @router.get("/orders/delivered")
-async def get_delivered_orders(page: int = Query(1, ge=1), limit: int = Query(20)):
+async def get_delivered_orders(page: int = Query(1, ge=1), limit: int = Query(20), _admin: dict = Depends(get_current_admin)):
     skip = (page - 1) * limit
     query = {"order_status": "Delivered"}
     total = await orders_collection.count_documents(query)
@@ -289,7 +290,7 @@ async def get_delivered_orders(page: int = Query(1, ge=1), limit: int = Query(20
 
 
 @router.get("/orders/cancelled")
-async def get_cancelled_orders(page: int = Query(1, ge=1), limit: int = Query(20)):
+async def get_cancelled_orders(page: int = Query(1, ge=1), limit: int = Query(20), _admin: dict = Depends(get_current_admin)):
     skip = (page - 1) * limit
     query = {"order_status": {"$in": ["Cancelled", "Refund Initiated", "Refund Completed"]}}
     total = await orders_collection.count_documents(query)
@@ -300,7 +301,7 @@ async def get_cancelled_orders(page: int = Query(1, ge=1), limit: int = Query(20
 # ─── Refund ───────────────────────────────────────────────
 
 @router.put("/orders/{order_id}/refund")
-async def initiate_refund(order_id: str):
+async def initiate_refund(order_id: str, _admin: dict = Depends(get_current_admin)):
     order = await orders_collection.find_one({"order_id": order_id})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -319,7 +320,7 @@ async def initiate_refund(order_id: str):
 
 
 @router.put("/orders/{order_id}/refund-complete")
-async def complete_refund(order_id: str):
+async def complete_refund(order_id: str, _admin: dict = Depends(get_current_admin)):
     now = _now()
     await orders_collection.update_one(
         {"order_id": order_id},
@@ -504,6 +505,7 @@ async def admin_all_orders(
     limit: int = Query(20, ge=1, le=100),
     status: str = Query(""),
     q: str = Query(""),
+    _admin: dict = Depends(get_current_admin),
 ):
     skip = (page - 1) * limit
     query: dict = {}
@@ -523,7 +525,7 @@ async def admin_all_orders(
 # ─── Analytics ────────────────────────────────────────────
 
 @router.get("/admin/orders/analytics")
-async def order_analytics():
+async def order_analytics(_admin: dict = Depends(get_current_admin)):
     now = datetime.utcnow()
     today_start = datetime(now.year, now.month, now.day).isoformat()
     month_start = datetime(now.year, now.month, 1).isoformat()

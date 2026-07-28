@@ -1,11 +1,9 @@
 import logging
-import logging
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Depends
 from pydantic import BaseModel
 from database import db
-
-log = logging.getLogger(__name__)
+from admin_auth import get_current_admin
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +41,7 @@ async def register_token(req: RegisterTokenRequest):
 
 
 @router.post("/send")
-async def send_notification(req: SendNotificationRequest):
+async def send_notification(req: SendNotificationRequest, _admin: dict = Depends(get_current_admin)):
     try:
         import firebase_admin
         from firebase_admin import messaging
