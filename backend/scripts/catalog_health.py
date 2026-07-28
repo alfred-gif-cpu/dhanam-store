@@ -118,14 +118,35 @@ async def run(fix_dead: bool, worklist: str | None) -> None:
         print("  python scripts/bulk_update_images.py")
 
 
+async def show_misses(limit: int) -> None:
+    """What customers searched for and got nothing."""
+    from database import search_misses_collection
+
+    rows = await search_misses_collection.find().sort("count", -1).to_list(limit)
+    if not rows:
+        print("No failed searches recorded yet — this fills up as customers use the app.")
+        return
+    print(f"{'searches':>9}  {'last seen':<12} term")
+    for r in rows:
+        print(f"{r.get('count', 0):>9}  {str(r.get('last_seen', ''))[:10]:<12} {r.get('term', r['_id'])}")
+    print("\nEach line is either a product worth stocking, or one the catalogue")
+    print("names differently from what customers call it.")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--fix-dead-images", action="store_true",
                     help="clear image_url where the file no longer exists")
     ap.add_argument("--worklist", metavar="CSV",
                     help="export the products needing a photo")
+    ap.add_argument("--search-misses", nargs="?", type=int, const=40, metavar="N",
+                    help="show the searches that returned nothing")
     args = ap.parse_args()
-    asyncio.run(run(args.fix_dead_images, args.worklist))
+
+    if args.search_misses:
+        asyncio.run(show_misses(args.search_misses))
+    else:
+        asyncio.run(run(args.fix_dead_images, args.worklist))
 
 
 if __name__ == "__main__":

@@ -15,6 +15,8 @@ wallet_transactions_collection = db["wallet_transactions"]
 admins_collection = db["admins"]
 audit_logs_collection = db["audit_logs"]
 otp_collection = db["otps"]
+# Search terms that returned nothing — the term only, never who searched.
+search_misses_collection = db["search_misses"]
 
 
 async def ensure_indexes():

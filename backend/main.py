@@ -15,7 +15,7 @@ from bson import ObjectId
 from database import (
     products_collection, banners_collection, orders_collection,
     addresses_collection, wishlists_collection, users_collection,
-    otp_collection, ensure_indexes,
+    otp_collection, search_misses_collection, ensure_indexes,
 )
 from auth import generate_otp, verify_otp, create_token, get_current_user, verify_firebase_phone_token
 from admin_auth import get_current_admin
@@ -493,6 +493,19 @@ async def search_products(
     total = await products_collection.count_documents(query)
     cursor = products_collection.find(query).skip(skip).limit(limit)
     products = [serialize_product(p, base_url) async for p in cursor]
+
+    # A search that finds nothing is the clearest signal the catalogue has a
+    # gap — either a product worth stocking, or one named differently from
+    # what customers call it. Only the term is recorded, never who typed it.
+    if total == 0 and page == 1:
+        term = q.strip()[:80]
+        if term:
+            await search_misses_collection.update_one(
+                {"_id": term.lower()},
+                {"$inc": {"count": 1},
+                 "$set": {"term": term, "last_seen": datetime.utcnow().isoformat()}},
+                upsert=True,
+            )
     return {
         "products": products,
         "total": total,
