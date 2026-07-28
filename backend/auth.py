@@ -160,6 +160,14 @@ async def get_current_user(
     user = await users_collection.find_one({"phone": payload["phone"]})
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    # Checked on every request, not just at login: tokens last 30 days and
+    # cannot be revoked, so without this an account blocked in the admin panel
+    # would keep full access for up to a month.
+    if user.get("is_active") is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been blocked. Please contact the store.",
+        )
     user["id"] = str(user.pop("_id"))
     return user
 

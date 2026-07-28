@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
 
@@ -10,6 +11,58 @@ class AuthService extends ChangeNotifier {
   static const _tokenKey = 'auth_token';
   static const _userKey = 'auth_user';
   static final String _baseUrl = AppConfig.baseUrl;
+
+  /// The session token is a 30-day credential, so it lives in the platform
+  /// keystore rather than SharedPreferences.
+  ///
+  /// Every call falls back to SharedPreferences if the secure store throws.
+  /// Encrypted storage fails on a small number of Android devices with broken
+  /// keystore implementations, and being logged out is a worse outcome for
+  /// those users than the storage we were already using.
+  static const _secure = FlutterSecureStorage();
+
+  Future<String?> _readToken() async {
+    try {
+      final fromSecure = await _secure.read(key: _tokenKey);
+      if (fromSecure != null) return fromSecure;
+    } catch (_) {
+      // fall through to the legacy location
+    }
+
+    // Migrate anyone still holding a token from before this change, so
+    // updating the app does not sign them out.
+    final prefs = await SharedPreferences.getInstance();
+    final legacy = prefs.getString(_tokenKey);
+    if (legacy != null) {
+      try {
+        await _secure.write(key: _tokenKey, value: legacy);
+        await prefs.remove(_tokenKey);
+      } catch (_) {
+        // Secure storage unavailable — leave it where it is.
+      }
+    }
+    return legacy;
+  }
+
+  Future<void> _writeToken(String token) async {
+    try {
+      await _secure.write(key: _tokenKey, value: token);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_tokenKey); // never leave a copy behind
+      return;
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tokenKey, token);
+    }
+  }
+
+  Future<void> _clearToken() async {
+    try {
+      await _secure.delete(key: _tokenKey);
+    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
 
   static final AuthService _instance = AuthService._();
   factory AuthService() => _instance;
@@ -38,7 +91,7 @@ class AuthService extends ChangeNotifier {
   Future<void> load() async {
     if (_loaded) return;
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString(_tokenKey);
+    _token = await _readToken();
     final userData = prefs.getString(_userKey);
     if (userData != null) {
       _user = jsonDecode(userData);
@@ -142,8 +195,8 @@ class AuthService extends ChangeNotifier {
     _token = result['token'];
     _user = {'id': result['user_id'], 'phone': phone, 'name': '', 'email': ''};
 
+    await _writeToken(_token!);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, _token!);
     await prefs.setString(_userKey, jsonEncode(_user));
 
     notifyListeners();
@@ -178,8 +231,8 @@ class AuthService extends ChangeNotifier {
     _token = result['token'];
     _user = {'id': result['user_id'], 'phone': phone, 'name': '', 'email': ''};
 
+    await _writeToken(_token!);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, _token!);
     await prefs.setString(_userKey, jsonEncode(_user));
 
     notifyListeners();
@@ -231,8 +284,8 @@ class AuthService extends ChangeNotifier {
     _verificationId = null;
     _resendToken = null;
     try { await _fbAuth.signOut(); } catch (_) {}
+    await _clearToken();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
     notifyListeners();
     onUserSwitch?.call();
