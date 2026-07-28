@@ -66,3 +66,8 @@ backend/static/uploads/
 
 # Generated catalog worklists
 photo-worklist.csv
+
+# Generated image-matching artefacts
+backend/review.html
+backend/image_proposals.json
+backend/approved.txt
