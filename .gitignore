@@ -63,3 +63,6 @@ backend/backups/
 
 # Runtime uploads (volume-backed in production)
 backend/static/uploads/
+
+# Generated catalog worklists
+photo-worklist.csv
