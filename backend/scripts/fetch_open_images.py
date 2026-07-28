@@ -44,6 +44,7 @@ UA = "DhanamStore/1.0 (alfreddhanam@gmail.com) catalogue image matching"
 IMAGES_DIR = STATIC_DIR / "images"
 PROPOSALS = Path("image_proposals.json")
 REVIEW_HTML = Path("review.html")
+SEARCHED = Path("image_search_done.txt")  # product ids already searched
 
 # Expand the catalogue's abbreviations so the search sees the real brand name.
 EXPAND = {alias: full for full, aliases in BRAND_SYNONYMS.items() for alias in aliases}
@@ -80,18 +81,34 @@ async def propose(limit: int, delay: float) -> None:
         {"name": 1, "category": 1, "slug": 1},
     ):
         todo.append(p)
-    todo = todo[:limit]
 
-    print(f"searching Open Food Facts for {len(todo)} products "
-          f"(~{len(todo)*delay/60:.0f} min at {delay}s between calls)\n")
-
+    # A full pass takes the best part of an hour, which is long enough that a
+    # laptop lid will close on it. Everything is written as it goes and
+    # already-searched products are skipped, so a re-run picks up where it
+    # stopped instead of starting over.
+    seen = set()
+    if SEARCHED.exists():
+        seen = {ln.strip() for ln in SEARCHED.read_text(encoding="utf-8").splitlines() if ln.strip()}
     proposals = []
+    if PROPOSALS.exists():
+        try:
+            proposals = json.loads(PROPOSALS.read_text(encoding="utf-8"))
+        except Exception:
+            proposals = []
+
+    remaining = [p for p in todo if str(p["_id"]) not in seen][:limit]
+    if seen:
+        print(f"resuming: {len(seen)} already searched, {len(proposals)} proposals kept")
+    print(f"searching Open Food Facts for {len(remaining)} products "
+          f"(~{len(remaining)*delay/60:.0f} min at {delay}s between calls)", flush=True)
+    print("safe to interrupt — progress is saved after every product\n", flush=True)
+    todo = remaining
     for i, p in enumerate(todo, 1):
         name = p.get("name", "")
         try:
             hits = _search(query_for(name))
         except Exception as e:
-            print(f"  [{i}/{len(todo)}] error {type(e).__name__} on {name[:34]}")
+            print(f"  [{i}/{len(todo)}] error {type(e).__name__} on {name[:34]}", flush=True)
             await asyncio.sleep(delay * 2)
             continue
 
@@ -114,7 +131,13 @@ async def propose(limit: int, delay: float) -> None:
                 "code": best.get("code", ""),
                 "score": round(best_score, 2),
             })
-            print(f"  [{i}/{len(todo)}] {best_score:.2f} {name[:32]:<34} -> {(best.get('product_name') or '')[:34]}")
+            print(f"  [{i}/{len(todo)}] {best_score:.2f} {name[:32]:<34} -> {(best.get('product_name') or '')[:34]}", flush=True)
+
+        # Persist after each product so an interrupted run loses at most one.
+        with SEARCHED.open("a", encoding="utf-8") as fh:
+            fh.write(str(p["_id"]) + "\n")
+        if i % 10 == 0 or best:
+            PROPOSALS.write_text(json.dumps(proposals, indent=1, ensure_ascii=False), encoding="utf-8")
         await asyncio.sleep(delay)
 
     PROPOSALS.write_text(json.dumps(proposals, indent=1, ensure_ascii=False), encoding="utf-8")
