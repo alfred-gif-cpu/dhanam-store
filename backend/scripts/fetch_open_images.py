@@ -201,20 +201,38 @@ async def apply(approved_file: str) -> None:
     saved = 0
     for p in chosen:
         slug = re.sub(r"[^a-z0-9]+", "-", p["our_name"].lower()).strip("-")
+
+        # The search returns a 400px preview. The original upload sits at the
+        # same path with "full" in place of the size, and is usually 1500px or
+        # more — worth having, since a 400px image looks soft on a phone's
+        # product page. Falls back to the preview if there is no original.
+        candidates = [p["image_url"].replace(".400.jpg", ".full.jpg"), p["image_url"]]
+
+        raw = None
+        for url in candidates:
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": UA})
+                with urllib.request.urlopen(req, timeout=45) as r:
+                    raw = r.read()
+                break
+            except Exception:
+                continue
+        if raw is None:
+            print(f"  failed {p['our_name'][:34]}: could not download", flush=True)
+            continue
+
         try:
-            req = urllib.request.Request(p["image_url"], headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=30) as r:
-                raw = r.read()
             im = Image.open(io.BytesIO(raw))
             im.load()
             if im.mode not in ("RGB", "L"):
                 im = im.convert("RGB")
+            source_w = im.size[0]
             im.thumbnail((1000, 1000), Image.LANCZOS)
             buf = io.BytesIO()
-            im.save(buf, "JPEG", quality=82, optimize=True)
+            im.save(buf, "JPEG", quality=88, optimize=True, progressive=True)
             (IMAGES_DIR / f"{slug}.jpg").write_bytes(buf.getvalue())
         except Exception as e:
-            print(f"  failed {p['our_name'][:34]}: {type(e).__name__}")
+            print(f"  failed {p['our_name'][:34]}: {type(e).__name__}", flush=True)
             continue
 
         await products_collection.update_one(
@@ -226,7 +244,7 @@ async def apply(approved_file: str) -> None:
             }},
         )
         saved += 1
-        print(f"  saved {slug}.jpg")
+        print(f"  saved {slug}.jpg  ({source_w}px source -> {im.size[0]}x{im.size[1]})", flush=True)
 
     print(f"\n{saved} images downloaded into {IMAGES_DIR}")
     print("These are CC-BY-SA: credit Open Food Facts somewhere in the app or site.")
