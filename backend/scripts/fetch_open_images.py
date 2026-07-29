@@ -208,15 +208,21 @@ async def apply(approved_file: str) -> None:
         # product page. Falls back to the preview if there is no original.
         candidates = [p["image_url"].replace(".400.jpg", ".full.jpg"), p["image_url"]]
 
+        # The image CDN throttles a fast burst — an unpaced run downloaded 62
+        # files and then failed the remaining 192. Pace the requests and back
+        # off on refusal rather than skipping the product.
         raw = None
         for url in candidates:
-            try:
-                req = urllib.request.Request(url, headers={"User-Agent": UA})
-                with urllib.request.urlopen(req, timeout=45) as r:
-                    raw = r.read()
+            for attempt in range(3):
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": UA})
+                    with urllib.request.urlopen(req, timeout=45) as r:
+                        raw = r.read()
+                    break
+                except Exception:
+                    await asyncio.sleep(2 * (attempt + 1))
+            if raw is not None:
                 break
-            except Exception:
-                continue
         if raw is None:
             print(f"  failed {p['our_name'][:34]}: could not download", flush=True)
             continue
@@ -245,6 +251,7 @@ async def apply(approved_file: str) -> None:
         )
         saved += 1
         print(f"  saved {slug}.jpg  ({source_w}px source -> {im.size[0]}x{im.size[1]})", flush=True)
+        await asyncio.sleep(0.4)  # stay under the image CDN's burst limit
 
     print(f"\n{saved} images downloaded into {IMAGES_DIR}")
     print("These are CC-BY-SA: credit Open Food Facts somewhere in the app or site.")
