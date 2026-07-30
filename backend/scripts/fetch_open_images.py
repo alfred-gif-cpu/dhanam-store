@@ -40,6 +40,23 @@ from search_utils import BRAND_SYNONYMS, normalize  # noqa: E402
 from storage import STATIC_DIR  # noqa: E402
 
 SEARCH_URL = "https://search.openfoodfacts.org/search"
+
+# Open Food Facts has sibling databases for cosmetics and general goods, and
+# they cover categories the food database simply does not carry. Personal Care
+# is the largest gap in the catalogue, so routing those to Open Beauty Facts
+# finds products that would otherwise return nothing.
+SOURCE_BY_CATEGORY = {
+    "Personal Care": "beauty",
+    "Baby Care": "beauty",
+    "Health & Wellness": "beauty",
+    "Household": "products",
+    "Kitchen Accessories": "products",
+    "Toys & Stationery": "products",
+}
+LEGACY_HOSTS = {
+    "beauty": "https://world.openbeautyfacts.org/cgi/search.pl",
+    "products": "https://world.openproductsfacts.org/cgi/search.pl",
+}
 UA = "DhanamStore/1.0 (alfreddhanam@gmail.com) catalogue image matching"
 IMAGES_DIR = STATIC_DIR / "images"
 PROPOSALS = Path("image_proposals.json")
@@ -59,11 +76,31 @@ def query_for(name: str) -> str:
     return " ".join(PACK_SIZE.sub(" ", " ".join(words)).split())[:60]
 
 
-def _search(q: str) -> list:
-    url = f"{SEARCH_URL}?" + urllib.parse.urlencode({"q": q, "page_size": 5})
+def _search(q: str, source: str = "food") -> list:
+    """Search whichever database is likeliest to carry this kind of product.
+
+    The food database has a modern search service; the cosmetics and general
+    goods ones only expose the older CGI endpoint, which returns the same
+    fields under a different key.
+    """
+    if source == "food":
+        url = f"{SEARCH_URL}?" + urllib.parse.urlencode({"q": q, "page_size": 5})
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read().decode("utf-8")).get("hits", [])
+
+    url = f"{LEGACY_HOSTS[source]}?" + urllib.parse.urlencode({
+        "search_terms": q, "json": 1, "page_size": 5,
+        "fields": "product_name,brands,image_front_url,code",
+    })
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode("utf-8")).get("hits", [])
+        products = json.loads(r.read().decode("utf-8")).get("products", [])
+    # Normalise to the shape the food search returns.
+    for pr in products:
+        b = pr.get("brands") or ""
+        pr["brands"] = [x.strip() for x in b.split(",") if x.strip()] if isinstance(b, str) else b
+    return products
 
 
 def _score(mine: str, theirs: str) -> float:
@@ -105,8 +142,9 @@ async def propose(limit: int, delay: float) -> None:
     todo = remaining
     for i, p in enumerate(todo, 1):
         name = p.get("name", "")
+        source = SOURCE_BY_CATEGORY.get(p.get("category", ""), "food")
         try:
-            hits = _search(query_for(name))
+            hits = _search(query_for(name), source)
         except Exception as e:
             print(f"  [{i}/{len(todo)}] error {type(e).__name__} on {name[:34]}", flush=True)
             await asyncio.sleep(delay * 2)
@@ -129,6 +167,7 @@ async def propose(limit: int, delay: float) -> None:
                 "brands": ", ".join(best.get("brands") or []),
                 "image_url": best["image_front_url"],
                 "code": best.get("code", ""),
+                "source": source,
                 "score": round(best_score, 2),
             })
             print(f"  [{i}/{len(todo)}] {best_score:.2f} {name[:32]:<34} -> {(best.get('product_name') or '')[:34]}", flush=True)
