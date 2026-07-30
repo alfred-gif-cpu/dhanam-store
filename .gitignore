@@ -71,3 +71,6 @@ photo-worklist.csv
 backend/review.html
 backend/image_proposals.json
 backend/approved.txt
+backend/generic_proposals.json
+backend/generic_review.html
+backend/approved_generic.txt

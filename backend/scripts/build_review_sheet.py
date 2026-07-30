@@ -21,6 +21,8 @@ import html as html_mod  # noqa: E402
 
 from PIL import Image  # noqa: E402
 
+import argparse
+
 PROPOSALS = Path("image_proposals.json")
 OUT = Path("review.html")
 UA = "DhanamStore/1.0 (alfreddhanam@gmail.com) catalogue image matching"
@@ -46,6 +48,16 @@ def thumbnail(url: str) -> str | None:
 
 
 def main() -> None:
+    global PROPOSALS, OUT
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--file", help="proposals JSON to render")
+    ap.add_argument("--out", help="HTML file to write")
+    args = ap.parse_args()
+    if args.file:
+        PROPOSALS = Path(args.file)
+    if args.out:
+        OUT = Path(args.out)
+
     proposals = json.loads(PROPOSALS.read_text(encoding="utf-8"))
     print(f"fetching {len(proposals)} thumbnails\n")
 
