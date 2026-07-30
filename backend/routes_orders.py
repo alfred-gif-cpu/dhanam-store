@@ -11,6 +11,7 @@ from fpdf import FPDF
 from pydantic import BaseModel, Field
 from database import orders_collection, products_collection, customers_collection, users_collection, db
 from admin_auth import get_current_admin
+from config import settings
 from auth import get_current_user, decode_token, create_invoice_token
 
 log = logging.getLogger(__name__)
@@ -156,8 +157,38 @@ async def _products_by_id(product_ids: list[str]) -> dict[str, dict]:
     return found
 
 
+@router.get("/delivery/check")
+async def check_delivery(pincode: str = Query(..., min_length=6, max_length=6)):
+    """Whether the shop delivers to a pincode.
+
+    Lets the app tell a customer before they fill a basket, rather than
+    failing them at checkout.
+    """
+    allowed = settings.delivery_pincodes
+    return {
+        "pincode": pincode,
+        "serviceable": (not allowed) or pincode in allowed,
+        "unrestricted": not allowed,
+    }
+
+
+def _check_serviceable(pincode: str) -> None:
+    """Refuse orders outside the delivery area.
+
+    Without this an order can be placed from anywhere in the country, and with
+    cash on delivery that is only discovered when someone tries to deliver it.
+    """
+    allowed = settings.delivery_pincodes
+    if allowed and (pincode or "").strip() not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail="Sorry, we do not deliver to this pincode yet.",
+        )
+
+
 @router.post("/orders/create")
 async def create_order(data: CreateOrderRequest, user: dict = Depends(get_current_user)):
+    _check_serviceable(data.address.pincode)
     # Filed against the verified caller: a client-supplied user_id would let
     # anyone place orders in someone else's name.
     data.user_id = user["id"]

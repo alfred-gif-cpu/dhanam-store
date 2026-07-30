@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     cors_origins: list[str] = []
     sentry_dsn: str = ""
 
+    # Pincodes the shop actually delivers to. Empty means no restriction —
+    # which is the current behaviour, and means an order can be placed from
+    # anywhere in the country. Set DELIVERY_PINCODES to the real list.
+    delivery_pincodes: list[str] = []
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
@@ -34,4 +39,10 @@ if settings.jwt_secret == _DEFAULT_JWT_SECRET and not settings.debug:
 if settings.jwt_secret == _DEFAULT_JWT_SECRET:
     logging.getLogger(__name__).warning(
         "Running in DEBUG with the default JWT_SECRET — never do this in production"
+    )
+
+
+if not settings.delivery_pincodes:
+    logging.getLogger(__name__).warning(
+        "DELIVERY_PINCODES is not set — orders will be accepted from any pincode in India"
     )
