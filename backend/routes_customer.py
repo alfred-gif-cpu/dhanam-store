@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, Request, Body, Fil
 from bson import ObjectId
 from auth import get_current_user
 from admin_auth import get_current_admin
-from database import customers_collection, orders_collection, wallet_transactions_collection, products_collection
+from database import customers_collection, orders_collection, products_collection
 from storage import read_image_upload, save_image, resolve_image_url, slugify
 
 router = APIRouter()
@@ -185,77 +185,13 @@ async def customer_cart(customer_id: str, _user: dict = Depends(get_current_user
     return {"cart": customer.get("cart", [])}
 
 
-# ─── Loyalty Points ──────────────────────────────────────
-
-@router.post("/customers/{customer_id}/loyalty/add")
-async def add_loyalty_points(customer_id: str, points: int = Body(..., embed=True), reason: str = Body("purchase", embed=True), _admin: dict = Depends(get_current_admin)):
-    if points <= 0:
-        raise HTTPException(status_code=400, detail="Points must be positive")
-    await customers_collection.update_one(
-        {"customer_id": customer_id},
-        {"$inc": {"loyalty_points": points}, "$set": {"updated_at": datetime.utcnow().isoformat()}},
-    )
-    return {"status": "added", "points": points, "reason": reason}
-
-
-@router.post("/customers/{customer_id}/loyalty/redeem")
-async def redeem_loyalty_points(customer_id: str, points: int = Body(..., embed=True), _user: dict = Depends(get_current_user)):
-    customer = await customers_collection.find_one({"customer_id": customer_id})
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    if customer.get("loyalty_points", 0) < points:
-        raise HTTPException(status_code=400, detail="Insufficient loyalty points")
-    await customers_collection.update_one(
-        {"customer_id": customer_id},
-        {"$inc": {"loyalty_points": -points}, "$set": {"updated_at": datetime.utcnow().isoformat()}},
-    )
-    return {"status": "redeemed", "points": points}
-
-
-# ─── Wallet ──────────────────────────────────────────────
-
-@router.post("/customers/{customer_id}/wallet/credit")
-async def wallet_credit(customer_id: str, amount: float = Body(..., embed=True), reason: str = Body("top_up", embed=True), _admin: dict = Depends(get_current_admin)):
-    if amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be positive")
-    now = datetime.utcnow().isoformat()
-    await customers_collection.update_one(
-        {"customer_id": customer_id},
-        {"$inc": {"wallet_balance": amount}, "$set": {"updated_at": now}},
-    )
-    await wallet_transactions_collection.insert_one({
-        "customer_id": customer_id, "type": "credit", "amount": amount,
-        "reason": reason, "created_at": now,
-    })
-    return {"status": "credited", "amount": amount}
-
-
-@router.post("/customers/{customer_id}/wallet/debit")
-async def wallet_debit(customer_id: str, amount: float = Body(..., embed=True), reason: str = Body("purchase", embed=True), _user: dict = Depends(get_current_user)):
-    customer = await customers_collection.find_one({"customer_id": customer_id})
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    if customer.get("wallet_balance", 0) < amount:
-        raise HTTPException(status_code=400, detail="Insufficient wallet balance")
-    now = datetime.utcnow().isoformat()
-    await customers_collection.update_one(
-        {"customer_id": customer_id},
-        {"$inc": {"wallet_balance": -amount}, "$set": {"updated_at": now}},
-    )
-    await wallet_transactions_collection.insert_one({
-        "customer_id": customer_id, "type": "debit", "amount": amount,
-        "reason": reason, "created_at": now,
-    })
-    return {"status": "debited", "amount": amount}
-
-
-@router.get("/customers/{customer_id}/wallet/transactions")
-async def wallet_transactions(customer_id: str, page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=50), _user: dict = Depends(get_current_user)):
-    skip = (page - 1) * limit
-    total = await wallet_transactions_collection.count_documents({"customer_id": customer_id})
-    cursor = wallet_transactions_collection.find({"customer_id": customer_id}).sort("created_at", -1).skip(skip).limit(limit)
-    txns = [serialize(t) async for t in cursor]
-    return {"transactions": txns, "total": total, "page": page, "pages": (total + limit - 1) // limit}
+# Wallet and loyalty endpoints used to sit here. They were removed with the
+# screens that were meant to call them: the feature was never wired up, and
+# three of the six took the customer id from the path without checking it
+# against the caller's token, so any logged-in customer could read or spend
+# another's balance. If the feature ever comes back, that ownership check is
+# the first thing it needs. The `wallet_balance` and `loyalty_points` fields
+# stay on the customer record — the admin customers screen still shows them.
 
 
 # ─── Admin: Customer Management ──────────────────────────

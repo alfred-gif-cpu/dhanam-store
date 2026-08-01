@@ -129,38 +129,6 @@ class CustomerService extends ChangeNotifier {
     await fetchProfile(customerId);
   }
 
-  Future<void> addLoyaltyPoints(int points) async {
-    await _post('/customers/$customerId/loyalty/add', {'points': points});
-    _customer?['loyalty_points'] = loyaltyPoints + points;
-    await _save();
-    notifyListeners();
-  }
-
-  Future<void> redeemLoyaltyPoints(int points) async {
-    await _post('/customers/$customerId/loyalty/redeem', {'points': points});
-    _customer?['loyalty_points'] = loyaltyPoints - points;
-    await _save();
-    notifyListeners();
-  }
-
-  Future<void> walletCredit(double amount, {String reason = 'top_up'}) async {
-    await _post('/customers/$customerId/wallet/credit', {'amount': amount, 'reason': reason});
-    _customer?['wallet_balance'] = walletBalance + amount;
-    await _save();
-    notifyListeners();
-  }
-
-  Future<void> walletDebit(double amount, {String reason = 'purchase'}) async {
-    await _post('/customers/$customerId/wallet/debit', {'amount': amount, 'reason': reason});
-    _customer?['wallet_balance'] = walletBalance - amount;
-    await _save();
-    notifyListeners();
-  }
-
-  Future<Map<String, dynamic>> getWalletTransactions({int page = 1}) async {
-    return _get('/customers/$customerId/wallet/transactions?page=$page');
-  }
-
   Future<Map<String, dynamic>> getOrderHistory({int page = 1}) async {
     return _get('/customers/$customerId/orders?page=$page');
   }
