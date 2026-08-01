@@ -74,3 +74,13 @@ backend/approved.txt
 backend/generic_proposals.json
 backend/generic_review.html
 backend/approved_generic.txt
+
+# Review sheets and preview images produced by the catalogue scripts. They are
+# large, regenerable, and only useful for the one sitting that produced them.
+backend/*_review.html
+backend/*_issues.html
+backend/*_changes.html
+backend/*_preview/
+backend/approved_*.txt
+backend/*_proposals.json
+backend/*_results.json
