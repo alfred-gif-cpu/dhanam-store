@@ -33,6 +33,11 @@ android {
 
     defaultConfig {
         applicationId = "com.dhanamstore.app"
+        // Pinned, not `flutter.minSdkVersion`. 23 is what flutter_secure_storage
+        // requires — the session token lives in the Android keystore — and it is
+        // the lowest that satisfies every plugin, so it keeps Android 6.0 phones
+        // able to install. The Flutter default is 24 and regenerating this file
+        // silently reverts to it, which drops those phones for nothing.
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = 1
