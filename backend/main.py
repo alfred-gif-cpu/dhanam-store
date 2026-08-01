@@ -3,7 +3,7 @@ import re
 import traceback
 from pathlib import Path
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Query, HTTPException, Request, Body, Depends, File, UploadFile, Form
+from fastapi import FastAPI, Query, HTTPException, Request, Response, Body, Depends, File, UploadFile, Form
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -433,6 +433,86 @@ async def get_product(product_id: str, request: Request):
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return serialize_product(product, base_url)
+
+
+# ─── Image credits ────────────────────────────────────────
+
+# Photographs imported from open databases are licensed on the condition that
+# the source is credited wherever the image appears, so the app carries a
+# Credits screen and this is what fills it.
+#
+# The import scripts record the credit on each product as one string, in one
+# of two shapes:
+#
+#     Open Food Facts (8901719100956), CC-BY-SA
+#     Openverse / Jane Doe (cc-by)
+#
+# Parse both back into parts, so the screen can group by source and link each
+# photograph to the record it came from.
+
+_SOURCE_HOMES = {
+    "open food facts": "https://world.openfoodfacts.org",
+    "openverse": "https://openverse.org",
+}
+_CREDIT_RE = re.compile(
+    r"^\s*(?P<source>[^(/]+?)\s*"
+    r"(?:/\s*(?P<creator>[^(]+?)\s*)?"
+    r"(?:\((?P<ref>[^)]*)\))?"
+    r"(?:\s*,\s*(?P<licence>.+?))?\s*$"
+)
+
+
+def _parse_credit(credit: str) -> dict:
+    m = _CREDIT_RE.match(credit or "")
+    if not m:
+        return {"source": (credit or "").strip(), "creator": "", "licence": "", "home": "", "url": ""}
+
+    source = (m.group("source") or "").strip()
+    creator = (m.group("creator") or "").strip()
+    ref = (m.group("ref") or "").strip()
+    licence = (m.group("licence") or "").strip()
+
+    # The bracketed part is a barcode for Open Food Facts but the licence for
+    # Openverse. Tell them apart by what they contain rather than by position.
+    if ref and not licence and not ref.isdigit():
+        licence, ref = ref, ""
+
+    home = _SOURCE_HOMES.get(source.lower(), "")
+    url = f"{home}/product/{ref}" if ref.isdigit() and "openfoodfacts" in home else home
+    return {"source": source, "creator": creator, "licence": licence, "home": home, "url": url}
+
+
+@app.get("/image-credits")
+async def get_image_credits(response: Response):
+    """Attribution for catalogue photographs taken from open databases."""
+    groups: dict[str, dict] = {}
+    cursor = products_collection.find(
+        {"image_credit": {"$nin": ["", None]}},
+        {"name": 1, "image_credit": 1},
+    ).sort("name", 1)
+    async for p in cursor:
+        c = _parse_credit(p.get("image_credit", ""))
+        if not c["source"]:
+            continue
+        group = groups.setdefault(c["source"], {
+            "name": c["source"], "url": c["home"], "licences": [], "items": [],
+        })
+        if c["licence"] and c["licence"] not in group["licences"]:
+            group["licences"].append(c["licence"])
+        group["items"].append({
+            "product": p.get("name", ""),
+            "creator": c["creator"],
+            "licence": c["licence"],
+            "url": c["url"],
+        })
+
+    sources = sorted(groups.values(), key=lambda g: -len(g["items"]))
+    for group in sources:
+        group["count"] = len(group["items"])
+
+    # Only changes when new photographs are imported, which is a deploy.
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return {"sources": sources, "total": sum(g["count"] for g in sources)}
 
 
 @app.get("/categories")

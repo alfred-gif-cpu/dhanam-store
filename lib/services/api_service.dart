@@ -138,6 +138,12 @@ class ApiService {
     return (data['products'] as List).map((p) => Product.fromJson(p)).toList();
   }
 
+  // Image credits
+  Future<List<ImageCreditSource>> getImageCredits() async {
+    final data = await _get('/image-credits');
+    return (data['sources'] as List).map((s) => ImageCreditSource.fromJson(s)).toList();
+  }
+
   // Banners
   Future<List<HomeBanner>> getBanners() async {
     final data = await _get('/banners');
@@ -215,6 +221,53 @@ class SearchSuggestions {
       names: List<String>.from(json['names'] ?? []),
       brands: List<String>.from(json['brands'] ?? []),
       categories: List<String>.from(json['categories'] ?? []),
+    );
+  }
+}
+
+/// One photograph we did not take ourselves, and where it came from.
+class ImageCredit {
+  final String product;
+  final String creator;
+  final String licence;
+  final String url;
+
+  ImageCredit({required this.product, required this.creator, required this.licence, required this.url});
+
+  factory ImageCredit.fromJson(Map<String, dynamic> json) {
+    return ImageCredit(
+      product: json['product'] ?? '',
+      creator: json['creator'] ?? '',
+      licence: json['licence'] ?? '',
+      url: json['url'] ?? '',
+    );
+  }
+}
+
+/// The photographs from one open database, grouped for the Credits screen.
+class ImageCreditSource {
+  final String name;
+  final String url;
+  final List<String> licences;
+  final int count;
+  final List<ImageCredit> items;
+
+  ImageCreditSource({
+    required this.name,
+    required this.url,
+    required this.licences,
+    required this.count,
+    required this.items,
+  });
+
+  factory ImageCreditSource.fromJson(Map<String, dynamic> json) {
+    final items = ((json['items'] ?? []) as List).map((i) => ImageCredit.fromJson(i)).toList();
+    return ImageCreditSource(
+      name: json['name'] ?? '',
+      url: json['url'] ?? '',
+      licences: List<String>.from(json['licences'] ?? []),
+      count: json['count'] ?? items.length,
+      items: items,
     );
   }
 }

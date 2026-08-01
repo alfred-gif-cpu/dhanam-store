@@ -3,6 +3,8 @@ import '../services/auth_service.dart';
 import 'orders_screen.dart';
 import 'address/address_list_screen.dart';
 import 'edit_profile_screen.dart';
+import 'image_credits_screen.dart';
+import 'legal_page_screen.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -107,6 +109,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _tile(context, Icons.location_on_outlined, 'My Addresses', 'Manage delivery addresses',
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressListScreen()))),
           _tile(context, Icons.headset_mic_outlined, 'Help & Support', 'Get help with your orders', null),
+          _tile(context, Icons.photo_library_outlined, 'Photo Credits', 'Sources for product photographs',
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ImageCreditsScreen()))),
+          _tile(context, Icons.privacy_tip_outlined, 'Privacy Policy', 'How we handle your data',
+              () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const LegalPageScreen(title: 'Privacy Policy', content: LegalPageScreen.privacyPolicy)))),
+          _tile(context, Icons.description_outlined, 'Terms of Service', 'The terms you agree to by ordering',
+              () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const LegalPageScreen(title: 'Terms of Service', content: LegalPageScreen.termsOfService)))),
           _tile(context, Icons.info_outline, 'About', 'App version 2.0.0', null),
           const SizedBox(height: 10),
           // Logout
