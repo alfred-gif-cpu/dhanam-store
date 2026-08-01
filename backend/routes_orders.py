@@ -3,7 +3,7 @@ import re
 import logging
 from datetime import datetime, timedelta
 from typing import Literal
-from fastapi import APIRouter, Query, HTTPException, Body, Depends
+from fastapi import APIRouter, Query, HTTPException, Body, Depends, Request
 from fastapi.responses import StreamingResponse
 from bson import ObjectId
 from pymongo import ReturnDocument
@@ -13,6 +13,7 @@ from database import orders_collection, products_collection, customers_collectio
 from admin_auth import get_current_admin
 from config import settings
 from auth import get_current_user, decode_token, create_invoice_token
+from rate_limit import limiter
 
 log = logging.getLogger(__name__)
 from push_service import notify_new_order
@@ -187,7 +188,15 @@ def _check_serviceable(pincode: str) -> None:
 
 
 @router.post("/orders/create")
-async def create_order(data: CreateOrderRequest, user: dict = Depends(get_current_user)):
+# Stock is reserved atomically the moment an order is filed, so an unthrottled
+# caller could empty the shelves faster than anyone could notice. Ten a minute
+# is far more than a real customer places and far less than a loop needs.
+@limiter.limit("10/minute")
+async def create_order(
+    request: Request,
+    data: CreateOrderRequest,
+    user: dict = Depends(get_current_user),
+):
     _check_serviceable(data.address.pincode)
     # Filed against the verified caller: a client-supplied user_id would let
     # anyone place orders in someone else's name.

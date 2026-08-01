@@ -8,8 +8,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from bson import ObjectId
 from database import (
@@ -49,17 +47,7 @@ if settings.sentry_dsn:
         log.warning("Sentry init failed, continuing without it: %s", e)
 
 
-def _client_ip(request: Request) -> str:
-    """Resolve the real client IP behind Railway's proxy.
-    Railway sets X-Forwarded-For; the first entry is the originating client.
-    Falls back to the direct peer address for local/non-proxied requests."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return get_remote_address(request)
-
-
-limiter = Limiter(key_func=_client_ip)
+from rate_limit import limiter  # noqa: E402  (shared with the routers)
 
 _PHONE_RE = re.compile(r"^\+?91?\d{10}$")
 
@@ -561,6 +549,10 @@ async def search_suggestions(q: str = Query(..., min_length=1)):
 
 
 @app.get("/search")
+# The heaviest read in the app — normalised matching across the whole
+# catalogue. A shop's worth of customers will not notice 60 a minute; a
+# script pointed at it would otherwise throttle Atlas for everyone.
+@limiter.limit("60/minute")
 async def search_products(
     request: Request,
     q: str = Query(..., min_length=1),

@@ -34,3 +34,12 @@ async def ensure_indexes():
     await addresses_collection.create_index("user_id")
     await admins_collection.create_index("email", unique=True, sparse=True)
     await otp_collection.create_index("expires_at", expireAfterSeconds=0)
+    # Sorted on by the admin order list; without this it is a full in-memory
+    # sort of every order ever placed, which only gets slower.
+    await orders_collection.create_index("updated_at")
+    # /products/bestsellers sorts on this on every home screen load.
+    await products_collection.create_index("sold_count")
+    await banners_collection.create_index([("active", 1), ("order", 1)])
+    await wishlists_collection.create_index("user_id")
+    await audit_logs_collection.create_index("created_at")
+    await search_misses_collection.create_index("term", unique=True, sparse=True)
