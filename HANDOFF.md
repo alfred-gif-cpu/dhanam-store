@@ -47,6 +47,26 @@ Failed searches are logged: `python scripts/catalog_health.py --search-misses`.
 `compress_images.py`, then 254 added from Open Food Facts at full resolution.
 Cache headers added, so repeat views cost no network at all.
 
+**Image attribution.** The 254 Open Food Facts photographs are CC-BY-SA and
+require visible credit. *Profile → Photo Credits* now shows it, filled by
+`GET /image-credits`, which parses the `image_credit` string recorded on each
+product and groups it by source. The licence statement itself is baked into
+the screen rather than fetched, so the credit still appears offline. **Deploy
+the backend before shipping an app build**, or the list will not load.
+
+**Legal pages.** Privacy Policy and Terms of Service were written but nothing
+in the app linked to them: the only links were in `customer_settings_screen.dart`,
+which nothing navigates to. Both are now tiles in *Profile*, alongside Photo
+Credits. All of `lib/screens/customer/` was deleted: five screens duplicated
+live ones, and the wallet and loyalty screens were dropped as unwanted
+features rather than dead code. Nothing in the app calls wallet or loyalty
+now, so these are unused: `addLoyaltyPoints`, `redeemLoyaltyPoints`,
+`walletCredit`, `walletDebit` and `getWalletTransactions` in
+`customer_service.dart`, and the six endpoints under `/customers/{id}/wallet`
+and `/customers/{id}/loyalty` in `routes_customer.py`. The admin customers
+screen still *displays* `wallet_balance` and `loyalty_points`, but only reads
+the fields off the customer record — it does not call those endpoints.
+
 **Ops.** Uploads persist across deploys (Railway volume at `/data/uploads`),
 GitHub Actions checks production every 15 minutes, `backup_db.py` dumps the
 database, `.env.example` documents every variable.
@@ -71,9 +91,14 @@ database, `.env.example` documents every variable.
 
 ## Next — Claude
 
-1. **Image attribution screen.** The 254 Open Food Facts photos are CC-BY-SA
-   and require visible credit. Needs a Credits screen before Play Store. This
-   is an obligation we created, so it should be finished.
+1. **Wallet and loyalty endpoints let one customer act on another.**
+   `/customers/{id}/wallet/debit`, `/customers/{id}/wallet/transactions` and
+   `/customers/{id}/loyalty/redeem` require a logged-in user but never check
+   that the token belongs to `{id}`, so any customer can read or spend
+   another's balance by changing the id. Same class as the address bug
+   already closed. Nothing calls them since the screens were removed, so
+   deleting the six endpoints closes it outright — that is the recommendation
+   unless the feature comes back, in which case they need an ownership check.
 2. **258 image proposals awaiting review.** Two sheets:
    - `backend/review.html` — 211 packaged goods
    - `backend/generic_review.html` — 47 loose goods
