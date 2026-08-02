@@ -21,7 +21,7 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
       await tester.pump();
 
-      expect(find.text('Dhanam Store'), findsOneWidget);
+      expect(find.text('Dhanam Stores'), findsOneWidget);
       expect(find.text('Mobile Number'), findsOneWidget);
       expect(find.text('Get OTP'), findsOneWidget);
       expect(find.text('Login as Staff / Owner'), findsOneWidget);
@@ -72,29 +72,50 @@ void main() {
   });
 
   group('OtpScreen', () {
-    testWidgets('renders 4 OTP boxes, masked phone and dev hint', (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: OtpScreen(phone: '+919876543210', devOtp: '1234'),
-      ));
-      await tester.pump();
-
-      expect(find.text('Verify OTP'), findsOneWidget);
-      // 4 single-digit entry boxes
-      expect(find.byType(TextField), findsNWidgets(4));
-      // masked phone keeps the +91 prefix and last 3 digits (rendered in a RichText)
-      expect(find.textContaining('+919', findRichText: true), findsOneWidget);
-      expect(find.textContaining('210', findRichText: true), findsOneWidget);
-      // dev OTP hint surfaced when provided
-      expect(find.textContaining('Dev OTP: 1234'), findsOneWidget);
-    });
-
-    testWidgets('hides dev hint when no dev OTP is provided', (tester) async {
+    // These tests stopped compiling when the screen dropped its devOtp
+    // parameter and moved from four boxes to six, and nothing was running
+    // them, so the rot went unnoticed. They now assert what the screen
+    // actually does.
+    testWidgets('renders the header and the masked phone number', (tester) async {
       await tester.pumpWidget(const MaterialApp(
         home: OtpScreen(phone: '+919876543210'),
       ));
       await tester.pump();
 
-      expect(find.textContaining('Dev OTP'), findsNothing);
+      expect(find.text('Verify OTP'), findsOneWidget);
+      expect(find.textContaining('6-digit', findRichText: true), findsOneWidget);
+      // The masked form keeps the +91 prefix and the last digits, so the
+      // customer can tell which number the code went to.
+      expect(find.textContaining('+919', findRichText: true), findsOneWidget);
+      expect(find.textContaining('210', findRichText: true), findsOneWidget);
+    });
+
+    testWidgets('takes six digits through one hidden field', (tester) async {
+      // The six boxes on screen are display-only Text widgets: per-box
+      // TextFields corrupted the typed glyph on some devices. Input goes to a
+      // single invisible field stacked over them, so there is exactly one.
+      await tester.pumpWidget(const MaterialApp(
+        home: OtpScreen(phone: '+919876543210'),
+      ));
+      await tester.pump();
+
+      final field = find.byType(TextField);
+      expect(field, findsOneWidget);
+      expect(tester.widget<TextField>(field).maxLength, 6);
+    });
+
+    testWidgets('shows the typed code in the boxes', (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: OtpScreen(phone: '+919876543210'),
+      ));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), '1234');
+      await tester.pump();
+
+      for (final digit in ['1', '2', '3', '4']) {
+        expect(find.text(digit), findsWidgets, reason: 'digit $digit is not displayed');
+      }
     });
   });
 }

@@ -1,0 +1,5 @@
+# Test-time only. The running server never imports these, so they stay out of
+# requirements.txt and off the deployed image.
+-r requirements.txt
+pytest>=8.0
+pytest-asyncio>=0.24

@@ -1,0 +1,61 @@
+name: Tests
+
+# Runs on every push and pull request. The suite needs no database and no
+# network, so it cannot fail for a reason unrelated to the change — which is
+# the only way a check stays trusted rather than routinely ignored.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest
+        env:
+          # Deliberately unreachable: Motor connects lazily, so importing the
+          # app is fine, and any test that tried to query would fail loudly
+          # rather than quietly reaching a real database.
+          MONGODB_URI: mongodb://127.0.0.1:27017/dhanam_store_test
+          DATABASE_NAME: dhanam_store_test
+          JWT_SECRET: ci-only-secret-not-used-anywhere
+          DEBUG: "true"
+          DELIVERY_PINCODES: '["635109","635110","635126"]'
+
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Catches the class of mistake that reaches production most easily in
+      # this codebase: a screen that no longer compiles after a rename, or a
+      # BuildContext used across an await.
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test
