@@ -42,3 +42,15 @@ def client() -> TestClient:
     database. Requests still route normally without it.
     """
     return TestClient(app)
+
+
+@pytest.fixture(scope="session")
+def tolerant_client() -> TestClient:
+    """Returns server errors as responses instead of raising them.
+
+    For the handful of tests that only care which side of the auth line a
+    response falls on. Those endpoints go on to query the database, which
+    these tests do not have, and the resulting error is not the point — a 500
+    still answers the question, an exception does not.
+    """
+    return TestClient(app, raise_server_exceptions=False)
