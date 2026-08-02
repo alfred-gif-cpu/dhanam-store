@@ -1,0 +1,71 @@
+name: Database backup
+
+# Atlas M0 has no automated backups and no point-in-time recovery — the tier
+# does not offer them. Without this there is nothing to restore from if a bulk
+# script goes wrong or a collection is dropped, which is a larger risk than
+# the storage limit and a much quieter one.
+#
+# A daily snapshot means losing at most a day of orders in the worst case.
+# That is not as good as a paid backup tier, and is not meant to be: it is the
+# safety net that fits a free cluster before launch.
+on:
+  schedule:
+    - cron: "0 1 * * *" # 06:30 IST, before the shop opens
+  workflow_dispatch: # run one by hand before any risky bulk script
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      - name: Dump every collection
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'dhanam_store' }}
+          # backup_db.py imports the app's config, which refuses to start on
+          # the default signing key. Nothing here signs anything.
+          JWT_SECRET: backup-job-does-not-issue-tokens
+        run: |
+          if [ -z "$MONGODB_URI" ]; then
+            echo "::error::MONGODB_URI secret is not set — nothing was backed up."
+            echo "Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          python scripts/backup_db.py --out dump --keep 1
+
+      - name: Name the archive after the day it covers
+        id: stamp
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dhanam-store-backup-${{ steps.stamp.outputs.date }}
+          path: backend/dump/
+          # Two weeks: the dump is a few MB and thirty of them would eat most
+          # of the free artifact storage. Long enough to notice a bad script,
+          # which is what this is for.
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Report what was captured
+        run: |
+          echo "### Backup complete" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          du -sh dump/* >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "Restore one collection:" >> "$GITHUB_STEP_SUMMARY"
+          echo '`python scripts/backup_db.py --restore <file>.json`' >> "$GITHUB_STEP_SUMMARY"
+          echo "Restore everything:" >> "$GITHUB_STEP_SUMMARY"
+          echo '`python scripts/backup_db.py --restore-all <dir> --yes`' >> "$GITHUB_STEP_SUMMARY"
