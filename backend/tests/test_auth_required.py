@@ -50,9 +50,27 @@ def test_rejects_a_forged_token(client, method, path, exposure):
     )
 
 
+def _all_routes(app):
+    """Every route, including any nested under a mount.
+
+    Walked rather than read straight off app.routes because how an included
+    router appears there is a detail of the installed FastAPI version — and
+    a test that quietly finds nothing is worse than no test, since it passes.
+    """
+    found, stack = [], list(app.routes)
+    while stack:
+        route = stack.pop()
+        found.append(route)
+        stack.extend(getattr(route, "routes", []))
+    return found
+
+
 def _guards(route) -> set:
     """Every dependency a route resolves, by name, walked recursively."""
-    found, stack = set(), list(getattr(route.dependant, "dependencies", []))
+    dependant = getattr(route, "dependant", None)
+    if dependant is None:
+        return set()
+    found, stack = set(), list(dependant.dependencies)
     while stack:
         dep = stack.pop()
         if dep.call is not None:
@@ -73,7 +91,7 @@ def test_public_endpoints_stay_public():
     from main import app
 
     public = {"/health", "/products", "/categories", "/image-credits", "/search", "/banners"}
-    for route in app.routes:
+    for route in _all_routes(app):
         if getattr(route, "path", None) in public:
             guards = _guards(route)
             assert "get_current_user" not in guards and "get_current_admin" not in guards, (
@@ -95,7 +113,7 @@ def test_protected_endpoints_carry_a_guard():
     targets = {"/orders/create", "/addresses", "/cart", "/cart/add",
                "/notifications/send", "/admin/orders/all", "/auth/me"}
     seen = set()
-    for route in app.routes:
+    for route in _all_routes(app):
         path = getattr(route, "path", "")
         if path in targets:
             guards = _guards(route)
@@ -104,4 +122,10 @@ def test_protected_endpoints_carry_a_guard():
             )
             seen.add(path)
     missing = targets - seen
-    assert not missing, f"these routes have disappeared from the app: {sorted(missing)}"
+    # On failure, say what the app does have. A bare "not found" sent an
+    # earlier version of this test chasing a phantom regression when the real
+    # answer was that the routes were nested a level deeper.
+    assert not missing, (
+        f"these routes have disappeared from the app: {sorted(missing)}. "
+        f"Found {len(_all_routes(app))} routes in total."
+    )
