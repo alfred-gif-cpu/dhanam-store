@@ -1,4 +1,4 @@
-# Dhanam Store — where things stand (2026-08-01)
+# Dhanam Store — where things stand (2026-08-02)
 
 Continuation notes. Everything below is deployed and verified against
 production unless marked otherwise.
@@ -94,6 +94,46 @@ requires for the keystore-backed session token, and the highest any plugin
 asks for — the minimum that builds and the widest device support available.
 The reasoning is in the file so the next regeneration does not undo it.
 
+**Tests.** 141 of them — 134 backend, 7 widget — running in CI on every push
+alongside `flutter analyze`. They need no database and no network and finish
+in under a second, which is the point: a check that fails for reasons
+unrelated to the change stops being read. Run with `python -m pytest` in
+`backend/`, and `flutter test` at the root.
+
+What they cover is what has actually broken here. The five endpoints found
+open in the route audit are asserted closed, anonymously and with a forged
+token. Orders are asserted to have no `price` field at all, because the fix
+for the tampering bug was removing it from the request shape and a test of
+the arithmetic would not notice it returning. The ordering flow runs against
+mongomock-motor, a real query engine in process, covering the two properties
+that only a database can show: stock reserved by conditional update so the
+last unit cannot sell twice, and order ids from an atomic counter.
+
+Those sixteen were verified by mutation, not by passing — changing the
+reservation to decrement zero fails six of them. Worth repeating for any new
+test here: a suite nobody has watched fail is a suite nobody knows works.
+
+`widget_test.dart` was not a placeholder, whatever an earlier note implied.
+It held six real tests and had been failing to compile since `OtpScreen`
+dropped `devOtp` and moved to six digits. Nothing ran them, so nobody knew.
+
+**Rate limits and indexes.** `/orders/create` is capped at 10/minute and
+`/search` at 60. Ordering was the gap that mattered: stock is reserved the
+moment an order is filed, so an unthrottled loop could empty the shelves.
+The limiter lives in `rate_limit.py` because importing it from `main` would
+be a cycle. Six indexes added, of which `orders.updated_at` and
+`products.sold_count` are the ones that matter — both are sorted on by paths
+that run constantly.
+
+**Dependencies are pinned.** Every requirement used to be a floor, and
+Railway installs fresh on each build, so each deploy resolved whatever was
+newest that morning. CI ran Starlette 1.3 while this project was developed
+against 0.52 — a major version apart, on the library the whole app sits on.
+`requirements.txt` now pins the exact set CI passes against, including
+`starlette` and `pymongo` explicitly, since they are where the behaviour
+lives and their parents' floors allow a major jump. Upgrading is now a
+deliberate act: change a line, let the suite run, deploy.
+
 **Ops.** Uploads persist across deploys (Railway volume at `/data/uploads`),
 GitHub Actions checks production every 15 minutes, `backup_db.py` dumps the
 database, `.env.example` documents every variable.
@@ -114,7 +154,8 @@ database, `.env.example` documents every variable.
    and priority order are in `PRODUCT_IMAGES.md`. Free, and covers the branded
    lines no database will.
 5. **Atlas M10** (~$9/mo) and **UptimeRobot** before real traffic. M0 will
-   throttle during an evening rush.
+   throttle during an evening rush. Ordering and search are rate-limited now,
+   which protects M0 from one script but not from genuine evening load.
 6. **Three duplicate products, two priced differently.** `Dds Raw Rice 1kg`
    at ₹72 and ₹50; `Navneet Notes` at ₹35 and ₹47; `7 Up 20Rs` twice at ₹20.
    The names are now identical, so a customer sees the same product twice at
@@ -136,7 +177,18 @@ database, `.env.example` documents every variable.
    to the same filename.
    `approved.txt` at the repo root is left over from one of these and it is
    not recorded which — check before running `--apply` on it.
-2. Optional: AI-generated images for loose goods (needs an API key, ~$12 for
+2. **Four things the production review found and left alone**, none of them
+   urgent, in the order they will start to matter:
+   - Four queries with no limit — `routes_customer.py:245` loads every
+     customer, `routes_admin.py:468` and `main.py:680` every matching order,
+     `routes_notifications.py:82` a thousand FCM tokens. Fine at today's
+     size; orders accumulate forever.
+   - `datetime.utcnow()` throughout: deprecated on Python 3.12+, and it
+     returns naive datetimes stored as ISO strings, so the timestamps carry
+     no timezone.
+   - `@app.on_event("startup")` is deprecated; lifespan handlers replaced it.
+   - One uvicorn worker, so no headroom if a handler ever blocks.
+3. Optional: AI-generated images for loose goods (needs an API key, ~$12 for
    300), and `--workers` for uvicorn.
 
 ---
@@ -154,6 +206,23 @@ database, `.env.example` documents every variable.
   malformed. Symptom was a 500 that looked like a code bug.
 - **Pace requests to free APIs.** An unpaced image download failed 192 of 254
   times and the failures were caught and skipped silently.
+- **Do not test a framework's internals.** A test walked FastAPI's route
+  table to check each protected endpoint carried an auth guard. It passed
+  locally and failed in CI, because CI resolved a newer Starlette that
+  arranges routes differently, and two attempts to fix it were two attempts
+  to make a fragile thing work. The 28 tests that simply send a request and
+  check for a 401 never wavered in either environment. Ask the app; do not
+  read it.
+- **A test that can match nothing can pass vacuously.** The same test's
+  public-endpoint half iterated routes and asserted only on what it found —
+  so on the newer Starlette it would have reported success while checking
+  zero endpoints. Worse than no test. If a check loops before it asserts,
+  assert on the count too.
+- **"Works locally" is a claim about one machine.** Local was fastapi 0.135
+  and starlette 0.52; CI resolved 0.141 and 1.3 from the same requirements
+  file. Three CI runs went into discovering that. Deps are pinned now, but
+  after any change to them, `pip install -r requirements-dev.txt` locally or
+  the gap reopens.
 - **Match brand names as whole words.** The same bug landed twice in one
   session: `(?<![a-z])a|b|c(?![a-z])` binds the lookarounds to only the first
   and last alternative, so every brand between them matched mid-word — "rin"
