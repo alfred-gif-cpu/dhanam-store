@@ -7,6 +7,7 @@ name: Production health check
 on:
   schedule:
     - cron: "*/15 * * * *"
+    - cron: "30 1 * * *" # 07:00 IST — the capacity check, once a day
   workflow_dispatch: # lets you trigger a check by hand from the Actions tab
 
 jobs:
@@ -48,3 +49,61 @@ jobs:
             echo "::error::API is up but returned $total products"
             exit 1
           fi
+
+  capacity:
+    # Once a day, not every fifteen minutes: storage moves slowly, and a
+    # measurement that repeats 96 times a day is one nobody reads.
+    if: github.event.schedule == '30 1 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install "pymongo==4.17.0"
+
+      - name: Measure the database against the M0 limit
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: |
+          if [ -z "$MONGODB_URI" ]; then
+            echo "::notice::MONGODB_URI secret is not set — skipping the capacity check."
+            echo "Add it under Settings → Secrets and variables → Actions to enable this."
+            exit 0
+          fi
+          python3 - <<'PY'
+          import os, sys
+          from pymongo import MongoClient
+
+          # M0's storage ceiling. Change this if the cluster tier changes, or
+          # the percentages below will quietly describe the wrong limit.
+          LIMIT_MB = 512
+          WARN_AT, FAIL_AT = 50, 75
+
+          client = MongoClient(os.environ["MONGODB_URI"], serverSelectionTimeoutMS=20000)
+          stats = client.get_database(os.environ.get("DATABASE_NAME", "dhanam_store")).command("dbStats")
+          used_mb = (stats["dataSize"] + stats["indexSize"]) / 1024 / 1024
+          pct = used_mb / LIMIT_MB * 100
+
+          print(f"data + indexes: {used_mb:.1f} MB of {LIMIT_MB} MB  ({pct:.1f}%)")
+
+          # Orders are the only collection that grows without bound, so the
+          # useful number is not today's size but how long the headroom lasts.
+          orders = client.get_database(os.environ.get("DATABASE_NAME", "dhanam_store")).orders
+          count = orders.estimated_document_count()
+          if count:
+              per_order_kb = (orders.aggregate([{"$collStats": {"storageStats": {}}}]).next()
+                              ["storageStats"]["size"] / count / 1024)
+              headroom = (LIMIT_MB - used_mb) * 1024 / max(per_order_kb, 0.1)
+              print(f"orders: {count} at ~{per_order_kb:.1f} KB each — "
+                    f"room for roughly {headroom:,.0f} more")
+
+          if pct >= FAIL_AT:
+              print(f"::error::Database is {pct:.0f}% of the {LIMIT_MB} MB limit. "
+                    "Writes start failing at 100% — orders would stop being accepted "
+                    "while the catalogue kept serving. Upgrade the cluster tier.")
+              sys.exit(1)
+          if pct >= WARN_AT:
+              print(f"::warning::Database is {pct:.0f}% of the {LIMIT_MB} MB limit. "
+                    "Worth planning the upgrade rather than reacting to it.")
+          PY
