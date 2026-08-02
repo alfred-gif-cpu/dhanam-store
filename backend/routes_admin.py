@@ -282,7 +282,14 @@ async def upload_image(product_id: str, request: Request, file: UploadFile = Fil
     filename = f"{slugify(product.get('name', ''), 'product')}{ext}"
     stored = save_image(content, filename)
 
-    await products_collection.update_one({"_id": ObjectId(product_id)}, {"$set": {"image_url": stored}})
+    # The credit belongs to the photograph, so it leaves with it. Without this
+    # a shop photo replacing an Open Food Facts one keeps that credit: the
+    # Photo Credits screen would attribute your own picture to someone else,
+    # and list it as CC-BY-SA, which hands your work away to anyone reading.
+    await products_collection.update_one(
+        {"_id": ObjectId(product_id)},
+        {"$set": {"image_url": stored}, "$unset": {"image_credit": ""}},
+    )
     base_url = str(request.base_url).rstrip("/")
     await _log(admin["email"], "product_image_uploaded", f"Image for product: {product_id}")
     return {"status": "uploaded", "image_url": resolve_image_url(stored, base_url)}
