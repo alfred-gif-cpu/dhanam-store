@@ -1,15 +1,28 @@
-fastapi>=0.115.12
-uvicorn[standard]>=0.34.3
-motor>=3.7.1
-pydantic>=2.11.7
-pydantic-settings>=2.9.1
-python-dotenv>=1.1.1
-PyJWT>=2.9.0
-bcrypt>=4.2.0
-httpx>=0.28.0
-python-multipart>=0.0.22
-passlib>=1.7.4
-fpdf2>=2.8.1
-firebase-admin>=7.4.0
-slowapi>=0.1.9
-sentry-sdk[fastapi]>=2.20.0
+# Pinned exactly, not floored.
+#
+# These were open-ended (fastapi>=0.115.12 and so on), and Railway installs
+# fresh on every build, so each deploy silently resolved whatever was newest
+# that morning. That is how CI ended up on Starlette 1.3 while this project
+# was developed against 0.52 — a major version apart, on a library the whole
+# app sits on, chosen by nobody.
+#
+# This exact set is what the test suite runs against in CI. Upgrading is now
+# a deliberate act: change a line, let the tests run, deploy. The failure mode
+# it removes is a Friday evening deploy picking up a major version on its own.
+fastapi==0.141.1
+starlette==1.3.1          # pinned explicitly: fastapi's floor allows a major jump
+uvicorn[standard]==0.52.1
+motor==3.7.1
+pymongo==4.17.0           # motor's driver; the version that reaches Atlas
+pydantic==2.13.4
+pydantic-settings==2.14.2
+python-dotenv==1.2.2
+PyJWT==2.13.0
+bcrypt==5.0.0
+httpx==0.28.1
+python-multipart==0.0.32
+passlib==1.7.4
+fpdf2==2.8.7
+firebase-admin==7.5.0
+slowapi==0.1.10
+sentry-sdk[fastapi]==2.66.1
