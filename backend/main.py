@@ -731,8 +731,16 @@ async def admin_stats(_admin: dict = Depends(get_current_admin)):
     low_stock = await products_collection.count_documents({"stock": {"$lte": 5, "$gt": 0}})
     out_of_stock = await products_collection.count_documents({"stock": 0})
 
+    # The panel counts every product, including hidden ones — it is the screen
+    # you bring something back from, so it has to show what is not on sale.
+    # But the total alone reads as the size of the shop, which it is not, so
+    # send the split and let the panel say which is which.
+    visible_products = await products_collection.count_documents(VISIBLE)
+
     return {
         "total_products": total_products,
+        "visible_products": visible_products,
+        "hidden_products": total_products - visible_products,
         "total_orders": total_orders,
         "total_users": total_users,
         "total_revenue": revenue,

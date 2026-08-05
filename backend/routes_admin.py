@@ -207,6 +207,7 @@ async def list_products(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     q: str = Query(""),
+    status: str = Query("", description="visible | hidden — omit for all"),
     admin: dict = Depends(get_current_admin),
 ):
     skip = (page - 1) * limit
@@ -217,6 +218,12 @@ async def list_products(
             {"brand": {"$regex": re.escape(q), "$options": "i"}},
             {"category": {"$regex": re.escape(q), "$options": "i"}},
         ]
+    # Absent counts as visible, matching what the shop does — otherwise the
+    # filter and the customer's view would disagree about the same product.
+    if status == "visible":
+        query["is_active"] = {"$ne": False}
+    elif status == "hidden":
+        query["is_active"] = False
     total = await products_collection.count_documents(query)
     cursor = products_collection.find(query).sort("name", 1).skip(skip).limit(limit)
     products = []
@@ -226,6 +233,33 @@ async def list_products(
         p["image"] = resolve_image_url(p.get("image_url") or p.get("image") or "", base_url)
         products.append(p)
     return {"products": products, "total": total, "page": page, "pages": (total + limit - 1) // limit}
+
+
+@router.put("/products/{product_id}/visibility")
+async def set_product_visibility(
+    product_id: str,
+    visible: bool = Body(..., embed=True),
+    admin: dict = Depends(get_current_admin),
+):
+    """Take a product off the shelf, or put it back.
+
+    Hiding is not deleting: the product keeps its price, stock and photograph,
+    and an order already placed for it still works. It simply stops appearing
+    in the app. Seasonal lines and anything not worth a delivery run belong
+    here rather than in the bin.
+    """
+    if not ObjectId.is_valid(product_id):
+        raise HTTPException(status_code=400, detail="Invalid product ID")
+    product = await products_collection.find_one({"_id": ObjectId(product_id)}, {"name": 1})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    await products_collection.update_one(
+        {"_id": ObjectId(product_id)}, {"$set": {"is_active": visible}}
+    )
+    await _log(admin["email"], "product_visibility",
+               f"{'Shown' if visible else 'Hidden'}: {product.get('name', product_id)}")
+    return {"status": "ok", "visible": visible}
 
 
 @router.post("/products")

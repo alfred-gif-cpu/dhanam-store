@@ -122,6 +122,7 @@
   .pill.g{background:var(--ok-bg);color:#137A3C}
   .pill.r{background:var(--err-bg);color:#B01B1B}
   .pill.y{background:var(--warn-bg);color:#9A5B00}
+  .pill.h{background:#EEF0F3;color:#5B6472}
   .pill.b{background:var(--info-bg);color:var(--primary)}
   .pill.n{background:var(--neutral-bg);color:#4A5A72}
 
@@ -356,7 +357,7 @@ async function vDashboard(){
         card('Revenue this month', money(d.revenue_this_month),  'blue','rupee') +
         card('Orders today',       '<span class="num">'+d.orders_today+'</span>',  'blue','cart') +
         card('Total orders',       '<span class="num">'+d.total_orders+'</span>',  'gray','cart') +
-        card('Products',           '<span class="num">'+d.total_products+'</span>','gray','box') +
+        card('Products',           '<span class="num">'+d.total_products+'</span>' + (d.hidden_products ? '<div class="sb">' + d.visible_products + ' in the app · ' + d.hidden_products + ' hidden</div>' : ''),'gray','box') +
         card('Customers',          '<span class="num">'+d.total_customers+'</span>','gray','users') +
         card('Low stock',          '<span class="num">'+d.low_stock+'</span>',     'amber','warn') +
         card('Out of stock',       '<span class="num">'+d.out_of_stock+'</span>',  'red','ban') +
@@ -376,35 +377,50 @@ function statusColor(s){
 }
 
 /* ═══════════ Products ═══════════ */
-let pP = 1, pQ = '';
+let pP = 1, pQ = '', pStatus = '';
 async function vProducts(p){
   if (p) pP = p;
   try{
-    const d = await api('/admin/products?page=' + pP + '&limit=20&q=' + encodeURIComponent(pQ));
+    const d = await api('/admin/products?page=' + pP + '&limit=20&status=' + pStatus + '&q=' + encodeURIComponent(pQ));
     const rows = d.products.map(x =>
       '<tr>' +
       '<td><div class="cell-prod">' + (x.image ? '<img class="thumb" src="' + esc(x.image) + '" onerror="this.style.visibility=\'hidden\'">' : '<div class="thumb"></div>') +
-        '<div><div class="nm">' + esc(x.name) + '</div><div class="sb">' + esc(x.brand || '—') + '</div></div></div></td>' +
+        '<div><div class="nm">' + esc(x.name) + (x.is_active === false ? ' <span class="pill h">Hidden</span>' : '') + '</div><div class="sb">' + esc(x.brand || '—') + '</div></div></div></td>' +
       '<td>' + esc(x.category || '—') + '</td>' +
       '<td class="nowrap">' + money(x.price) + '</td>' +
       '<td>' + stockPill(x.stock) + '</td>' +
       '<td class="right nowrap">' +
         '<button class="btn btn-sm btn-ghost" onclick="editProduct(\'' + x.id + '\')">Edit</button> ' +
+        '<button class="btn btn-sm btn-ghost" onclick="toggleVisible(\'' + x.id + '\',' + (x.is_active === false) + ')">' + (x.is_active === false ? 'Show' : 'Hide') + '</button> ' +
         '<button class="btn btn-sm btn-danger" onclick="delProduct(\'' + x.id + '\',\'' + esc(x.name).replace(/'/g,"\\'") + '\')">Delete</button>' +
       '</td></tr>').join('');
     $('view').innerHTML =
       '<div class="panel"><div class="panel-head"><h3>Products</h3>' +
       '<input class="search" id="pSearch" placeholder="Search name, brand, category…" value="' + esc(pQ) + '">' +
+      '<select class="search" id="pFilter" style="max-width:150px">' +
+        ['','visible','hidden'].map(v => '<option value="' + v + '"' + (pStatus === v ? ' selected' : '') + '>' + ({'':'All products','visible':'Visible only','hidden':'Hidden only'})[v] + '</option>').join('') +
+      '</select>' +
       '<button class="btn btn-sm" onclick="editProduct()">+ Add Product</button></div>' +
       (d.products.length ? '<table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th class="right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table>' : emptyState('📦','No products found')) +
       pager(d.page, d.pages, d.total, 'vProducts') + '</div>';
     const s = $('pSearch');
     s.addEventListener('keydown', e => { if (e.key === 'Enter'){ pQ = s.value.trim(); pP = 1; vProducts(); } });
+    $('pFilter').addEventListener('change', e => { pStatus = e.target.value; pP = 1; vProducts(); });
   }catch(e){ fail(e); }
 }
 const stockPill = n => n > 0
   ? (n < 10 ? '<span class="pill y">' + n + ' low</span>' : '<span class="pill g">' + n + '</span>')
   : '<span class="pill r">Out</span>';
+
+// Hiding takes a product out of the app without deleting it — the price,
+// stock and photograph stay, and it can be put back with the same button.
+async function toggleVisible(id, hidden){
+  try{
+    await api('/admin/products/' + id + '/visibility', {method:'PUT', body:{visible: hidden}});
+    toast(hidden ? 'Now showing in the app' : 'Hidden from the app');
+    vProducts();
+  }catch(e){ toast(e.message, true); }
+}
 
 async function delProduct(id, name){
   if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
