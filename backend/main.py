@@ -336,6 +336,21 @@ def serialize_product(product: dict, base_url: str = "") -> dict:
 
 # ─── Products ─────────────────────────────────────────────
 
+# Products hidden from the shop. `is_active` was already on every product and
+# read by nothing, so it hid nothing; these queries are what make it mean
+# something. Absent or true counts as visible, so a product created without
+# the field — by an import script, or by hand — appears rather than vanishing.
+#
+# Discovery only: browsing, search, categories and the home-screen rails. A
+# hidden product fetched directly by id still resolves, so a cart or wishlist
+# saved before it was hidden does not break, and an order for it still goes
+# through. Hidden means "not on the shelf", not "we no longer sell this".
+VISIBLE = {"is_active": {"$ne": False}}
+
+
+def _visible(query: dict | None = None) -> dict:
+    return {**(query or {}), **VISIBLE}
+
 @app.get("/products")
 async def get_products(
     request: Request,
@@ -345,7 +360,7 @@ async def get_products(
 ):
     base_url = str(request.base_url).rstrip("/")
     skip = (page - 1) * limit
-    query = {"category": category} if category else {}
+    query = _visible({"category": category} if category else None)
     total = await products_collection.count_documents(query)
     cursor = products_collection.find(query).skip(skip).limit(limit)
     products = [serialize_product(p, base_url) async for p in cursor]
@@ -361,10 +376,10 @@ async def get_products(
 @app.get("/products/featured")
 async def get_featured_products(request: Request, limit: int = Query(10, ge=1, le=50)):
     base_url = str(request.base_url).rstrip("/")
-    cursor = products_collection.find({"featured": True}).limit(limit)
+    cursor = products_collection.find(_visible({"featured": True})).limit(limit)
     products = [serialize_product(p, base_url) async for p in cursor]
     if not products:
-        cursor = products_collection.find().limit(limit)
+        cursor = products_collection.find(VISIBLE).limit(limit)
         products = [serialize_product(p, base_url) async for p in cursor]
     return {"products": products}
 
@@ -373,11 +388,11 @@ async def get_featured_products(request: Request, limit: int = Query(10, ge=1, l
 async def get_flash_deals(request: Request, limit: int = Query(10, ge=1, le=50)):
     base_url = str(request.base_url).rstrip("/")
     cursor = products_collection.find(
-        {"$expr": {"$gt": [{"$ifNull": ["$original_price", 0]}, "$price"]}}
+        _visible({"$expr": {"$gt": [{"$ifNull": ["$original_price", 0]}, "$price"]}})
     ).sort("original_price", -1).limit(limit)
     products = [serialize_product(p, base_url) async for p in cursor]
     if not products:
-        cursor = products_collection.find().sort("price", 1).limit(limit)
+        cursor = products_collection.find(VISIBLE).sort("price", 1).limit(limit)
         products = [serialize_product(p, base_url) async for p in cursor]
     return {"products": products}
 
@@ -386,9 +401,9 @@ async def get_flash_deals(request: Request, limit: int = Query(10, ge=1, le=50))
 async def get_trending(request: Request, limit: int = Query(10, ge=1, le=50)):
     import random
     base_url = str(request.base_url).rstrip("/")
-    total = await products_collection.count_documents({})
+    total = await products_collection.count_documents(VISIBLE)
     skip = random.randint(0, max(0, total - limit))
-    cursor = products_collection.find().skip(skip).limit(limit)
+    cursor = products_collection.find(VISIBLE).skip(skip).limit(limit)
     products = [serialize_product(p, base_url) async for p in cursor]
     return {"products": products}
 
@@ -407,7 +422,7 @@ async def get_products_by_ids(request: Request, ids: str = Query(...)):
 @app.get("/products/bestsellers")
 async def get_bestsellers(request: Request, limit: int = Query(10, ge=1, le=50)):
     base_url = str(request.base_url).rstrip("/")
-    cursor = products_collection.find().sort("sold_count", -1).limit(limit)
+    cursor = products_collection.find(VISIBLE).sort("sold_count", -1).limit(limit)
     products = [serialize_product(p, base_url) async for p in cursor]
     return {"products": products}
 
@@ -507,7 +522,7 @@ async def get_image_credits(response: Response):
 async def get_categories(request: Request):
     import re
     base_url = str(request.base_url).rstrip("/")
-    categories = await products_collection.distinct("category")
+    categories = await products_collection.distinct("category", VISIBLE)
     result = []
     cat_dir = STATIC_DIR / "images" / "categories"
     for cat in sorted(categories):
@@ -524,7 +539,7 @@ async def get_categories(request: Request):
 @app.get("/search/suggestions")
 async def search_suggestions(q: str = Query(..., min_length=1)):
     pipeline = [
-        {"$match": build_search_query(q)},
+        {"$match": _visible(build_search_query(q))},
         {"$limit": 50},
         {"$group": {
             "_id": None,
@@ -561,7 +576,7 @@ async def search_products(
 ):
     base_url = str(request.base_url).rstrip("/")
     skip = (page - 1) * limit
-    query = build_search_query(q)
+    query = _visible(build_search_query(q))
     total = await products_collection.count_documents(query)
     cursor = products_collection.find(query).skip(skip).limit(limit)
     products = [serialize_product(p, base_url) async for p in cursor]
