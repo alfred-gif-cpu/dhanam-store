@@ -1,4 +1,4 @@
-# Dhanam Store — where things stand (2026-08-02)
+# Dhanam Store — where things stand (2026-08-05)
 
 Continuation notes. Everything below is deployed and verified against
 production unless marked otherwise.
@@ -43,9 +43,16 @@ abbreviations map to real names — `britannia`→`brit`, `colgate`→`col` and
 five more — which made ~200 products findable that returned nothing before.
 Failed searches are logged: `python scripts/catalog_health.py --search-misses`.
 
-**Images.** 651 → 923 products with photos. 102 MB → 62 MB via
-`compress_images.py`, then 254 added from Open Food Facts at full resolution.
-Cache headers added, so repeat views cost no network at all.
+**Images.** **631 of the 1,173 visible products have a photo (54%)**; 966 of
+2,869 across the whole catalogue. 62 of those Alfred uploaded by hand through
+the panel. 102 MB → 62 MB via `compress_images.py`, then 254 from Open Food
+Facts at full resolution. Cache headers added, so repeat views cost no
+network at all.
+
+The 542 visible products still without one are concentrated: **Household 96,
+Personal Care 91**, then Bakery & Snacks 57 and Spices & Masalas 53. Those
+two categories are a third of the gap and are where a distributor's image
+pack would pay off most.
 
 A further 18 Unilever photographs came from re-running the importer against
 one brand at a lower match bar — `fetch_brand_images.py --brand unilever
@@ -63,6 +70,36 @@ search normalises spaces away. `search_text` and `search_words` are rebuilt
 inside the same update, which matters: a renamed product with stale search
 fields is findable only by a name nobody can see. Audit findings fell from
 797 to 135. Re-run `audit_product_names.py` after any bulk import.
+
+**Shorthand expanded, 206 names.** The catalogue was written for someone
+behind the counter: `Brit Nc Digestive` is now Britannia NutriChoice
+Digestive, `Him Cl Com Br Fc100G` is Himalaya Clear Complexion Brightening
+Face Cream 100g. Run with `expand_product_names.py`.
+
+`surf excel` returned **nothing at all** before — the catalogue said `Surf Xl`
+and no customer types that; it now finds 13. `front load` also returned
+nothing, which matters: front-load and top-load detergents are different
+formulations and the wrong one fills a machine with suds. `powder` went 11 to
+31, `face wash` 2 to 9. The old shorthand still works, because search
+normalises and matches substrings — `brit` finds Britannia.
+
+The rules are context-aware, not a blanket replace, because the same letters
+differ by product: `Cl` is Cleaner in a Domex and Clear in the Himalaya line,
+`Gin` is Gingelly in an oil and Ginger in a paste, `Mat` is Matic in a
+detergent and a floor mat on its own (`Mat-225-250` is a doormat). Two
+expansions were checked against real product listings rather than guessed.
+
+Plus 12 plain misspellings: Syrub→Syrup, Gn Oil→Groundnut Oil, Biscuts,
+Coffe, Varmicelli, Masla/Masal→Masala. Found by looking for rare words one
+edit away from common ones — which also flagged `Parle Milk Shakthi` as a
+misspelling of Sakthi. It is a real Parle product. Tamil and regional words
+score as typos against an English-weighted comparison, so every candidate was
+read in context before being touched.
+
+**`Dds` (135 products) and `Kr` (13) are still shorthand** — the shop's own
+prefixes, and nobody outside the shop knows what they stand for. Alfred is
+checking. They are excluded from the expander by name, so re-running it is
+safe; add them to `BRANDS` in the script once known.
 
 **Image attribution.** The 254 Open Food Facts photographs are CC-BY-SA and
 require visible credit. *Profile → Photo Credits* now shows it, filled by
@@ -94,7 +131,7 @@ requires for the keystore-backed session token, and the highest any plugin
 asks for — the minimum that builds and the widest device support available.
 The reasoning is in the file so the next regeneration does not undo it.
 
-**Catalogue trimmed to 1,175 of 2,871.** `is_active` sat on every product and
+**Catalogue trimmed to 1,173 of 2,869.** `is_active` sat on every product and
 was read by nothing, so it hid nothing; browse, search, suggestions,
 categories and the home rails now respect it. Absent or true counts as
 visible — a filter written `is_active: True` would have emptied the shop for
@@ -119,7 +156,7 @@ Two cuts, on different grounds:
 
 **Managed from the panel, not the database.** Hiding was applied by a script
 and the panel could not see it — no badge, no filter, no way back short of a
-MongoDB client. It now shows `2,871 — 1,175 in the app · 1,696 hidden` on the
+MongoDB client. It now shows `2,869 — 1,173 in the app · 1,696 hidden` on the
 dashboard, filters the product list by all/visible/hidden, marks hidden rows,
 and puts a Hide/Show button on each. Bringing stationery back in June is:
 filter to Hidden, search, click Show. Every toggle lands in the audit log.
@@ -139,9 +176,32 @@ nothing about festival season. The threshold is one number in the script.
 replacing an imported one inherited the old credit, so the Photo Credits
 screen would have attributed Alfred's own picture to Open Food Facts and
 published it as CC-BY-SA. The upload endpoint is the only path that writes
-`image_url`, so one `$unset` covers it.
+`image_url`, so one `$unset` covers it. Verified against the 62 hand-uploaded
+photos: every one shows no credit, including products that previously carried
+an Open Food Facts one.
 
-**Tests.** 176 of them — 169 backend, 7 widget — running in CI on every push
+**The edit form used to open blank past the first hundred products.** It
+found its product by fetching `?page=1&limit=100` and searching that list, so
+anything later in the alphabet — most of the catalogue — rendered every field
+empty, and saving would have written those blanks over the real price, stock,
+GST and category. Only the "name is required" check stood in the way. There
+is now `GET /admin/products/{id}`, and the form refuses to open rather than
+opening blank.
+
+**Panel image handling.** The edit dialog shows the current photograph
+(clickable to full size) so a replacement is chosen with sight of what it
+replaces, and `DELETE /admin/products/{id}/image` clears one — a placeholder
+is honest where the wrong product is not. The credit leaves with it. The file
+stays on disk: unpicking a possibly shared filename is a worse risk than a
+few unused kilobytes.
+
+List thumbnails are 58px and open full size on click. They also carry a
+per-render cache-busting token, because uploads are served with
+`max-age=300` and the filename does not change when one is replaced — so a
+newly uploaded photo appeared to not have saved for five minutes. That
+caching is right for customers and wrong for the person who just uploaded it.
+
+**Tests.** 186 of them — 179 backend, 7 widget — running in CI on every push
 alongside `flutter analyze`. They need no database and no network and finish
 in under a second, which is the point: a check that fails for reasons
 unrelated to the change stops being read. Run with `python -m pytest` in
@@ -193,26 +253,26 @@ database, `.env.example` documents every variable.
    thing between the app and real customers; everything else is polish.
 2. **Fix stock levels.** Every product reads 100. That was harmless until
    ordering started decrementing them. Zero out anything not actually stocked,
-   via the panel's Inventory section. Only the 1,175 visible ones matter —
-   hiding the rest cut this job by more than half.
+   via the panel's Inventory section. Only the 1,173 visible ones matter —
+   hiding the rest cut this job by more than half. This is the likeliest
+   cause of a bad first order: someone buys what is not on the shelf.
 3. **FSSAI number and GSTIN.** Neither appears anywhere. The invoice calls
    itself a "Tax Invoice" with no GSTIN on it. Confirm with a CA — this is a
    compliance question, not a code one.
-4. **Distributor emails** for the ~1,500 products still without photos. Draft
-   and priority order are in `PRODUCT_IMAGES.md`. Free, and covers the branded
-   lines no database will.
+4. **Distributor emails** for the 542 visible products still without photos —
+   Household and Personal Care are a third of them. Draft and priority order
+   are in `PRODUCT_IMAGES.md`. Free, and covers the branded lines no open
+   database carries.
 5. **Atlas M10** (~$9/mo) and **UptimeRobot** before real traffic. M0 will
    throttle during an evening rush. Ordering and search are rate-limited now,
    which protects M0 from one script but not from genuine evening load.
-6. **Three duplicate products, two priced differently.** `Dds Raw Rice 1kg`
-   at ₹72 and ₹50; `Navneet Notes` at ₹35 and ₹47; `7 Up 20Rs` twice at ₹20.
-   The names are now identical, so a customer sees the same product twice at
-   two prices, and the stock is split across both records. Which price is
-   right is a shop question — say, and the merge takes a minute.
-7. **Three photographs show the wrong product.** `Sunfeast Cheese 50` shows a
-   Deutsche Grammophon CD sleeve, `Canaan 20-30` shows a moving company
-   invoice, `Arun Ic 10` shows a Pepsi pack. Found by OCR against the product
-   name; the script is in `650d180` if the check is ever wanted again.
+6. **Two duplicate products, both priced differently.** `Dds Raw Rice 1kg` at
+   ₹72 and ₹50; `Navneet Notes` at ₹35 and ₹47. The names are identical after
+   the rename, so a customer sees the same product twice at two prices and the
+   stock is split across both records. Which price is right is a shop
+   question. (The third, a doubled `7 Up 20Rs`, Alfred deleted.)
+7. **What `Dds` and `Kr` stand for** — 148 products of shop shorthand that
+   cannot be expanded without knowing.
 
 ## Next — Claude
 
@@ -238,6 +298,35 @@ database, `.env.example` documents every variable.
    - One uvicorn worker, so no headroom if a handler ever blocks.
 3. Optional: AI-generated images for loose goods (needs an API key, ~$12 for
    300), and `--workers` for uvicorn.
+4. **A web build of the customer app** was considered and deliberately
+   dropped. It is one codebase — `flutter build web` — but all 12 service
+   files use `dart:io`'s `HttpClient`, which does not exist in a browser, so
+   they would need moving to `package:http` (already a dependency). Login
+   also needs the Railway domain added to Firebase's authorized domains, and
+   web cannot test push notifications or real-device behaviour anyway. Worth
+   doing after launch if customers who will not install an app matter; not
+   worth doing as a testing convenience while an APK exists.
+
+---
+
+## How the review sheets work
+
+Several scripts here propose changes rather than making them, and the pattern
+is always the same: run `--propose`, open the HTML it writes **in a real
+browser** (the download button does nothing in a preview pane), untick what is
+wrong, click *Save approved list*, then run `--apply <file>`.
+
+The saved file lands wherever the browser puts downloads — it has turned up in
+`~/Downloads` and in the repo root on different days, so check both. Nothing
+is ever applied without one.
+
+| script | proposes |
+|---|---|
+| `expand_product_names.py` | shorthand expanded into readable names |
+| `normalize_product_names.py` | pack sizes to one convention |
+| `fetch_brand_images.py` | photographs for one brand at a lower match bar |
+| `fetch_open_images.py` | photographs, catalogue-wide |
+| `audit_product_names.py` | reports only — duplicates, sizes, abbreviations |
 
 ---
 
@@ -254,6 +343,12 @@ database, `.env.example` documents every variable.
   malformed. Symptom was a 500 that looked like a code bug.
 - **Pace requests to free APIs.** An unpaced image download failed 192 of 254
   times and the failures were caught and skipped silently.
+- **A form that fails to load its data must not open.** The panel's edit
+  dialog fetched the first hundred products and searched that list for the
+  one clicked. Past the first hundred it found nothing, kept the empty
+  template it started with, and rendered every field blank — and saving would
+  have written those blanks over a real product. Failing loudly beats
+  degrading into something that looks usable.
 - **A capability with no controls is a trap.** 1,651 products were hidden by
   a script, and the panel showed no badge, no filter and no way to undo it —
   the only route back was a MongoDB client. Whoever inherits that has a shop
