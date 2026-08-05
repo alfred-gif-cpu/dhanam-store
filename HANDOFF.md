@@ -117,13 +117,31 @@ Two cuts, on different grounds:
   The till data cannot see this; it showed stationery selling 1,414 units,
   more than seven other categories.
 
-Reversible in one command:
-`db.products.updateMany({}, {$set: {is_active: true}})`, or filter by
-category to bring stationery back when school reopens. Re-run the movement
+**Managed from the panel, not the database.** Hiding was applied by a script
+and the panel could not see it — no badge, no filter, no way back short of a
+MongoDB client. It now shows `2,871 — 1,175 in the app · 1,696 hidden` on the
+dashboard, filters the product list by all/visible/hidden, marks hidden rows,
+and puts a Hide/Show button on each. Bringing stationery back in June is:
+filter to Hidden, search, click Show. Every toggle lands in the audit log.
+
+The panel still lists everything whatever the filter's default — it is the
+screen a product gets brought back from, so it has to show what is not on
+sale. Both the panel filter and the shop treat a missing flag as visible; if
+they disagreed the panel would describe a catalogue customers cannot see.
+
+Still reversible wholesale if wanted:
+`db.products.updateMany({}, {$set: {is_active: true}})`. Re-run the movement
 cut against a fresh export when there is one — May is a single month and says
 nothing about festival season. The threshold is one number in the script.
 
-**Tests.** 156 of them — 149 backend, 7 widget — running in CI on every push
+**Replacing a photo clears its credit.** Uploading through the panel sets
+`image_url` and now unsets `image_credit`. Before this, a shop photograph
+replacing an imported one inherited the old credit, so the Photo Credits
+screen would have attributed Alfred's own picture to Open Food Facts and
+published it as CC-BY-SA. The upload endpoint is the only path that writes
+`image_url`, so one `$unset` covers it.
+
+**Tests.** 176 of them — 169 backend, 7 widget — running in CI on every push
 alongside `flutter analyze`. They need no database and no network and finish
 in under a second, which is the point: a check that fails for reasons
 unrelated to the change stops being read. Run with `python -m pytest` in
@@ -236,6 +254,15 @@ database, `.env.example` documents every variable.
   malformed. Symptom was a 500 that looked like a code bug.
 - **Pace requests to free APIs.** An unpaced image download failed 192 of 254
   times and the failures were caught and skipped silently.
+- **A capability with no controls is a trap.** 1,651 products were hidden by
+  a script, and the panel showed no badge, no filter and no way to undo it —
+  the only route back was a MongoDB client. Whoever inherits that has a shop
+  they cannot fully explain or reverse. Ship the switch with the wiring.
+- **A find-and-replace that matches nothing should be an error.** Patching the
+  panel by script, one of four edits silently did not match: the Hide button
+  was never added while the function it calls was. The page would have loaded
+  perfectly and simply had no button. Caught by counting occurrences after —
+  do that, or edit by hand.
 - **The numbers cannot see the business.** The catalogue cut was argued from
   till data, and the data said keep stationery: 1,414 units in May, more than
   seven other categories. Alfred removed it anyway, because a ₹10 pen costs
