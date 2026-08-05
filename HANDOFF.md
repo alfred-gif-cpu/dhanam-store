@@ -94,7 +94,36 @@ requires for the keystore-backed session token, and the highest any plugin
 asks for — the minimum that builds and the widest device support available.
 The reasoning is in the file so the next regeneration does not undo it.
 
-**Tests.** 141 of them — 134 backend, 7 widget — running in CI on every push
+**Catalogue trimmed to 1,175 of 2,871.** `is_active` sat on every product and
+was read by nothing, so it hid nothing; browse, search, suggestions,
+categories and the home rails now respect it. Absent or true counts as
+visible — a filter written `is_active: True` would have emptied the shop for
+every product predating the field, silently. Hidden means off the shelf, not
+withdrawn: a hidden product still resolves by id and in bulk, so a saved cart
+or wishlist does not break and an order for it still goes through.
+
+Two cuts, on different grounds:
+
+- **Movement**, from `Margin_Analysis_May2026.xlsx` — a real till export,
+  6,309 products with quantity sold. Kept anything selling 8+ units in May,
+  which is 93.7% of units in a third of the catalogue. The threshold rather
+  than "top 1000" because the 1,000th and 1,001st had both sold exactly 8.
+  The 175 products with no match in the till were **kept**: their names differ
+  there (`Brit Nc Digestive 100g` against `BRITNCDIGESTIVE100GM`), which is not
+  evidence of no sales.
+- **Delivery economics** — Toys & Stationery and Electronics hidden outright,
+  189 products, regardless of sales. A ₹10 pen costs the same to deliver as a
+  ₹1,000 grocery order and is bought on its own rather than added to a basket.
+  The till data cannot see this; it showed stationery selling 1,414 units,
+  more than seven other categories.
+
+Reversible in one command:
+`db.products.updateMany({}, {$set: {is_active: true}})`, or filter by
+category to bring stationery back when school reopens. Re-run the movement
+cut against a fresh export when there is one — May is a single month and says
+nothing about festival season. The threshold is one number in the script.
+
+**Tests.** 156 of them — 149 backend, 7 widget — running in CI on every push
 alongside `flutter analyze`. They need no database and no network and finish
 in under a second, which is the point: a check that fails for reasons
 unrelated to the change stops being read. Run with `python -m pytest` in
@@ -144,9 +173,10 @@ database, `.env.example` documents every variable.
 
 1. **Play Store submission.** $25 unpaid, no build uploaded. This is the only
    thing between the app and real customers; everything else is polish.
-2. **Fix stock levels.** All 2,867 products read 100. That was harmless until
+2. **Fix stock levels.** Every product reads 100. That was harmless until
    ordering started decrementing them. Zero out anything not actually stocked,
-   via the panel's Inventory section.
+   via the panel's Inventory section. Only the 1,175 visible ones matter —
+   hiding the rest cut this job by more than half.
 3. **FSSAI number and GSTIN.** Neither appears anywhere. The invoice calls
    itself a "Tax Invoice" with no GSTIN on it. Confirm with a CA — this is a
    compliance question, not a code one.
@@ -206,6 +236,12 @@ database, `.env.example` documents every variable.
   malformed. Symptom was a 500 that looked like a code bug.
 - **Pace requests to free APIs.** An unpaced image download failed 192 of 254
   times and the failures were caught and skipped silently.
+- **The numbers cannot see the business.** The catalogue cut was argued from
+  till data, and the data said keep stationery: 1,414 units in May, more than
+  seven other categories. Alfred removed it anyway, because a ₹10 pen costs
+  the same to deliver as a ₹1,000 grocery order and nobody adds a pen to a
+  grocery basket. Sales volume measures what sells over a counter, not what
+  is worth driving to a house. Ask before arguing with the shopkeeper.
 - **Do not test a framework's internals.** A test walked FastAPI's route
   table to check each protected endpoint carried an auth guard. It passed
   locally and failed in CI, because CI resolved a newer Starlette that
