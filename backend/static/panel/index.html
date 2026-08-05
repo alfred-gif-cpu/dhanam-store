@@ -120,6 +120,9 @@
                 border-radius:12px;padding:10px;box-shadow:0 18px 60px rgba(0,0,0,.4)}
   .lightbox .cap{position:absolute;bottom:22px;left:0;right:0;text-align:center;color:#fff;
                  font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .cur-img{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .cur-img img{width:76px;height:76px;object-fit:contain;background:#F3F5F9;border:1px solid #EDF0F5;
+               border-radius:10px;cursor:zoom-in}
   .cell-prod{display:flex;align-items:center;gap:11px}
   .cell-prod .nm{font-weight:620}
   .cell-prod .sb{font-size:12px;color:var(--text-3)}
@@ -429,6 +432,18 @@ const stockPill = n => n > 0
 // for the panel only, leaving the customer's caching alone.
 const fresh = url => url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
 
+// Clears the photograph, not the product. Used when the picture is wrong and
+// there is no replacement to hand — a placeholder beats the wrong product.
+async function removeImage(id){
+  if (!confirm('Remove this image? The product keeps everything else, and you can upload a new one any time.')) return;
+  try{
+    await api('/admin/products/' + id + '/image', {method:'DELETE'});
+    toast('Image removed');
+    document.querySelectorAll('.modal-bg').forEach(m => m.remove());
+    vProducts();
+  }catch(e){ toast(e.message, true); }
+}
+
 function zoom(src, name){
   const box = document.createElement('div');
   box.className = 'lightbox';
@@ -459,11 +474,12 @@ async function delProduct(id, name){
 async function editProduct(id){
   let p = {name:'',brand:'',category:'',price:'',stock:'',unit:'',gst:'',description:''};
   if (id){
+    // Fetched by id. This used to search the first hundred products, so
+    // editing anything later in the alphabet opened a blank form — and
+    // saving it would have written those blanks over a real product.
     try{
-      const d = await api('/admin/products?page=1&limit=100&q=');
-      const found = d.products.find(x => x.id === id);
-      if (found) p = found;
-    }catch(e){ toast(e.message, true); return; }
+      p = await api('/admin/products/' + id);
+    }catch(e){ toast('Could not load this product: ' + e.message, true); return; }
   }
   modal((id?'Edit':'Add') + ' Product',
     '<div class="grid2">' +
@@ -473,7 +489,16 @@ async function editProduct(id){
       f('GST rate (%)','m_gst',p.gst,'number') + f('Original price (₹)','m_original',p.original_price||p.mrp||'','number') +
     '</div>' +
     f('Description','m_description',p.description) +
-    (id ? '<div class="field"><label>Product image</label><input type="file" id="m_image" accept="image/*"><div class="muted" style="font-size:12px;margin-top:4px">Optional — uploads after saving. Max 5MB.</div></div>' : '<div class="muted" style="font-size:12px">Save first, then re-open to upload an image.</div>'),
+    (id ? '<div class="field"><label>Product image</label>' +
+            // Show what is already there. Choosing a photograph blind is how
+            // the wrong one gets replaced and the right one does not.
+            (p.image
+              ? '<div class="cur-img"><img src="' + esc(fresh(p.image)) + '" onclick="zoom(this.src,\'' + esc(p.name || '').replace(/'/g,"\\'") + '\')" title="Click to enlarge">' +
+                '<button type="button" class="btn btn-sm btn-danger" onclick="removeImage(\'' + id + '\')">Remove image</button></div>'
+              : '<div class="muted" style="font-size:12px;margin-bottom:6px">No image yet.</div>') +
+            '<input type="file" id="m_image" accept="image/*">' +
+            '<div class="muted" style="font-size:12px;margin-top:4px">Optional — uploads after saving. Max 5MB.</div></div>'
+        : '<div class="muted" style="font-size:12px">Save first, then re-open to upload an image.</div>'),
     async () => {
       const body = {
         name:$('m_name').value.trim(), brand:$('m_brand').value.trim(),

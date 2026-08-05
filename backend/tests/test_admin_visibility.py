@@ -148,3 +148,75 @@ class TestTheDashboardSplit:
 
         stats = client.get("/admin/stats").json()
         assert stats["visible_products"] + stats["hidden_products"] == stats["total_products"]
+
+
+@pytest.mark.asyncio
+class TestFetchingOneProduct:
+    """The edit form used to find its product by fetching the first hundred
+    and searching that list. Anything alphabetically later opened blank, and
+    saving a blank form would have written those blanks over a real product.
+    """
+
+    async def test_returns_the_product(self, client, shop):
+        pid = await _add(shop, "Zzz Last Alphabetically", price=99.0)
+        body = client.get(f"/admin/products/{pid}").json()
+
+        assert body["name"] == "Zzz Last Alphabetically"
+        assert body["price"] == 99.0
+
+    async def test_works_for_a_product_far_past_the_first_hundred(self, client, shop):
+        for i in range(150):
+            await _add(shop, f"Product {i:04d}")
+        pid = await _add(shop, "Zzz Very Last", price=42.0)
+
+        body = client.get(f"/admin/products/{pid}").json()
+        assert body["price"] == 42.0, "the edit form would open blank for this product"
+
+    async def test_a_hidden_product_can_still_be_edited(self, client, shop):
+        pid = await _add(shop, "Hidden Notebook", is_active=False)
+        assert client.get(f"/admin/products/{pid}").json()["name"] == "Hidden Notebook"
+
+    async def test_an_unknown_id_is_refused(self, client, shop):
+        assert client.get("/admin/products/000000000000000000000000").status_code == 404
+
+    async def test_a_malformed_id_is_refused(self, client, shop):
+        assert client.get("/admin/products/not-an-id").status_code == 400
+
+
+@pytest.mark.asyncio
+class TestRemovingAnImage:
+    async def test_the_image_is_cleared(self, client, shop):
+        pid = await _add(shop, "Sunfeast Cheese", image_url="wrong-photo.jpg")
+        assert client.delete(f"/admin/products/{pid}/image").status_code == 200
+
+        stored = await shop["products"].find_one({"_id": ObjectId(pid)})
+        assert not stored.get("image_url")
+
+    async def test_the_credit_goes_with_it(self, client, shop):
+        pid = await _add(shop, "Parle-G", image_url="parle.jpg",
+                         image_credit="Open Food Facts (890), CC-BY-SA")
+        client.delete(f"/admin/products/{pid}/image")
+
+        stored = await shop["products"].find_one({"_id": ObjectId(pid)})
+        assert not stored.get("image_credit"), (
+            "the credit outlived the photograph it described"
+        )
+
+    async def test_the_product_itself_survives(self, client, shop):
+        pid = await _add(shop, "Parle-G", image_url="parle.jpg")
+        client.delete(f"/admin/products/{pid}/image")
+
+        stored = await shop["products"].find_one({"_id": ObjectId(pid)})
+        assert stored["name"] == "Parle-G"
+        assert stored["price"] == 50.0
+        assert stored["stock"] == 10
+
+    async def test_it_is_logged(self, client, shop):
+        pid = await _add(shop, "Parle-G", image_url="parle.jpg")
+        client.delete(f"/admin/products/{pid}/image")
+
+        entry = await shop["audit_logs"].find_one({"action": "product_image_removed"})
+        assert entry and "Parle-G" in entry.get("details", "")
+
+    async def test_an_unknown_product_is_refused(self, client, shop):
+        assert client.delete("/admin/products/000000000000000000000000/image").status_code == 404

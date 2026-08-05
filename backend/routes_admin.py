@@ -235,6 +235,50 @@ async def list_products(
     return {"products": products, "total": total, "page": page, "pages": (total + limit - 1) // limit}
 
 
+@router.get("/products/{product_id}")
+async def get_product(product_id: str, request: Request, admin: dict = Depends(get_current_admin)):
+    """One product, for the edit form.
+
+    The panel used to find it by fetching the first hundred products and
+    searching that list, so editing anything alphabetically later opened an
+    empty form — and saving it would have written those blanks back.
+    """
+    if not ObjectId.is_valid(product_id):
+        raise HTTPException(status_code=400, detail="Invalid product ID")
+    product = await products_collection.find_one({"_id": ObjectId(product_id)})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    product["id"] = str(product.pop("_id"))
+    product["image"] = resolve_image_url(
+        product.get("image_url") or product.get("image") or "",
+        str(request.base_url).rstrip("/"),
+    )
+    return product
+
+
+@router.delete("/products/{product_id}/image")
+async def remove_product_image(product_id: str, admin: dict = Depends(get_current_admin)):
+    """Drop a product's photograph, leaving the product itself alone.
+
+    For when the picture is wrong and no replacement is to hand: a placeholder
+    is honest, a photograph of the wrong thing is not. The file is left on
+    disk — it costs nothing there, and unpicking a shared filename is a worse
+    risk than a few unused kilobytes.
+    """
+    if not ObjectId.is_valid(product_id):
+        raise HTTPException(status_code=400, detail="Invalid product ID")
+    product = await products_collection.find_one({"_id": ObjectId(product_id)}, {"name": 1})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    await products_collection.update_one(
+        {"_id": ObjectId(product_id)},
+        {"$set": {"image_url": ""}, "$unset": {"image_credit": ""}},
+    )
+    await _log(admin["email"], "product_image_removed", f"Image removed: {product.get('name', product_id)}")
+    return {"status": "removed"}
+
+
 @router.put("/products/{product_id}/visibility")
 async def set_product_visibility(
     product_id: str,
