@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/banner.dart';
+import '../theme.dart';
 
 class BannerCarousel extends StatefulWidget {
   final List<HomeBanner> banners;
@@ -21,7 +22,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
     if (widget.banners.length > 1) {
       _timer = Timer.periodic(const Duration(seconds: 4), (_) {
         final next = (_current + 1) % widget.banners.length;
-        _controller.animateToPage(next, duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+        // Overshoots into the next banner and settles back. The scroll physics
+        // clamp at the first and last page, so the wrap from the last banner
+        // round to the first has nothing to overshoot into and simply stops.
+        _controller.animateToPage(next, duration: AppMotion.pageDuration, curve: AppMotion.entrance);
       });
     }
   }

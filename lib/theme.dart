@@ -17,6 +17,31 @@ class AppColors {
   static const star = Color(0xFFFBBF24);
 }
 
+/// Shared motion values, so the app springs the same way everywhere.
+///
+/// The one rule worth stating: **overshoot curves belong on movement, never on
+/// opacity.** `easeOutBack` and `elasticOut` deliberately travel past their end
+/// value and come back, which is the bounce. On a transform that reads as
+/// weight; on a fade it means an opacity above 1 or below 0, which Flutter
+/// clamps — so the fade stalls at the ends and the animation looks broken
+/// rather than lively. That is why entrances below animate their slide with
+/// [entrance] while their fade stays on [fade].
+class AppMotion {
+  /// Entrances that slide or scale into place. Overshoots, then settles.
+  static const entrance = Curves.easeOutBack;
+
+  /// The fade half of an entrance. Never overshoots — see the class note.
+  static const fade = Curves.easeOut;
+
+  /// Tap feedback that should feel springy: a heart, a quantity, a tick.
+  /// Wobbles around its end value, so it needs a little longer to settle.
+  static const pop = Curves.elasticOut;
+
+  static const entranceDuration = Duration(milliseconds: 700);
+  static const popDuration = Duration(milliseconds: 450);
+  static const pageDuration = Duration(milliseconds: 500);
+}
+
 ThemeData appTheme() {
   return ThemeData(
     useMaterial3: true,

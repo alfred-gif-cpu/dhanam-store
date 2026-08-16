@@ -3,6 +3,7 @@ import '../models/product.dart';
 import '../screens/product_detail_screen.dart';
 import '../services/wishlist_service.dart';
 import '../services/cart_service.dart';
+import '../theme.dart';
 import 'product_image.dart';
 
 class ProductCard extends StatefulWidget {
@@ -102,10 +103,22 @@ class _ProductCardState extends State<ProductCard> {
                           shape: BoxShape.circle,
                           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)],
                         ),
-                        child: Icon(
-                          wishlisted ? Icons.favorite : Icons.favorite_outline,
-                          size: 16,
-                          color: wishlisted ? Colors.red : Colors.grey[500],
+                        // The heart used to swap instantly. Scaling only the
+                        // icon keeps the tap target exactly where it was —
+                        // Transform does not affect layout, and the padded
+                        // Container around it is what receives the tap.
+                        child: TweenAnimationBuilder<double>(
+                          key: ValueKey(wishlisted),
+                          tween: Tween(begin: 0.6, end: 1.0),
+                          duration: AppMotion.popDuration,
+                          curve: AppMotion.pop,
+                          builder: (_, scale, child) =>
+                              Transform.scale(scale: scale, child: child),
+                          child: Icon(
+                            wishlisted ? Icons.favorite : Icons.favorite_outline,
+                            size: 16,
+                            color: wishlisted ? Colors.red : Colors.grey[500],
+                          ),
                         ),
                       ),
                     ),
@@ -215,8 +228,19 @@ class _ProductCardState extends State<ProductCard> {
             child: Container(
               constraints: const BoxConstraints(minWidth: 20),
               alignment: Alignment.center,
-              child: Text('$qty',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+              // Keyed on the quantity, so each change restarts the pop. The
+              // Container keeps its own size, so the row does not reflow while
+              // the number springs.
+              child: TweenAnimationBuilder<double>(
+                key: ValueKey(qty),
+                tween: Tween(begin: 0.7, end: 1.0),
+                duration: AppMotion.popDuration,
+                curve: AppMotion.pop,
+                builder: (_, scale, child) =>
+                    Transform.scale(scale: scale, child: child),
+                child: Text('$qty',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
             ),
           ),
           _stepBtn(Icons.add, () => _cart.increment(product.id)),

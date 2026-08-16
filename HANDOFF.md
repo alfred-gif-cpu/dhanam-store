@@ -180,6 +180,32 @@ stay on the customer record — the admin customers screen still displays them,
 reading the fields directly. If the feature ever returns, the ownership check
 is the first thing it needs.
 
+**Motion is in one place.** `AppMotion` in `lib/theme.dart`, beside
+`AppColors`. The entrances on the home greeting and the login screen overshoot
+and settle (`easeOutBack`), the banner carousel does the same as it advances,
+and the wishlist heart and cart quantity — which used to snap with no
+animation at all — pop on `elasticOut`. One constant to tune if it is too
+much.
+
+The rule that is easy to get wrong: **overshoot curves belong on movement,
+never on opacity.** `easeOutBack` and `elasticOut` deliberately travel past
+their end value, which on an opacity means above 1 or below 0, and Flutter
+clamps that — the fade stalls at both ends and the entrance looks broken
+rather than lively. So an entrance bounces its slide and eases its fade.
+`AppMotion.fade` exists to be the safe one and `test/motion_test.dart` asserts
+it stays in range, because a later tidy-up unifying the two curves would
+compile, animate, and quietly break every fade in the app.
+
+Both pops are `Transform.scale` on a leaf widget inside the existing gesture
+detector. `Transform` takes no part in layout, so no tap target moved and
+nothing reflows while the number springs. The ADD ↔ quantity swap was
+deliberately *not* wrapped in an `AnimatedSwitcher` for the opposite reason: it
+keeps the outgoing button in the tree through the transition, where a stray tap
+lands on a button that is on its way out and adds a second item to the cart.
+The checkout `AnimatedContainer`s were left alone too — they animate colour and
+borders, an overshoot on a border width can go negative, and colour does not
+read as bounce anyway.
+
 **Android minSdk.** Pinned at 23, not `flutter.minSdkVersion`. Flutter 3.44
 defaults to 24, and regenerating `android/app/build.gradle.kts` silently
 reverts to it, dropping Android 6.0 phones. 23 is what `flutter_secure_storage`
@@ -259,7 +285,7 @@ per-render cache-busting token, because uploads are served with
 newly uploaded photo appeared to not have saved for five minutes. That
 caching is right for customers and wrong for the person who just uploaded it.
 
-**Tests.** 194 of them — 187 backend, 7 widget — running in CI on every push
+**Tests.** 199 of them — 187 backend, 12 widget — running in CI on every push
 alongside `flutter analyze`. They need no database and no network and finish
 in under a second, which is the point: a check that fails for reasons
 unrelated to the change stops being read. Run with `python -m pytest` in

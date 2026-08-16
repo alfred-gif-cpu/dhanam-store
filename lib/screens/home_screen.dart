@@ -185,11 +185,11 @@ class _HomeTabState extends State<_HomeTab>
     );
     _greetFade = CurvedAnimation(
       parent: _greetController,
-      curve: Curves.easeOut,
+      curve: AppMotion.fade,
     );
     _greetSlide = Tween(begin: const Offset(-0.15, 0), end: Offset.zero)
         .animate(
-          CurvedAnimation(parent: _greetController, curve: Curves.easeOutCubic),
+          CurvedAnimation(parent: _greetController, curve: AppMotion.entrance),
         );
     _cart.addListener(_refresh);
     _recentService.addListener(_loadRecentlyViewed);
