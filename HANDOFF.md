@@ -559,6 +559,15 @@ route around.
   the image behind it (`candle.webp` is 180×180), one carried a corrupt
   metadata chunk from a half-finished save, and 119 were at print resolution.
   None of it shows in the panel, which renders everything at 58px.
+- **A guard that cannot fail is not a guard.** `config.dart` fell back to the
+  local dev server when `API_URL` was not passed at build time, and a release
+  APK built without it reached `10.0.2.2:8000` — an address that means nothing
+  off an emulator, so every screen timed out on a real phone. It read as
+  guarded: there was an `assert` right there with a message about the fallback.
+  The assert tested `true`, so the message could never print, and asserts are
+  stripped from release builds regardless. Release builds now throw. Same shape
+  as the vacuous test in the suite: something that loops or asserts without ever
+  being able to fail reads as safety and provides none.
 - **The config is not the artifact.** `build.gradle.kts` said `minSdk = 23`,
   the comment above it explained why, and the handoff repeated the claim for
   months. Every APK shipped 24, because Flutter rewrites that line on every

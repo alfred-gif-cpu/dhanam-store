@@ -116,9 +116,23 @@ flutter run
 ```
 
 ### Production Build
+
+`API_URL` is a compile-time constant. **Leave it off and the build points at a
+local dev server** — `10.0.2.2:8000`, which only resolves on an emulator on the
+machine that built it, so every screen times out on a real phone. Release
+builds now throw on startup rather than doing that quietly, but the way not to
+meet either is to pass it:
+
 ```bash
-flutter build appbundle --dart-define=API_URL=https://your-backend-url.com
+flutter build apk --release --dart-define=API_URL=https://dhanam-store-production.up.railway.app
 ```
+
+```bash
+flutter build appbundle --release --dart-define=API_URL=https://dhanam-store-production.up.railway.app
+```
+
+The appbundle is what the Play Store takes; the apk is for installing on a
+phone directly.
 
 ## Environment Variables
 
