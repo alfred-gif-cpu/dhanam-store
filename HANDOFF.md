@@ -83,6 +83,33 @@ chunk — a half-finished save from the source site. Browsers ignore ancillary
 chunk checksums and show it anyway; stricter decoders refuse the whole file.
 The script drops the bad chunk without touching a pixel.
 
+**Uploads are cached for a week, not five minutes.** They expired in five
+because a replacement reuses the same filename and there was no other way to
+make the new photograph appear. That was cheap when uploads were a few dozen
+exceptions. They are now 637 of the 993 visible photographs, so nearly every
+product image cost a round trip every five minutes of browsing — which for
+Hosur is most of the perceived load time, and is the exact cost the
+Cache-Control middleware exists to avoid. It was quietly undoing the
+compression above.
+
+`resolve_image_url` now stamps upload URLs with the file's mtime, so the URL
+changes the moment the photograph does and a week is safe. Both halves have to
+hold or the shop serves a week-old photo, so both are tested, and both were
+watched to fail: freezing the token, and removing the long header.
+
+Requests with no query string keep the five-minute life — they cannot have
+come from `resolve_image_url` and have no way to notice a replacement. The
+token is cached for 60 seconds so a product list does not stat a hundred
+files, and `save_image` drops the entry it just rewrote, which is the one
+moment the cache must not answer from memory.
+
+Expect every client to refetch every image once after this deploys: the URLs
+all change. That is 85 MB spread across whoever is browsing, once.
+
+`fresh()` in the panel — which appends its own token per render — is now
+redundant for uploads, but it is harmless (it already appends `&v=` when a
+query exists) and it is the admin path only. Left alone deliberately.
+
 A further 18 Unilever photographs came from re-running the importer against
 one brand at a lower match bar — `fetch_brand_images.py --brand unilever
 --min-score 0.5`. 0.75 is right for the whole catalogue, where a loose match
@@ -232,7 +259,7 @@ per-render cache-busting token, because uploads are served with
 newly uploaded photo appeared to not have saved for five minutes. That
 caching is right for customers and wrong for the person who just uploaded it.
 
-**Tests.** 186 of them — 179 backend, 7 widget — running in CI on every push
+**Tests.** 194 of them — 187 backend, 7 widget — running in CI on every push
 alongside `flutter analyze`. They need no database and no network and finish
 in under a second, which is the point: a check that fails for reasons
 unrelated to the change stops being read. Run with `python -m pytest` in

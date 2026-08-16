@@ -98,9 +98,24 @@ async def security_headers(request: Request, call_next):
     path = request.url.path
     if path.startswith("/static/"):
         if path.startswith(f"/static/{UPLOAD_PREFIX}/"):
-            # An admin re-uploading a product photo reuses the same filename,
-            # so these must go stale quickly or the new photo never appears.
-            response.headers["Cache-Control"] = "public, max-age=300"
+            # These used to expire in five minutes, because an admin replacing
+            # a photo reuses the same filename and there was no other way to
+            # make the new one appear. That was cheap when uploads were a few
+            # dozen exceptions; they are now most of the catalogue's
+            # photographs, so it meant nearly every product image cost a round
+            # trip every five minutes of browsing — the exact cost this
+            # middleware exists to avoid.
+            # resolve_image_url now stamps upload URLs with the file's mtime,
+            # so the URL itself changes when the photograph does and a long
+            # life is safe. A request with no query string could not have come
+            # from there — an older link, or someone typing the path — and has
+            # no way to notice a replacement, so it keeps the short life.
+            # (The panel's thumbnails carry a fresh token per render, so each
+            # is a URL of its own and a long life costs them nothing.)
+            versioned = bool(request.url.query)
+            response.headers["Cache-Control"] = (
+                "public, max-age=604800" if versioned else "public, max-age=300"
+            )
         elif path.rsplit(".", 1)[-1].lower() in _CACHEABLE_IMAGE_EXTS:
             # Catalog images ship with the build and only change on deploy.
             response.headers["Cache-Control"] = "public, max-age=604800"
