@@ -33,12 +33,25 @@ android {
 
     defaultConfig {
         applicationId = "com.dhanamstore.app"
-        // Pinned, not `flutter.minSdkVersion`. 23 is what flutter_secure_storage
-        // requires — the session token lives in the Android keystore — and it is
-        // the lowest that satisfies every plugin, so it keeps Android 6.0 phones
-        // able to install. The Flutter default is 24 and regenerating this file
-        // silently reverts to it, which drops those phones for nothing.
-        minSdk = 23
+        // This said `minSdk = 23` for months and every APK still shipped 24.
+        //
+        // Flutter runs MinSdkVersionMigration on each build, which rewrites any
+        // literal minSdk of 16-23 to flutter.minSdkVersion — 24 on 3.44. Not an
+        // occasional regeneration: it is every single build, so the pin was
+        // never in an artifact. Verified by reading the built APK with
+        // `aapt2 dump badging`, which is the only place the answer is real.
+        //
+        // 23 was chosen because flutter_secure_storage asks for it, and it is
+        // still the plugin's floor. But Flutter itself now declares 24 the
+        // minimum it supports (gradle_utils.dart, minSdkVersionInt = 24), so 23
+        // is below the framework's own floor, not just the plugin's.
+        //
+        // To actually hold 23 the value has to dodge the migration's regex,
+        // which only matches a literal: `val androidMinSdk = 23` on its own
+        // line, then `minSdk = androidMinSdk`. Worth doing only if Android 6.0
+        // reach is worth running under a framework that no longer tests it.
+        // Check a real APK afterwards either way.
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = 1
         versionName = "1.0.0"

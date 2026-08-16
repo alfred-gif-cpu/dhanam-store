@@ -206,12 +206,27 @@ The checkout `AnimatedContainer`s were left alone too — they animate colour an
 borders, an overshoot on a border width can go negative, and colour does not
 read as bounce anyway.
 
-**Android minSdk.** Pinned at 23, not `flutter.minSdkVersion`. Flutter 3.44
-defaults to 24, and regenerating `android/app/build.gradle.kts` silently
-reverts to it, dropping Android 6.0 phones. 23 is what `flutter_secure_storage`
-requires for the keystore-backed session token, and the highest any plugin
-asks for — the minimum that builds and the widest device support available.
-The reasoning is in the file so the next regeneration does not undo it.
+**Android minSdk is 24, and the pin at 23 never worked.** This entry used to
+say it was pinned at 23 to keep Android 6.0 phones able to install. Every APK
+ever built shipped 24.
+
+Flutter runs `MinSdkVersionMigration` on each build, which rewrites any literal
+`minSdk` of 16–23 to `flutter.minSdkVersion`. The old note assumed an
+occasional regeneration was to blame and that a comment in the file would deter
+it; it happens on every single build, and a comment cannot stop a regex. Both
+APKs built on 2026-08-16 read `minSdkVersion:'24'`.
+
+23 was chosen because `flutter_secure_storage` asks for it, and that is still
+the plugin's floor. But Flutter now declares 24 the minimum it supports
+(`gradle_utils.dart`, `minSdkVersionInt = 24`), so 23 is below the framework's
+floor too. Holding it means dodging the migration's regex — which only matches
+a literal, so `val androidMinSdk = 23` then `minSdk = androidMinSdk` survives —
+and running under a framework that no longer tests that level. **Alfred's
+call**, and it only matters before the Play Store listing fixes the supported
+device set.
+
+The lesson generalises past this file: **the config is not the artifact.**
+`aapt2 dump badging <apk>` is where the answer is real.
 
 **Catalogue trimmed to 1,107 of 2,858** (1,173 of 2,869 when the cut was made;
 Alfred has hidden and deleted a few by hand since). `is_active` sat on every product and
@@ -544,6 +559,12 @@ route around.
   the image behind it (`candle.webp` is 180×180), one carried a corrupt
   metadata chunk from a half-finished save, and 119 were at print resolution.
   None of it shows in the panel, which renders everything at 58px.
+- **The config is not the artifact.** `build.gradle.kts` said `minSdk = 23`,
+  the comment above it explained why, and the handoff repeated the claim for
+  months. Every APK shipped 24, because Flutter rewrites that line on every
+  build. Nobody had ever read a built APK. Where a toolchain can rewrite your
+  input, the output is the only evidence — `aapt2 dump badging` here, and the
+  same reasoning as reading the served image rather than the database row.
 - **Measure before optimising.** PDF invoice generation was flagged as a
   scaling risk; measured at 2–8 ms, it is a non-issue. Conversely, the
   region-migration plan was dropped once it was clear that compressing images
