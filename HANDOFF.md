@@ -1,4 +1,4 @@
-# Dhanam Store — where things stand (2026-08-05)
+# Dhanam Store — where things stand (2026-08-16)
 
 Continuation notes. Everything below is deployed and verified against
 production unless marked otherwise.
@@ -43,16 +43,45 @@ abbreviations map to real names — `britannia`→`brit`, `colgate`→`col` and
 five more — which made ~200 products findable that returned nothing before.
 Failed searches are logged: `python scripts/catalog_health.py --search-misses`.
 
-**Images.** **631 of the 1,173 visible products have a photo (54%)**; 966 of
-2,869 across the whole catalogue. 62 of those Alfred uploaded by hand through
-the panel. 102 MB → 62 MB via `compress_images.py`, then 254 from Open Food
-Facts at full resolution. Cache headers added, so repeat views cost no
-network at all.
+**Images.** **993 of the 1,107 visible products have a photo (89.7%)** — 637
+of them uploaded by hand through the panel, 356 from the earlier imports.
+Cache headers added, so repeat views cost no network at all.
 
-The 542 visible products still without one are concentrated: **Household 96,
-Personal Care 91**, then Bakery & Snacks 57 and Spices & Masalas 53. Those
-two categories are a third of the gap and are where a distributor's image
-pack would pay off most.
+Audited in full on 2026-08-16 against production, and the hand-uploaded set is
+sound: every one of the 993 returns 200, no two products share an `image_url`,
+and not one upload carries a stale `image_credit` — the `$unset` on upload is
+doing its job, so none of Alfred's own photographs are being published as
+CC-BY-SA. 193 products still carry an Open Food Facts credit, only 9 of them
+visible; the rest are hidden.
+
+The 114 visible products still without a photo are **Bakery & Snacks 22,
+Spices & Masalas 21**, Rice & Cereals 15, then Dry Fruits & Nuts and Pulses &
+Grains at 14 each. They are overwhelmingly `Dds` and `Kr` lines — the shop's
+own loose goods, which no open database will ever carry. The distributor
+route no longer moves this much; a camera does.
+
+**Photos are compressed on upload's behalf, not by it.** The panel stores an
+upload exactly as it arrived, and a photograph saved from a manufacturer's
+site arrives at print resolution — up to 3840px and 4 MB, for something the
+app never draws larger than a few hundred pixels. 72 files were resized to fit
+1200px and re-encoded on 2026-08-16: **uploads 65.3 MB → 48.9 MB, the whole
+visible set 101.7 MB → 85.3 MB**. Harpic Flushmatic alone went 4181 KB → 1151
+KB, potato chips 2991 → 170. Run `recompress_uploads.py` after any batch of
+hand uploads — 563 of the 637 already needed nothing, so most of a re-run is
+just checking.
+
+It works against the live volume because the upload endpoint names a file
+`slugify(product name) + ext`: re-uploading with the same extension overwrites
+the same file, so `image_url` never moves and no saved cart, wishlist or
+cached page points anywhere new. The two products renamed *after* their photo
+was uploaded are detected and skipped for exactly that reason — they would
+land on a new filename and orphan the old file. Originals go to
+`backend/backups/` first, since the volume is the only copy that exists.
+
+One upload, `nescafe-classic-25g.png`, arrived with a corrupt `iTXt` metadata
+chunk — a half-finished save from the source site. Browsers ignore ancillary
+chunk checksums and show it anyway; stricter decoders refuse the whole file.
+The script drops the bad chunk without touching a pixel.
 
 A further 18 Unilever photographs came from re-running the importer against
 one brand at a lower match bar — `fetch_brand_images.py --brand unilever
@@ -131,7 +160,8 @@ requires for the keystore-backed session token, and the highest any plugin
 asks for — the minimum that builds and the widest device support available.
 The reasoning is in the file so the next regeneration does not undo it.
 
-**Catalogue trimmed to 1,173 of 2,869.** `is_active` sat on every product and
+**Catalogue trimmed to 1,107 of 2,858** (1,173 of 2,869 when the cut was made;
+Alfred has hidden and deleted a few by hand since). `is_active` sat on every product and
 was read by nothing, so it hid nothing; browse, search, suggestions,
 categories and the home rails now respect it. Absent or true counts as
 visible — a filter written `is_active: True` would have emptied the shop for
@@ -156,8 +186,9 @@ Two cuts, on different grounds:
 
 **Managed from the panel, not the database.** Hiding was applied by a script
 and the panel could not see it — no badge, no filter, no way back short of a
-MongoDB client. It now shows `2,869 — 1,173 in the app · 1,696 hidden` on the
-dashboard, filters the product list by all/visible/hidden, marks hidden rows,
+MongoDB client. It now shows the split on the dashboard (currently `2,858 —
+1,107 in the app · 1,751 hidden`),
+filters the product list by all/visible/hidden, marks hidden rows,
 and puts a Hide/Show button on each. Bringing stationery back in June is:
 filter to Hidden, search, click Show. Every toggle lands in the audit log.
 
@@ -253,38 +284,55 @@ database, `.env.example` documents every variable.
    thing between the app and real customers; everything else is polish.
 2. **Fix stock levels.** Every product reads 100. That was harmless until
    ordering started decrementing them. Zero out anything not actually stocked,
-   via the panel's Inventory section. Only the 1,173 visible ones matter —
+   via the panel's Inventory section. Only the 1,107 visible ones matter —
    hiding the rest cut this job by more than half. This is the likeliest
    cause of a bad first order: someone buys what is not on the shelf.
+   The panel dashboard shows it plainly as of 2026-08-16: **low stock 0, out
+   of stock 0** across 2,858 products. The shop believes it has everything.
 3. **FSSAI number and GSTIN.** Neither appears anywhere. The invoice calls
    itself a "Tax Invoice" with no GSTIN on it. Confirm with a CA — this is a
    compliance question, not a code one.
-4. **Distributor emails** for the 542 visible products still without photos —
-   Household and Personal Care are a third of them. Draft and priority order
-   are in `PRODUCT_IMAGES.md`. Free, and covers the branded lines no open
-   database carries.
+4. **Photograph the last 114.** Alfred closed this gap himself: 631 visible
+   products had a photo on 2026-08-05, 993 do on 2026-08-16. What is left is
+   almost entirely `Dds` and `Kr` loose goods, which no distributor and no
+   open database has — they need a camera on the counter. The distributor
+   drafts in `PRODUCT_IMAGES.md` are now worth much less than they were.
 5. **Atlas M10** (~$9/mo) and **UptimeRobot** before real traffic. M0 will
    throttle during an evening rush. Ordering and search are rate-limited now,
    which protects M0 from one script but not from genuine evening load.
-6. **Two duplicate products, both priced differently.** `Dds Raw Rice 1kg` at
-   ₹72 and ₹50; `Navneet Notes` at ₹35 and ₹47. The names are identical after
-   the rename, so a customer sees the same product twice at two prices and the
-   stock is split across both records. Which price is right is a shop
-   question. (The third, a doubled `7 Up 20Rs`, Alfred deleted.)
+6. **Seven duplicate products, each priced differently.** A customer sees the
+   same product twice at two prices, and the stock is split across both
+   records. Which price is right is a shop question.
+
+   | | |
+   |---|---|
+   | `Dds Raw Rice 1kg` | ₹72 and ₹50 |
+   | `Navneet Notes` | ₹35 and ₹47 |
+   | `Kellog's Muesli With 20% Nuts 240g` ₹182 | `Kelloggs Muesli` ₹51 — *and in a different category* |
+   | `Spoon Set` ₹20 | `Spoon-30-50` ₹15 |
+   | `Juicer` ₹84 | `Juicer-20-30` ₹70 |
+   | `Home Lite` ₹10 | `Homelite Big` ₹10 |
+
+   The last four were found by a check worth keeping: group the visible
+   catalogue by image *content hash*, then flag any group whose product names
+   start with different words. Alfred had given the pair one photograph
+   because they are one product. The Kellogg's pair is the one that matters —
+   ₹51 against ₹182 for what the shared photo says is the same box.
+   (An eighth, a doubled `7 Up 20Rs`, Alfred deleted.)
 7. **What `Dds` and `Kr` stand for** — 148 products of shop shorthand that
    cannot be expanded without knowing.
 
 ## Next — Claude
 
-1. **258 image proposals awaiting review.** Two sheets:
-   - `backend/review.html` — 211 packaged goods
-   - `backend/generic_review.html` — 47 loose goods
-   Untick wrong ones → *Save approved list* → downloads `approved.txt` → then
-   `python scripts/fetch_open_images.py --apply <file>` (or
-   `fetch_generic_images.py` for the second). **Do one at a time** — both save
-   to the same filename.
-   `approved.txt` at the repo root is left over from one of these and it is
-   not recorded which — check before running `--apply` on it.
+1. **The 258 image proposals are mostly stale — regenerate before using.**
+   `backend/review.html` (211 packaged goods) and `backend/generic_review.html`
+   (47 loose goods) were built when 542 visible products had no photo. Only
+   114 do now, and Alfred's own photograph is better than a proposed match, so
+   most of what those sheets offer would overwrite good work. Re-run
+   `--propose` against the current catalogue rather than applying the old
+   sheets. `approved.txt` and `approved_expand.txt` at the repo root are left
+   over from earlier rounds and it is not recorded which sheet either came
+   from — do not `--apply` them.
 2. **Four things the production review found and left alone**, none of them
    urgent, in the order they will start to matter:
    - Four queries with no limit — `routes_customer.py:245` loads every
@@ -327,6 +375,17 @@ is ever applied without one.
 | `fetch_brand_images.py` | photographs for one brand at a lower match bar |
 | `fetch_open_images.py` | photographs, catalogue-wide |
 | `audit_product_names.py` | reports only — duplicates, sizes, abbreviations |
+
+`recompress_uploads.py` is the exception to that pattern and deliberately so:
+resizing is mechanical, not a judgement about a particular product, so it
+reports by default, applies with `--apply`, and keeps the originals instead of
+asking anyone to tick 72 boxes. It needs an admin token in `DH_ADMIN_TOKEN` or
+`backend/.admin_token` (gitignored) — the panel keeps one in localStorage under
+`dh_admin_token`. **Delete that file afterwards; it is a live admin login for
+24 hours.** There is no way to mint one from this repo: `ADMIN_JWT_SECRET` is
+`settings.jwt_secret + "-admin"` and production's `JWT_SECRET` lives only in
+Railway's environment. That is the security model working, not an obstacle to
+route around.
 
 ---
 
@@ -395,6 +454,21 @@ is ever applied without one.
   brown packaging, 350 unit "errors" that were only a house style not yet
   chosen. Calibrate against a sample and count the false positives before
   believing the number, or the tool becomes noise that gets ignored.
+- **Look at the output, not just the numbers.** The compression pass reported
+  4181 KB → 1151 KB and zero failures. Rendering a before-and-after strip and
+  actually looking at it showed the transparent PNGs coming out ringed in
+  black: resampling averages colour and alpha separately, and where a pixel is
+  fully transparent there is no colour left to average, so the white hidden
+  behind it became black. Composited on the app's white card both look
+  identical — the damage only appears when something *flattens* the image
+  instead (a share sheet, a PDF, a thumbnailer). A summary of byte counts
+  cannot show you that. The fix is in `whiten_transparency`.
+- **A photo saved from a website is not a product photograph.** Alfred's 637
+  uploads were sound, but the workflow leaves fingerprints worth checking
+  after any batch: 29 were the small preview off a results page rather than
+  the image behind it (`candle.webp` is 180×180), one carried a corrupt
+  metadata chunk from a half-finished save, and 119 were at print resolution.
+  None of it shows in the panel, which renders everything at 58px.
 - **Measure before optimising.** PDF invoice generation was flagged as a
   scaling risk; measured at 2–8 ms, it is a non-issue. Conversely, the
   region-migration plan was dropped once it was clear that compressing images

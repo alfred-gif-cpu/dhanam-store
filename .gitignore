@@ -88,3 +88,6 @@ backend/*_results.json
 # Local database dumps from backup_db.py — never commit customer data.
 backend/dump/
 backend/backups/
+
+# Admin token scratch file (recompress_uploads.py) — a live credential.
+backend/.admin_token
