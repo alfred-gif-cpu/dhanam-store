@@ -276,6 +276,28 @@ deliberate act: change a line, let the suite run, deploy.
 GitHub Actions checks production every 15 minutes, `backup_db.py` dumps the
 database, `.env.example` documents every variable.
 
+**The photographs had exactly one copy until 2026-08-16.** `backup_db.py`
+dumps every collection, which preserves the *filename* of each product photo
+and none of the pixels — the images themselves existed only on the volume. A
+detached volume or a deleted project would have left the catalogue pointing at
+637 dead references with no way back but re-photographing the shop, and the
+handoff has been telling Alfred to go and delete a Railway project.
+
+`backup_uploads.py` mirrors them to `backend/backups/uploads-mirror/` — 637
+files, 48.9 MB — with a manifest recording which product, category and
+visibility each file belongs to, so a restore knows what it is holding. It
+reads the public `/static` path, so it needs no admin token and can alter
+nothing. Re-running HEADs each file and fetches only what changed; `--verify`
+reports drift without downloading. Every file is opened after fetching,
+because a backup nobody has opened is a backup nobody knows works.
+
+That mirror is on Alfred's D: drive, which is a second failure domain but not
+an off-site one. Worth a copy somewhere else before launch.
+
+It cannot see files the catalogue does not reference — orphans from a rename
+or a cleared image. `StaticFiles` does not list directories, so there is no way
+to enumerate them from outside, and nothing points at them.
+
 ---
 
 ## Next — Alfred
