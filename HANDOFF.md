@@ -1,4 +1,4 @@
-# Dhanam Store — where things stand (2026-08-16)
+# Dhanam Store — where things stand (2026-08-17)
 
 Continuation notes. Everything below is deployed and verified against
 production unless marked otherwise.
@@ -9,6 +9,13 @@ production unless marked otherwise.
 - Railway project: **amusing-kindness** (`1fc7e23e…`). A second project,
   *ingenious-generosity*, exists by accident, builds from the repo root, and
   fails every time — delete it.
+
+This file is arranged by subject rather than by date, so the most recent work
+is spread through it. The session of 16–17 August covered: the photo audit and
+compression, the first backup of the uploads volume, week-long image caching,
+bouncier animations, and 90-day sessions — plus two claims that turned out to
+be false and are now corrected in place, the `minSdk` pin and the `API_URL`
+fallback guard. `git log` is the chronological view.
 
 ---
 
@@ -157,8 +164,13 @@ prefixes, and nobody outside the shop knows what they stand for. Alfred is
 checking. They are excluded from the expander by name, so re-running it is
 safe; add them to `BRANDS` in the script once known.
 
-**Image attribution.** The 254 Open Food Facts photographs are CC-BY-SA and
-require visible credit. *Profile → Photo Credits* now shows it, filled by
+**Image attribution.** The Open Food Facts photographs are CC-BY-SA and
+require visible credit. 254 were imported; **193 still carry the credit as of
+2026-08-16, and only 9 of those are on visible products** — Alfred's own
+uploads replaced most of them, and the upload endpoint's `$unset` correctly
+took the credit with the photograph each time. The screen is close to empty
+now, which is the system working, not a bug. *Profile → Photo Credits* shows
+it, filled by
 `GET /image-credits`, which parses the `image_credit` string recorded on each
 product and groups it by source. The licence statement itself is baked into
 the screen rather than fetched, so the credit still appears offline. **Deploy
@@ -401,6 +413,20 @@ to enumerate them from outside, and nothing points at them.
 
 1. **Play Store submission.** $25 unpaid, no build uploaded. This is the only
    thing between the app and real customers; everything else is polish.
+
+   Build it with the API URL or it is worse than useless:
+
+   ```
+   flutter build appbundle --release --dart-define=API_URL=https://dhanam-store-production.up.railway.app
+   ```
+
+   `API_URL` is a compile-time constant. Omit it and the app used to fall back
+   silently to `10.0.2.2:8000` — the emulator's alias for the build machine —
+   which installs perfectly and then times out on every screen, for everyone.
+   That is exactly what a test APK built on 2026-08-16 did. Release builds now
+   throw on startup instead, so the mistake is loud, but the way to not meet it
+   at all is the line above. The `appbundle` is what the Play Store takes; the
+   `apk` form is for installing on a phone directly.
 2. **Fix stock levels.** Every product reads 100. That was harmless until
    ordering started decrementing them. Zero out anything not actually stocked,
    via the panel's Inventory section. Only the 1,107 visible ones matter —
@@ -463,9 +489,31 @@ to enumerate them from outside, and nothing points at them.
      no timezone.
    - `@app.on_event("startup")` is deprecated; lifespan handlers replaced it.
    - One uvicorn worker, so no headroom if a handler ever blocks.
-3. Optional: AI-generated images for loose goods (needs an API key, ~$12 for
+3. **App Check — after the Play Store listing, not before.** Researched on
+   2026-08-17 and deliberately deferred. It would be a second, enforced layer
+   proving requests come from the real app, on top of the Play Integrity check
+   that phone auth already does for itself.
+
+   The ordering is the whole point. Play Integrity only grants the
+   `PLAY_RECOGNIZED` label to apps published on Google Play, and every build so
+   far has been sideloaded — turning on enforcement now would fail attestation
+   on exactly the builds used for testing, and the symptom would read as a
+   login bug. Enforcement is also the change here with a blast radius bigger
+   than the problem: enable it while any legitimate path fails and login breaks
+   for everyone at once.
+
+   Sequence: publish → add the code → watch the console's unenforced
+   monitoring mode through a week of real logins → enforce. The code is
+   `flutter pub add firebase_app_check` plus one call after
+   `Firebase.initializeApp()` in `lib/main.dart`, with
+   `AndroidProvider.playIntegrity` in release and `AndroidProvider.debug`
+   otherwise — without the debug half, `flutter run` and the emulator stop
+   working. Console registration needs the SHA-256 of the release keystore.
+   Adding the code early is harmless and starts collecting the metrics the
+   enforcement decision needs.
+4. Optional: AI-generated images for loose goods (needs an API key, ~$12 for
    300), and `--workers` for uvicorn.
-4. **A web build of the customer app** was considered and deliberately
+5. **A web build of the customer app** was considered and deliberately
    dropped. It is one codebase — `flutter build web` — but all 12 service
    files use `dart:io`'s `HttpClient`, which does not exist in a browser, so
    they would need moving to `package:http` (already a dependency). Login
