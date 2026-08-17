@@ -26,6 +26,30 @@ class TestSessionTokens:
         claims = decode_token(create_token("u", "+919876543210"))
         assert "exp" in claims, "a session token that never expires cannot be revoked"
 
+    def test_a_customer_session_outlasts_an_admin_one_by_far(self):
+        """Customer sessions are long on purpose; admin sessions must not follow.
+
+        Every customer session that expires costs a real OTP SMS, so the length
+        is a billing decision and it is set deliberately high — 90 days. That
+        reasoning does not carry to the admin token, which opens the whole shop:
+        the panel, every order, every customer record. If someone lengthens the
+        customer session again and reaches for one shared constant, this is what
+        should stop them.
+        """
+        from admin_auth import ADMIN_JWT_EXPIRY_HOURS
+
+        assert settings.jwt_expiry_hours >= 24 * 30, (
+            "customer sessions got short — each expiry bills an OTP SMS"
+        )
+        assert ADMIN_JWT_EXPIRY_HOURS <= 24, (
+            "the admin token now lasts a day or more; a stolen laptop keeps the "
+            "whole shop for that long"
+        )
+        assert ADMIN_JWT_EXPIRY_HOURS * 10 < settings.jwt_expiry_hours, (
+            "admin and customer sessions have converged — they are set for "
+            "opposite reasons and should not share a value"
+        )
+
     def test_tampering_with_the_payload_is_rejected(self):
         token = create_token("user-123", "+919876543210")
         header, payload, signature = token.split(".")

@@ -7,7 +7,20 @@ class Settings(BaseSettings):
     mongodb_uri: str
     database_name: str = "dhanam_store"
     jwt_secret: str = _DEFAULT_JWT_SECRET
-    jwt_expiry_hours: int = 720
+    # 90 days. Every expiry costs a real OTP SMS, billed per message, and the
+    # free allowance is a daily one — so session length is the dial that decides
+    # whether logins are free. At 30 days a customer needed ~1 SMS/month, which
+    # for 10,000 customers is ~333/day against a free 357/day: inside, but with
+    # no room. At 90 it is a third of that.
+    #
+    # Long sessions are safe here in a way they are not in most apps. The token
+    # lives in the Android keystore, and `is_active` is checked on every request
+    # rather than only at login — so blocking a customer in the panel locks them
+    # out immediately, however long their token has left to run. A lost phone is
+    # a support call, not a wait for expiry.
+    #
+    # Admin sessions are deliberately not this: ADMIN_JWT_EXPIRY_HOURS is 24.
+    jwt_expiry_hours: int = 2160
     debug: bool = False
     # Same-origin by default: the admin panel is served by this app and the
     # mobile client doesn't enforce CORS, so nothing legitimate needs a wildcard.

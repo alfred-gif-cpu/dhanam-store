@@ -300,7 +300,7 @@ per-render cache-busting token, because uploads are served with
 newly uploaded photo appeared to not have saved for five minutes. That
 caching is right for customers and wrong for the person who just uploaded it.
 
-**Tests.** 199 of them — 187 backend, 12 widget — running in CI on every push
+**Tests.** 200 of them — 188 backend, 12 widget — running in CI on every push
 alongside `flutter analyze`. They need no database and no network and finish
 in under a second, which is the point: a check that fails for reasons
 unrelated to the change stops being read. Run with `python -m pytest` in
@@ -339,6 +339,35 @@ against 0.52 — a major version apart, on the library the whole app sits on.
 `starlette` and `pymongo` explicitly, since they are where the behaviour
 lives and their parents' floors allow a major jump. Upgrading is now a
 deliberate act: change a line, let the suite run, deploy.
+
+**Login costs money per SMS, so sessions are 90 days.** Firebase Phone Auth
+bills per OTP. The console shows two meters and one login ticks both: *SMS
+Total Sent*, free to **10/day**, and *Phone verification instances — US, Canada
+and India*, free to **357/day**. The small one binds, so the eleventh login in
+a day is billable. Reported India rates conflict badly between sources — use
+*See pricing* in the console, not a blog.
+
+Session length is therefore the dial that decides the bill, and
+`jwt_expiry_hours` is 2160 (was 720). A customer needs one SMS a quarter rather
+than one a month, cutting the cost to a third. It only applies to logins made
+after the deploy; existing sessions run out on the old clock.
+
+Long customer sessions are safe here in a way they are not in most apps: the
+token is in the Android keystore and `is_active` is checked on every request,
+so blocking someone in the panel locks them out at once whatever their token
+says. **Admin sessions stay at 24 hours** — set for the opposite reason, since
+an admin token opens the panel, every order and every customer record.
+`test_tokens.py` asserts both, and that they have not converged.
+
+Do not replace Firebase to save this. **The shop is cash on delivery only**
+(`payment_method: Literal["cod"]`), so a verified phone number is the only
+thing tying an order to a reachable human, and one wasted COD run costs more
+than a month of OTPs at this size. Google Sign-In is free and unlimited but
+verifies an email, not a number, and accounts are free to make in bulk. An
+Indian SMS provider is several times cheaper per message and would mean
+rebuilding the OTP flow — which is where the auth-bypass bug lived before
+Firebase — plus DLT registration. Revisit only when the billing page is
+annoying.
 
 **Ops.** Uploads persist across deploys (Railway volume at `/data/uploads`),
 GitHub Actions checks production every 15 minutes, `backup_db.py` dumps the
