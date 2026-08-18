@@ -69,7 +69,13 @@ class AuthService extends ChangeNotifier {
   AuthService._();
 
   final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
-  final fb.FirebaseAuth _fbAuth = fb.FirebaseAuth.instance;
+  // `late` deliberately: FirebaseAuth.instance throws unless
+  // Firebase.initializeApp has run, and as an eager field that made merely
+  // touching this singleton — reading userId, say, which CartService does when
+  // it saves — require Firebase. Production initialises Firebase in main()
+  // before anything else, so nothing changes there; it means the rest of the
+  // class can be exercised without it.
+  late final fb.FirebaseAuth _fbAuth = fb.FirebaseAuth.instance;
   String? _token;
   Map<String, dynamic>? _user;
   bool _loaded = false;

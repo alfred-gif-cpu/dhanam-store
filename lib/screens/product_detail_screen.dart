@@ -57,13 +57,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
   }
 
+  ScaffoldMessengerState? _messenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // See cart_screen: the lookup has to happen while the element is still
+    // active, so it is kept rather than done in dispose().
+    _messenger = ScaffoldMessenger.of(context);
+  }
+
   @override
   void dispose() {
     // SnackBars are shown via the app-wide ScaffoldMessenger, so by default
     // one triggered here (e.g. "Added to cart") keeps floating on top of
     // whatever screen comes next instead of disappearing when this page is
     // left. Clear it explicitly so it doesn't bleed into other screens.
-    ScaffoldMessenger.of(context).clearSnackBars();
+    _messenger?.clearSnackBars();
     _wishlist.removeListener(_refresh);
     _cart.removeListener(_refresh);
     super.dispose();

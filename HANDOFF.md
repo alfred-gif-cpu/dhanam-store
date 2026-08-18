@@ -587,7 +587,7 @@ device set.
 
 ## Tests, dependencies, ops
 
-**214 tests** — 196 backend, 18 widget — running in CI on every push alongside
+**222 tests** — 196 backend, 26 widget (4 skipped, known layout gaps) — running in CI on every push alongside
 `flutter analyze`. They need no database and no network and finish in under a
 second, which is the point: a check that fails for reasons unrelated to the
 change stops being read. Run with `python -m pytest` in `backend/`, and
@@ -720,6 +720,26 @@ entries below are that same bug.
   1.0/1.3/1.6/2.0x is a cheap check that catches both. `large_text_test.dart`.
   Fixed-height buttons have the same shape: `SizedBox(height: 42)` around a
   label slices it in half once the text is taller than 42. Use `minimumSize`.
+- **A placeholder is a layout too.** Extending the large-text check to cart and
+  checkout found the overflow was not in either screen: it was
+  `product_image.dart`'s no-photo placeholder, a fixed 54px disc plus a label
+  inside whatever box it is handed — 80x80 in the cart. It overflowed at the
+  *default* font size, so **every one of the 114 photoless products drew an
+  overflow stripe in a real customer's cart**. `BoxFit.scaleDown` fixes it for
+  any box. The screens were fine; the thing drawn inside them was not.
+- **`ScaffoldMessenger.of(context)` in `dispose()` is an error you cannot see.**
+  Both `cart_screen` and `product_detail_screen` cleared their SnackBars that
+  way. By `dispose()` the element is deactivated and the lookup asserts — and
+  assertions are compiled out of release builds, so it worked in production and
+  only ever surfaced under test. Capture the messenger in
+  `didChangeDependencies()` and use the saved reference.
+
+  **Still open:** checkout overflows 30px at 1.3x, 81px at 1.6x and 275px at
+  2.0x, and the cart bill panel 21px on the right at 2.0x. Located, not fixed —
+  `checkout_large_text_test.dart` marks them `[KNOWN: …]` and skips them so the
+  gap stays visible instead of being quietly dropped. 1.3x is an ordinary phone
+  setting, and checkout is where a clipped button costs an order, so this is
+  worth finishing.
 - **A flag is not a finding.** Every audit written here over-reported on its
   first run — 51 wrong-brand flags of which 4 were real, 10 "hands" that were
   brown packaging, 350 unit "errors" that were only a house style not yet

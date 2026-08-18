@@ -18,11 +18,23 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   void initState() { super.initState(); _cart.addListener(_r); }
+  ScaffoldMessengerState? _messenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Looked up here and kept, because by dispose() this element is
+    // deactivated and an inherited-widget lookup on it is an error — Flutter
+    // asserts on it, and assertions are compiled out of release builds, so it
+    // only ever showed up in tests.
+    _messenger = ScaffoldMessenger.of(context);
+  }
+
   @override
   void dispose() {
-    // Same fix as product_detail_screen: don't let a "removed"/"undo"
-    // SnackBar from this screen keep floating after navigating away.
-    ScaffoldMessenger.of(context).clearSnackBars();
+    // Don't let a "removed"/"undo" SnackBar from this screen keep floating
+    // after navigating away.
+    _messenger?.clearSnackBars();
     _cart.removeListener(_r);
     super.dispose();
   }

@@ -105,8 +105,15 @@ class ProductImage extends StatelessWidget {
       width: width,
       height: height,
       color: _bg,
+      // The disc and the label are fixed sizes and the box they go in is not:
+      // 80x80 in the cart, larger on a product page. At 80 the column was
+      // already 8px too tall, and any system font scale made it worse — every
+      // photoless product in the cart drew an overflow stripe. scaleDown keeps
+      // the design and guarantees it fits whatever box it is handed.
       child: Center(
-        child: Column(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -125,6 +132,7 @@ class ProductImage extends StatelessWidget {
               style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: _accent.withValues(alpha: 0.7), letterSpacing: 0.3),
             ),
           ],
+        ),
         ),
       ),
     );
