@@ -201,6 +201,13 @@ class ApiService {
     return await _post('/orders/create', order);
   }
 
+  /// Cancel an order the customer placed. The server refuses this once the
+  /// order is Delivered, Cancelled or refunded, and returns the reserved stock
+  /// to the shelf when it succeeds.
+  Future<void> cancelOrder(String orderId, {String reason = 'Customer requested'}) async {
+    await _put('/orders/$orderId/cancel', {'reason': reason});
+  }
+
   Future<List<Order>> getOrders(String userId) async {
     final data = await _get('/orders/$userId');
     return (data['orders'] as List).map((o) => Order.fromJson(o)).toList();

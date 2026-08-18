@@ -293,10 +293,30 @@ three handlers call it; it is a separate module rather than an import between
 the route files for the same reason `rate_limit.py` is.
 `test_cancel_restores_stock.py` covers it, watched to fail first.
 
-**The app has no cancel button**, so a customer who orders by mistake has to
-telephone the shop. `PUT /orders/{id}/cancel` exists and works; nothing calls
-it. Worth deciding rather than leaving as an accident — for a COD shop, letting
-a customer cancel before dispatch is cheaper than sending a driver.
+**Customers can cancel from the app, since 2026-08-18** — Profile → My Orders →
+*Cancel Order*, on any order still Pending, Confirmed or Packed. Once it is out
+for delivery the driver has gone, so that is a phone call rather than a button.
+The server is one step more permissive (it refuses only Delivered, Cancelled
+and refunded), and the narrower rule is deliberate.
+
+Finding out why there was no button is the more useful part. There were **two
+order-history screens**. `lib/screens/order/order_list_screen.dart` and its
+detail screen have cancel, reorder, invoice and tracking — and nothing
+navigates to either. Profile opens `lib/screens/orders_screen.dart`, a
+read-only list. The better implementation was dead code while the lesser one
+shipped, exactly as the Privacy Policy and Terms were unreachable in
+`customer_settings_screen.dart` before they were moved to Profile.
+
+The cancel button was added to the *live* screen rather than swapping Profile
+over to the dead pair, which is the smaller change before a launch; the dead
+pair is untested against production and one of its siblings had the
+open-blank-form bug. **Deciding what happens to `lib/screens/order/` is still
+open** — adopt it and customers gain invoices and tracking, or delete it. What
+should not persist is two answers to the same question.
+
+The same screen used to swallow a failed load and fall through to the empty
+state, so a customer whose orders could not load was told they had never
+ordered. It now shows the error and a retry.
 
 ## The catalogue: what customers can see
 
