@@ -123,16 +123,27 @@ machine that built it, so every screen times out on a real phone. Release
 builds now throw on startup rather than doing that quietly, but the way not to
 meet either is to pass it:
 
+There are two apps from this one codebase, so **every build needs `--flavor`**.
+
+**Customer app** — `com.dhanamstore.app`, the Play Store listing:
+
 ```bash
-flutter build apk --release --dart-define=API_URL=https://dhanam-store-production.up.railway.app
+flutter build appbundle --release --flavor customer --dart-define=API_URL=https://dhanam-store-production.up.railway.app
 ```
 
 ```bash
-flutter build appbundle --release --dart-define=API_URL=https://dhanam-store-production.up.railway.app
+flutter build apk --release --flavor customer --dart-define=API_URL=https://dhanam-store-production.up.railway.app
+```
+
+**Staff app** — `com.dhanamstore.app.staff`, handed out as an APK, never listed:
+
+```bash
+flutter build apk --release --flavor staff --target lib/main_staff.dart --dart-define=API_URL=https://dhanam-store-production.up.railway.app
 ```
 
 The appbundle is what the Play Store takes; the apk is for installing on a
-phone directly.
+phone directly. The staff flavor needs its package registered in Firebase or
+the build fails on `processStaffReleaseGoogleServices` — see HANDOFF.md.
 
 ## Environment Variables
 

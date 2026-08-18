@@ -28,8 +28,13 @@ even when nothing is wrong.
    Build it with the API URL or it is worse than useless:
 
    ```
-   flutter build appbundle --release --dart-define=API_URL=https://dhanam-store-production.up.railway.app
+   flutter build appbundle --release --flavor customer --dart-define=API_URL=https://dhanam-store-production.up.railway.app
    ```
+
+   **`--flavor customer` is new** and is not optional: the staff app added
+   product flavors, so Gradle no longer has a default and a build without it
+   fails outright. It fails loudly rather than producing the wrong app, which
+   is the right way round.
 
    `API_URL` is a compile-time constant. Omit it and the app falls back to
    `10.0.2.2:8000` — the emulator's alias for the build machine — which
