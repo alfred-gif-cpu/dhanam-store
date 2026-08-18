@@ -587,7 +587,7 @@ device set.
 
 ## Tests, dependencies, ops
 
-**222 tests** — 196 backend, 26 widget (4 skipped, known layout gaps) — running in CI on every push alongside
+**222 tests** — 196 backend, 26 widget (1 skipped, known layout gap) — running in CI on every push alongside
 `flutter analyze`. They need no database and no network and finish in under a
 second, which is the point: a check that fails for reasons unrelated to the
 change stops being read. Run with `python -m pytest` in `backend/`, and
@@ -734,12 +734,26 @@ entries below are that same bug.
   only ever surfaced under test. Capture the messenger in
   `didChangeDependencies()` and use the saved reference.
 
-  **Still open:** checkout overflows 30px at 1.3x, 81px at 1.6x and 275px at
-  2.0x, and the cart bill panel 21px on the right at 2.0x. Located, not fixed —
-  `checkout_large_text_test.dart` marks them `[KNOWN: …]` and skips them so the
-  gap stays visible instead of being quietly dropped. 1.3x is an ordinary phone
-  setting, and checkout is where a clipped button costs an order, so this is
-  worth finishing.
+- **A test proves what it renders, not what it is called.** The group above was
+  written as "Checkout" and reported 30px of overflow at 1.3x, which went into
+  this file and into a commit message as a checkout bug. It was never testing
+  checkout: `CheckoutScreen.initState` redirects to `LoginScreen` when nobody is
+  signed in, which is always true in a test, so every run had been measuring the
+  **login screen**. The overflow was real and the label was wrong — the same
+  mistake as the `minSdk` pin, made while writing up the lesson about the
+  `minSdk` pin. Read the widget tree in the failure (`debugCreator`), not the
+  test name.
+
+  Login turned out to be the better find: the first screen every customer sees,
+  the one they type into, and a `Column` with `Spacer`s that could not scroll —
+  so a large font scale, a short phone, or simply the keyboard coming up clipped
+  it. Fixed the same way as the order confirmation, and it now lays out to 2.0x.
+
+  **Still open:** the cart bill panel overflows 21px on the right at 2.0x, marked
+  `[KNOWN: …]` and skipped in `cart_login_large_text_test.dart` so the gap stays
+  visible. **Checkout itself remains untested at any scale** — reaching it needs
+  a signed-in `AuthService`, and that singleton reads its own state, so giving it
+  a seam is a change worth making deliberately rather than in passing.
 - **A flag is not a finding.** Every audit written here over-reported on its
   first run — 51 wrong-brand flags of which 4 were real, 10 "hands" that were
   brown packaging, 350 unit "errors" that were only a house style not yet

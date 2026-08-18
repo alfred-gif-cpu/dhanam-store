@@ -80,7 +80,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           opacity: _fadeAnim,
           child: SlideTransition(
             position: _slideAnim,
-            child: Padding(
+            // The Spacers below centre the form when there is room, and make
+            // this a Column that cannot scroll. At a large system font scale —
+            // or on a short phone, or simply with the keyboard up — the content
+            // grows past the screen, the Spacers collapse to zero and the rest
+            // is clipped. This is the first screen every customer sees and it
+            // is where they type their number, so it has to survive all three.
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -196,6 +207,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],
+              ),
+            ),
+                  ),
+                ),
               ),
             ),
           ),

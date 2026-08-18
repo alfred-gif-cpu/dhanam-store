@@ -14,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dhanam_store/models/product.dart';
 import 'package:dhanam_store/screens/cart_screen.dart';
-import 'package:dhanam_store/screens/checkout_screen.dart';
+import 'package:dhanam_store/screens/login_screen.dart';
 import 'package:dhanam_store/services/cart_service.dart';
 
 const _scales = [1.0, 1.3, 1.6, 2.0];
@@ -26,9 +26,6 @@ const _scales = [1.0, 1.3, 1.6, 2.0];
 // See HANDOFF.md, "Things that cost time".
 const _knownFailing = <String, String>{
   'Cart 2.0': 'overflows 21px on the right — a Row in the bill panel',
-  'Checkout 1.3': 'overflows 30px on the bottom',
-  'Checkout 1.6': 'overflows 81px on the bottom',
-  'Checkout 2.0': 'overflows 275px on the bottom',
 };
 
 Widget _at(double scale, Widget child) => MediaQuery(
@@ -67,21 +64,38 @@ void main() {
     }
   });
 
-  group('Checkout', () {
+  // This group was written as "Checkout" and was not testing checkout at all.
+  // CheckoutScreen.initState redirects to LoginScreen when nobody is signed in,
+  // which is always the case here, so every one of those runs was measuring the
+  // login screen — and reporting it under the wrong name, in the handoff and in
+  // a commit message. The overflows were real; the label was not.
+  //
+  // Login is the better thing to be testing anyway: it is the first screen every
+  // customer sees, it is where they type their number, and the keyboard coming
+  // up shrinks the viewport exactly the way a large font scale does.
+  //
+  // Checkout itself is still untested at scale. Reaching it needs a signed-in
+  // AuthService, and that singleton reads its own state; giving it a seam is a
+  // change worth making deliberately rather than in passing.
+  group('Login', () {
     for (final scale in _scales) {
-      final known = _knownFailing['Checkout $scale'];
-      testWidgets('lays out at ${scale}x without overflowing'
-          '${known == null ? '' : ' [KNOWN: $known]'}', (tester) async {
-        await tester.pumpWidget(_at(scale, const CheckoutScreen()));
-        // Addresses are fetched on init and there is no network here, so this
-        // settles into the error state. The bottom bar and the totals — the
-        // part with a fixed-height button — render either way.
+      testWidgets('lays out at ${scale}x without overflowing', (tester) async {
+        await tester.pumpWidget(_at(scale, const LoginScreen()));
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+        await tester.pump(const Duration(milliseconds: 900));
         expect(tester.takeException(), isNull,
-            reason: 'checkout overflows at ${scale}x — this is the screen '
-                'where a clipped button costs an order');
-      }, skip: known != null);
+            reason: 'login overflows at ${scale}x — the first screen a customer '
+                'sees, and the one they have to type into');
+      });
     }
+
+    testWidgets('the number field stays reachable at 2x', (tester) async {
+      await tester.pumpWidget(_at(2.0, const LoginScreen()));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 900));
+      await tester.ensureVisible(find.byType(TextField));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
   });
 }
