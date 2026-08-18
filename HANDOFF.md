@@ -22,6 +22,9 @@ even when nothing is wrong.
 1. **Play Store submission.** $25 unpaid, no build uploaded. The only thing
    between the app and real customers; everything else is polish.
 
+   **Create it on the shop's account, not yours** — see *Handover and
+   ownership* below. This is the step that is expensive to undo.
+
    Build it with the API URL or it is worse than useless:
 
    ```
@@ -140,6 +143,41 @@ even when nothing is wrong.
    300), and `--workers` for uvicorn.
 
 ---
+
+## Handover and ownership
+
+The shop owner will run this, not Alfred. That makes *which account owns what*
+a real question, and one of the answers is expensive to get wrong.
+
+**`dhanamstore81@gmail.com` was created on 2026-08-17** for exactly this. The
+Privacy Policy and Terms now print it as the contact address.
+
+They used to print `support@dhanamstore.com`, and `dhanamstore.com` has no DNS
+record at all — no domain, no mail server. Every customer who followed that
+address would have bounced, and Play requires a working contact email on the
+listing. Buying the domain (~₹800/yr) is still worth doing eventually; a real
+mailbox that exists beats a tidy one that does not.
+
+**Put on the shop's account, first time:**
+
+- **The Play Store developer account.** Whoever owns it is the legal publisher:
+  their name is on the listing, and policy strikes, takedowns and consumer
+  complaints land on them. Google can transfer apps between developer accounts,
+  but it is a support process that is slow and can be refused. Do not create it
+  on a personal account and plan to move it.
+- **Firebase, and separately its billing.** The project transfers cleanly
+  through IAM — add the account as Owner, remove the old one — but the Cloud
+  Billing account is a different object and has to be switched deliberately.
+  Miss it and Alfred's personal card keeps paying for the shop's OTP messages
+  after he has stopped working on this.
+
+**Can wait — all transferable later:** Railway, MongoDB Atlas, GitHub. Each
+supports adding an owner or transferring outright.
+
+**Already fine:** the panel logins (`admin@dhanamstore.com` and the three
+delivery accounts) are internal identities rather than mailboxes, so they work
+whether or not the domain exists. There is no password-reset flow that needs a
+real inbox behind them.
 
 ## Security and login
 

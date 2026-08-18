@@ -44,7 +44,7 @@ You can:
 
 6. Contact Us
 For privacy concerns, contact us at:
-Email: support@dhanamstore.com
+Email: dhanamstore81@gmail.com
 ''';
 
   static const termsOfService = '''
@@ -93,7 +93,7 @@ We may update these terms at any time. Continued use of the app constitutes acce
 
 9. Contact Us
 For questions about these terms, contact us at:
-Email: support@dhanamstore.com
+Email: dhanamstore81@gmail.com
 ''';
 
   @override
