@@ -60,7 +60,19 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with TickerProv
       child: Scaffold(
         backgroundColor: Colors.grey[50],
         body: SafeArea(
-          child: Padding(
+          // The Spacers below centre the content when there is room. They also
+          // mean a Column that cannot scroll: at a large system font scale the
+          // content grows past the screen, the Spacers collapse to zero, and
+          // everything after them — including Continue Shopping — is clipped
+          // off the bottom with no way to reach it. Wrapping in a scroll view
+          // with a minimum height of the viewport keeps the centred look at
+          // normal sizes and lets it scroll when it no longer fits.
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
@@ -172,6 +184,10 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with TickerProv
                 const SizedBox(height: 12),
               ],
             ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -184,9 +200,13 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with TickerProv
       child: Row(children: [
         Icon(icon, size: 20, color: Colors.grey[500]),
         const SizedBox(width: 10),
-        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-        const Spacer(),
-        Flexible(child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+        // The label used to size itself first and leave the value the
+        // remainder, which is how an order number came to wrap after its
+        // seventh character. The value is the part worth reading, so it gets
+        // the larger share and the label wraps instead.
+        Expanded(flex: 4, child: Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600]))),
+        const SizedBox(width: 8),
+        Expanded(flex: 5, child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
       ]),
     );
   }

@@ -587,7 +587,7 @@ device set.
 
 ## Tests, dependencies, ops
 
-**208 tests** — 196 backend, 12 widget — running in CI on every push alongside
+**214 tests** — 196 backend, 18 widget — running in CI on every push alongside
 `flutter analyze`. They need no database and no network and finish in under a
 second, which is the point: a check that fails for reasons unrelated to the
 change stops being read. Run with `python -m pytest` in `backend/`, and
@@ -709,6 +709,17 @@ entries below are that same bug.
   damage only appears when something *flattens* the image instead (a share
   sheet, a PDF, a thumbnailer). A summary of byte counts cannot show that. The
   fix is in `whiten_transparency`.
+- **A layout that fits your phone is not a layout that fits.** The order
+  confirmation was a Column with Spacers, which cannot scroll: once the content
+  grew past the screen the Spacers collapsed to zero and everything after them,
+  Continue Shopping included, was clipped off the bottom with no way to reach
+  it. Reported from a real phone at a large system font scale, but the test
+  written afterwards overflowed by 111px at **1.0x** in an 800x600 viewport —
+  so it was never really about font size, it was a screen that only fitted tall
+  displays. Flutter fails a test on a render overflow, so pumping a screen at
+  1.0/1.3/1.6/2.0x is a cheap check that catches both. `large_text_test.dart`.
+  Fixed-height buttons have the same shape: `SizedBox(height: 42)` around a
+  label slices it in half once the text is taller than 42. Use `minimumSize`.
 - **A flag is not a finding.** Every audit written here over-reported on its
   first run — 51 wrong-brand flags of which 4 were real, 10 "hands" that were
   brown packaging, 350 unit "errors" that were only a house style not yet

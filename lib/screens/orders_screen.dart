@@ -158,12 +158,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
-                              height: 42,
+                              // Deliberately a minimum rather than a fixed
+                              // height: at a large system font scale the label
+                              // is taller than 42 and a hard height clips it,
+                              // which is what "Cancel Order" with its bottom
+                              // sliced off looked like.
                               child: OutlinedButton(
                                 onPressed: _cancelling == null ? () => _cancel(order) : null,
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.red,
                                   side: const BorderSide(color: Colors.red),
+                                  minimumSize: const Size.fromHeight(42),
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: _cancelling == order.id
