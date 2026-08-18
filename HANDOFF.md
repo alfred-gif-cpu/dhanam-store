@@ -165,11 +165,29 @@ mailbox that exists beats a tidy one that does not.
   complaints land on them. Google can transfer apps between developer accounts,
   but it is a support process that is slow and can be refused. Do not create it
   on a personal account and plan to move it.
-- **Firebase, and separately its billing.** The project transfers cleanly
-  through IAM — add the account as Owner, remove the old one — but the Cloud
-  Billing account is a different object and has to be switched deliberately.
-  Miss it and Alfred's personal card keeps paying for the shop's OTP messages
-  after he has stopped working on this.
+- **Firebase, and separately its billing.** `dhanamstore81@gmail.com` was added
+  as an Owner on 2026-08-17, which is the easy half. The Cloud Billing account
+  — plainly, whose card pays — is a different object entirely and is still
+  Alfred's. Miss it and his personal card keeps paying for the shop's OTP
+  messages after he has stopped working on this.
+
+  **Never "disable billing" as a step.** Unlinking drops the project to the
+  free Spark plan, and phone OTP stops working the moment it does — no customer
+  can log in. The *Change billing* action swaps atomically; use only that.
+
+  Moving it needs rights on **both** billing accounts, the one being left and
+  the one being joined, so neither party can do it alone. On handover day:
+
+  1. Shop owner, signed in as `dhanamstore81@gmail.com`, creates a billing
+     account at `console.cloud.google.com/billing` with the shop's card.
+  2. Shop owner adds Alfred to it as **Billing Account Administrator**.
+  3. Alfred, now holding rights on both: *My Projects* → `dhanam-store` →
+     **Actions → Change billing** → the shop's account → **Set account**.
+  4. Confirm Firebase still reads **Blaze**, then send one test OTP.
+  5. Shop owner removes Alfred from their billing account.
+
+  Charges already incurred stay on the old account and can take two days to
+  appear, so a small final bill after the switch is expected, not a failure.
 
 **Can wait — all transferable later:** Railway, MongoDB Atlas, GitHub. Each
 supports adding an owner or transferring outright.
