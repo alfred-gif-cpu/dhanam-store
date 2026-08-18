@@ -16,6 +16,7 @@ from auth import get_current_user, decode_token, create_invoice_token
 from rate_limit import limiter
 
 log = logging.getLogger(__name__)
+from inventory import release_stock, should_release
 from push_service import notify_new_order
 
 router = APIRouter()
@@ -108,11 +109,12 @@ async def _next_order_id() -> str:
 
 
 async def _release_stock(reserved: list) -> None:
-    """Give reserved units back — used when an order fails or is cancelled."""
-    for product_id, qty in reserved:
-        await products_collection.update_one(
-            {"_id": ObjectId(product_id)}, {"$inc": {"stock": qty}}
-        )
+    """Give reserved units back, from (product_id, qty) pairs.
+
+    The rule itself lives in inventory.py, shared with the admin panel's
+    status handler — which used to have its own idea of it, and lost stock.
+    """
+    await release_stock([{"product_id": pid, "quantity": qty} for pid, qty in reserved])
 
 
 async def _reserve_stock(items: list) -> list:
@@ -362,12 +364,8 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
 
     # Restore stock the first time an order becomes cancelled, and only then:
     # re-applying the same status must not credit the stock twice.
-    already_cancelled = order.get("order_status") in ("Cancelled", "Refund Initiated", "Refund Completed")
-    if status == "Cancelled" and not already_cancelled:
-        await _release_stock([
-            (i["product_id"], i.get("quantity", 0))
-            for i in order.get("items", []) if i.get("product_id")
-        ])
+    if should_release(order, status):
+        await release_stock(order.get("items", []))
 
     now = _now()
     await orders_collection.update_one(

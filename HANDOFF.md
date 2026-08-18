@@ -268,6 +268,36 @@ limiter lives in `rate_limit.py` because importing it from `main` would be a
 cycle. Six indexes added, of which `orders.updated_at` and `products.sold_count`
 matter most — both are sorted on by paths that run constantly.
 
+**Cancelling returns the stock — by every route, since 2026-08-18.** Stock is
+decremented the moment an order is filed, so every path that cancels has to
+hand the units back. Three can, and only two did:
+
+| | |
+|---|---|
+| `PUT /orders/{id}/cancel` (customer) | released |
+| `PUT /orders/{id}/status` (admin) | released |
+| `PUT /admin/orders/{id}/status` (panel) | **did not** |
+
+Not shadowed routes — the route table has no duplicates. Three sibling
+handlers that drifted, and the one missed is the one the panel calls, which is
+the **only** way to cancel anything: the customer app has no cancel button. So
+in practice every cancellation leaked its stock permanently, and the shop would
+have drifted towards phantom out-of-stocks having sold nothing. That matters
+more the day real stock numbers are entered, since the drift is invisible
+against a catalogue that reads 100 everywhere.
+
+Found by placing a real order against production and watching the number stay
+at 99 after cancelling — the reason to place one rather than read the code.
+`inventory.py` now holds the rule (`release_stock`, `should_release`) and all
+three handlers call it; it is a separate module rather than an import between
+the route files for the same reason `rate_limit.py` is.
+`test_cancel_restores_stock.py` covers it, watched to fail first.
+
+**The app has no cancel button**, so a customer who orders by mistake has to
+telephone the shop. `PUT /orders/{id}/cancel` exists and works; nothing calls
+it. Worth deciding rather than leaving as an accident — for a COD shop, letting
+a customer cancel before dispatch is cheaper than sending a driver.
+
 ## The catalogue: what customers can see
 
 **Trimmed to 1,107 of 2,858** (1,173 of 2,869 when the cut was made; Alfred has
@@ -537,7 +567,7 @@ device set.
 
 ## Tests, dependencies, ops
 
-**200 tests** — 188 backend, 12 widget — running in CI on every push alongside
+**208 tests** — 196 backend, 12 widget — running in CI on every push alongside
 `flutter analyze`. They need no database and no network and finish in under a
 second, which is the point: a check that fails for reasons unrelated to the
 change stops being read. Run with `python -m pytest` in `backend/`, and

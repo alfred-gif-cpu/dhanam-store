@@ -14,6 +14,7 @@ from database import (
 from admin_auth import (
     hash_password, verify_password, create_admin_token, get_current_admin,
 )
+from inventory import release_stock, should_release
 from push_service import notify_delivery_ready
 from storage import read_image_upload, save_image, resolve_image_url, slugify
 from search_utils import build_search_text, build_search_words
@@ -524,6 +525,17 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid}")
     now = _now()
     match = {"$or": [{"order_id": order_id}, {"_id": ObjectId(order_id)}]} if ObjectId.is_valid(order_id) else {"order_id": order_id}
+
+    # Cancelling here has to put the goods back, exactly as the two handlers in
+    # routes_orders.py do. This one did not, and it is the only route the panel
+    # offers — and the app has no customer cancel button — so every cancelled
+    # order used to lose its stock for good.
+    existing = await orders_collection.find_one(match)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if should_release(existing, status):
+        await release_stock(existing.get("items", []))
+
     await orders_collection.update_one(
         match,
         {

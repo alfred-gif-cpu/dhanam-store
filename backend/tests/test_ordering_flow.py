@@ -18,6 +18,7 @@ import pytest
 from bson import ObjectId
 from mongomock_motor import AsyncMongoMockClient
 
+import inventory
 import routes_orders
 from main import app
 from auth import get_current_user
@@ -32,13 +33,16 @@ def shop(monkeypatch):
     """A fresh, empty shop for each test.
 
     Every collection routes_orders reaches for is swapped, so nothing here can
-    touch the real database even if a query is added later.
+    touch the real database even if a query is added later. That includes
+    inventory.py: returning stock moved there so the admin panel and the two
+    order handlers share one rule, which also moved where the write happens.
     """
     db = AsyncMongoMockClient()["dhanam_store_test"]
     for name in ("orders_collection", "products_collection",
                  "customers_collection", "users_collection", "counters_collection"):
         monkeypatch.setattr(routes_orders, name,
                             db[name.replace("_collection", "")], raising=True)
+    monkeypatch.setattr(inventory, "products_collection", db["products"], raising=True)
 
     # The shop owner's push notification would reach for Firebase credentials.
     monkeypatch.setattr(routes_orders, "notify_new_order", lambda order: None)
