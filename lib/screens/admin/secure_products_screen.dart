@@ -22,6 +22,10 @@ class _State extends State<SecureProductsScreen> {
   int _page = 1;
   int _pages = 1;
   String _query = '';
+  // '' = everything, 'visible' = on sale, 'hidden' = off the shelf. Only 1,107
+  // of 2,858 products are on sale, so an unfiltered list is mostly things
+  // customers cannot see — which is why this screen needed a filter at all.
+  String _visibility = '';
 
   @override
   void initState() { super.initState(); _load(); }
@@ -31,7 +35,7 @@ class _State extends State<SecureProductsScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final data = await _auth.getProducts(page: _page, q: _query);
+      final data = await _auth.getProducts(page: _page, q: _query, status: _visibility);
       setState(() {
         _products = data['products'] ?? [];
         _total = data['total'] ?? 0;
@@ -116,6 +120,33 @@ class _State extends State<SecureProductsScreen> {
     }
   }
 
+  Widget _visChip(String label, String value) {
+    final selected = _visibility == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) {
+          if (_visibility == value) return;
+          setState(() { _visibility = value; _page = 1; });
+          _load();
+        },
+        labelStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: selected ? Colors.white : Colors.grey[700],
+        ),
+        selectedColor: Colors.indigo[800],
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: selected ? Colors.transparent : Colors.grey[300]!),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,6 +195,19 @@ class _State extends State<SecureProductsScreen> {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.indigo, width: 2)),
             ),
+          ),
+        ),
+        // Visibility filter
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              _visChip('All', ''),
+              _visChip('In the app', 'visible'),
+              _visChip('Hidden', 'hidden'),
+            ],
           ),
         ),
         Padding(

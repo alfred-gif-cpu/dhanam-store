@@ -3,6 +3,7 @@ import '../../services/admin_auth_service.dart';
 import 'admin_login_screen.dart';
 import 'admin_inventory_screen.dart';
 import 'admin_audit_logs_screen.dart';
+import 'admin_customers_screen.dart';
 import 'admin_order_analytics_screen.dart';
 import 'admin_orders_screen.dart';
 import 'secure_products_screen.dart';
@@ -98,10 +99,17 @@ class _State extends State<SecureAdminDashboard> {
         crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.5,
         children: [
-          _stat('Products', '${s['total_products'] ?? 0}', Icons.inventory_2, Colors.blue),
-          _stat('Customers', '${s['total_customers'] ?? 0}', Icons.people, Colors.purple),
-          _stat('Orders', '${s['total_orders'] ?? 0}', Icons.receipt_long, Colors.orange),
-          _stat('Today', '${s['orders_today'] ?? 0} orders', Icons.today, Colors.teal),
+          // These four looked identical to the revenue cards below and did
+          // nothing when tapped, which reads as a broken screen rather than a
+          // static one. Each now opens the thing it counts.
+          _stat('Products', '${s['total_products'] ?? 0}', Icons.inventory_2, Colors.blue,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SecureProductsScreen()))),
+          _stat('Customers', '${s['total_customers'] ?? 0}', Icons.people, Colors.purple,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminCustomersScreen()))),
+          _stat('Orders', '${s['total_orders'] ?? 0}', Icons.receipt_long, Colors.orange,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersScreen()))),
+          _stat('Today', '${s['orders_today'] ?? 0} orders', Icons.today, Colors.teal,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersScreen()))),
         ],
       ),
       const SizedBox(height: 12),
@@ -171,7 +179,10 @@ class _State extends State<SecureAdminDashboard> {
     ]);
   }
 
-  Widget _stat(String label, String value, IconData icon, Color color) => Container(
+  Widget _stat(String label, String value, IconData icon, Color color, [VoidCallback? onTap]) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -180,6 +191,7 @@ class _State extends State<SecureAdminDashboard> {
       Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
       Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
     ]),
+    ),
   );
 
   Widget _revenueCard(String label, num value, Color color, [VoidCallback? onTap]) => InkWell(

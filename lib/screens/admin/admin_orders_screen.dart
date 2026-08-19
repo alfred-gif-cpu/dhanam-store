@@ -119,7 +119,15 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                           final o = _orders[index] as Map<String, dynamic>;
                           final items = o['items'] as List? ?? [];
                           final status = o['order_status'] ?? 'Confirmed';
-                          return Container(
+                          // The card showed a count and no way to see what was
+                          // in the order — the owner had to open the web panel
+                          // to answer "what did they actually buy". The status
+                          // pill keeps its own tap, so changing status is still
+                          // one press rather than two.
+                          return InkWell(
+                            onTap: () => _showOrderDetails(o),
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
@@ -142,6 +150,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                               Text('${o['payment_method'] ?? 'N/A'} • ${(o['created_at'] ?? '').toString().split('T').first}',
                                   style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                             ]),
+                            ),
                           );
                         },
                       ),
@@ -150,6 +159,147 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       ]),
     );
   }
+
+  /// What was actually ordered.
+  ///
+  /// Everything here already arrived with the order list, so opening it costs
+  /// no request — the data was on the device all along and simply had nowhere
+  /// to be seen.
+  void _showOrderDetails(Map<String, dynamic> o) {
+    final items = (o['items'] as List? ?? []).cast<Map<String, dynamic>>();
+    final addr = (o['delivery_address'] ?? o['address']) as Map<String, dynamic>? ?? {};
+    final line = [addr['line1'], addr['area'], addr['city'], addr['pincode']]
+        .where((v) => v != null && v.toString().trim().isNotEmpty)
+        .join(', ');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (ctx, scroll) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: ListView(
+            controller: scroll,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(
+                  child: Text(
+                    (o['order_id'] ?? o['id'] ?? '').toString(),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Text(
+                  (o['order_status'] ?? '').toString(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _statusColor((o['order_status'] ?? 'Confirmed').toString()),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 4),
+              Text(
+                '${o['payment_method'] ?? ''} - '
+                    '${(o['created_at'] ?? '').toString().replaceFirst('T', ' ').split('.').first}',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              if (line.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(Icons.location_on_outlined, size: 18, color: Colors.grey[500]),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(line, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+                  ),
+                ]),
+              ],
+              const Divider(height: 28),
+              Text(
+                items.length == 1 ? '1 item' : '${items.length} items',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ...items.map((i) {
+                final qty = (i['quantity'] ?? 0) as num;
+                final price = ((i['price'] ?? 0) as num).toDouble();
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    SizedBox(
+                      width: 36,
+                      child: Text('${qty}x',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    Expanded(
+                      child: Text((i['name'] ?? '').toString(),
+                          style: const TextStyle(fontSize: 14)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('₹${(price * qty).toStringAsFixed(0)}',
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ]),
+                );
+              }),
+              const Divider(height: 28),
+              _totalRow('Subtotal', o['subtotal']),
+              _totalRow('Delivery', o['delivery_fee']),
+              _totalRow('Total', o['grand_total'] ?? o['total_amount'], bold: true),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showStatusDialog(o);
+                  },
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Change status'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _totalRow(String label, dynamic value, {bool bold = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(label,
+              style: TextStyle(
+                fontSize: bold ? 15 : 13,
+                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+                color: bold ? Colors.black : Colors.grey[700],
+              )),
+          Text('₹${((value ?? 0) as num).toStringAsFixed(0)}',
+              style: TextStyle(
+                fontSize: bold ? 15 : 13,
+                fontWeight: bold ? FontWeight.bold : FontWeight.w600,
+              )),
+        ]),
+      );
 
   Widget _filterChip(String label, String? status) {
     final selected = _statusFilter == status;

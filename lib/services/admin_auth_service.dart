@@ -107,8 +107,13 @@ class AdminAuthService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> getDashboard() => _get('/admin/dashboard');
-  Future<Map<String, dynamic>> getProducts({int page = 1, String q = ''}) =>
-      _get('/admin/products?page=$page${q.isNotEmpty ? '&q=${Uri.encodeComponent(q)}' : ''}');
+  /// [status] is '' for everything, or 'visible' / 'hidden'. The catalogue has
+  /// 2,858 products and only 1,107 are on sale, so a list with no filter is
+  /// mostly things customers cannot see.
+  Future<Map<String, dynamic>> getProducts({int page = 1, String q = '', String status = ''}) =>
+      _get('/admin/products?page=$page'
+          '${q.isNotEmpty ? '&q=${Uri.encodeComponent(q)}' : ''}'
+          '${status.isNotEmpty ? '&status=$status' : ''}');
   Future<Map<String, dynamic>> getCustomers({int page = 1, String q = '', String status = ''}) =>
       _get('/admin/customers?page=$page${q.isNotEmpty ? '&q=${Uri.encodeComponent(q)}' : ''}${status.isNotEmpty ? '&status=$status' : ''}');
   Future<Map<String, dynamic>> getOrders({int page = 1, String status = '', String q = ''}) =>
