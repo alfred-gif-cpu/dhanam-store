@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/order_service.dart';
+import '../../services/admin_auth_service.dart';
 
 class AdminOrderAnalyticsScreen extends StatefulWidget {
   const AdminOrderAnalyticsScreen({super.key});
@@ -9,18 +9,26 @@ class AdminOrderAnalyticsScreen extends StatefulWidget {
 }
 
 class _State extends State<AdminOrderAnalyticsScreen> {
-  final OrderService _svc = OrderService();
+  // OrderService sends AuthService's *customer* token; this endpoint
+  // requires an admin, and the admin app has no customer session, so every
+  // request was a 401 rendered as an empty screen.
+  final AdminAuthService _svc = AdminAuthService();
   Map<String, dynamic>? _data;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
     try {
-      final data = await _svc.getAnalytics();
+      final data = await _svc.getOrderAnalytics();
       setState(() { _data = data; _loading = false; });
-    } catch (_) { setState(() => _loading = false); }
+    } catch (e) {
+      // An empty analytics screen and a failed request look identical; say
+      // which it is.
+      setState(() { _error = '$e'; _loading = false; });
+    }
   }
 
   @override
@@ -30,6 +38,16 @@ class _State extends State<AdminOrderAnalyticsScreen> {
       appBar: AppBar(title: const Text('Order Analytics'), backgroundColor: Colors.indigo, foregroundColor: Colors.white, elevation: 0),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(child: Padding(padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text('Could not load analytics', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+                const SizedBox(height: 6),
+                Text(_error!, textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                const SizedBox(height: 14),
+                ElevatedButton(onPressed: _load, child: const Text('Try again')),
+              ])))
           : RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
               // Revenue cards
               Row(children: [

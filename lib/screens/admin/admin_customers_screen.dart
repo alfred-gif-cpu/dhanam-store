@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
+
 import 'package:flutter/material.dart';
-import '../../config.dart';
+
+import '../../services/admin_auth_service.dart';
 
 class AdminCustomersScreen extends StatefulWidget {
   const AdminCustomersScreen({super.key});
@@ -12,8 +12,13 @@ class AdminCustomersScreen extends StatefulWidget {
 }
 
 class _State extends State<AdminCustomersScreen> {
-  static final _baseUrl = AppConfig.baseUrl;
-  final HttpClient _client = HttpClient();
+  // This screen built its own HttpClient and never set the Authorization
+  // header, so every request came back 401. The response has no `customers`
+  // key, the bare catch below swallowed the resulting error, and the screen
+  // reported "No customers found" — with eleven customers in the database.
+  // Going through AdminAuthService attaches the token and raises a failure
+  // instead of rendering it as emptiness.
+  final AdminAuthService _auth = AdminAuthService();
   final TextEditingController _search = TextEditingController();
   Timer? _debounce;
 
@@ -24,34 +29,29 @@ class _State extends State<AdminCustomersScreen> {
   int _pages = 1;
   String _query = '';
   String _statusFilter = '';
+  String? _error;
 
   @override
   void initState() { super.initState(); _load(); }
   @override
   void dispose() { _debounce?.cancel(); _search.dispose(); super.dispose(); }
 
-  Future<Map<String, dynamic>> _get(String path) async {
-    final req = await _client.getUrl(Uri.parse('$_baseUrl$path'));
-    final res = await req.close();
-    return jsonDecode(await res.transform(utf8.decoder).join());
-  }
-
-  Future<void> _put(String path) async {
-    final req = await _client.putUrl(Uri.parse('$_baseUrl$path'));
-    req.headers.contentType = ContentType.json;
-    req.write('{}');
-    await (await req.close()).drain();
-  }
-
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
-      var path = '/admin/customers?page=$_page';
-      if (_query.isNotEmpty) path += '&q=${Uri.encodeComponent(_query)}';
-      if (_statusFilter.isNotEmpty) path += '&status=$_statusFilter';
-      final data = await _get(path);
-      setState(() { _customers = data['customers']; _total = data['total']; _pages = data['pages']; _loading = false; });
-    } catch (_) { setState(() => _loading = false); }
+      final data = await _auth.getCustomers(
+          page: _page, q: _query, status: _statusFilter);
+      setState(() {
+        _customers = data['customers'] ?? [];
+        _total = data['total'] ?? 0;
+        _pages = data['pages'] ?? 1;
+        _loading = false;
+      });
+    } catch (e) {
+      // Reporting "no customers" when the request failed is worse than
+      // reporting nothing: the shop reads it as having no customers.
+      setState(() { _error = '$e'; _loading = false; });
+    }
   }
 
   void _onSearch(String v) {
@@ -97,7 +97,18 @@ class _State extends State<AdminCustomersScreen> {
         Expanded(child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _customers.isEmpty
-                ? Center(child: Text('No customers found', style: TextStyle(color: Colors.grey[600])))
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        _error != null
+                            ? 'Could not load customers.\n$_error'
+                            : 'No customers found',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ),
+                  )
                 : RefreshIndicator(onRefresh: _load, child: ListView.builder(
                     padding: const EdgeInsets.all(12), itemCount: _customers.length,
                     itemBuilder: (_, i) {
@@ -128,8 +139,23 @@ class _State extends State<AdminCustomersScreen> {
                           ]),
                           trailing: PopupMenuButton<String>(
                             onSelected: (action) async {
-                              if (action == 'block') { await _put('/admin/customers/${c['customer_id']}/block'); _load(); }
-                              if (action == 'activate') { await _put('/admin/customers/${c['customer_id']}/activate'); _load(); }
+                              // `id` is the account's own id; customer_id is a
+                              // legacy field that is not always present.
+                              final id = (c['id'] ?? c['customer_id'] ?? '').toString();
+                              try {
+                                // The route is /unblock. This called /activate,
+                                // which has never existed — masked because the
+                                // request was unauthenticated and never reached
+                                // a route at all.
+                                if (action == 'block') await _auth.blockCustomer(id);
+                                if (action == 'activate') await _auth.unblockCustomer(id);
+                                await _load();
+                              } catch (e) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text('Could not update customer: $e'),
+                                    backgroundColor: Colors.red));
+                              }
                             },
                             itemBuilder: (_) => [
                               if (active) const PopupMenuItem(value: 'block', child: Text('Block', style: TextStyle(color: Colors.red)))

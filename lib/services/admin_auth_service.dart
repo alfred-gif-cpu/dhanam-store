@@ -121,6 +121,10 @@ class AdminAuthService extends ChangeNotifier {
   Future<Map<String, dynamic>> getInventory({int page = 1, String filter = ''}) =>
       _get('/admin/inventory?page=$page${filter.isNotEmpty ? '&filter=$filter' : ''}');
   Future<Map<String, dynamic>> getLogs({int page = 1}) => _get('/admin/logs?page=$page');
+  /// Order analytics. Lives here rather than on OrderService because the
+  /// endpoint requires an admin, and OrderService sends the *customer*
+  /// token — which in the admin app does not exist at all.
+  Future<Map<String, dynamic>> getOrderAnalytics() => _get('/admin/orders/analytics');
 
   Future<void> updateOrderStatus(String orderId, String status) =>
       _put('/admin/orders/$orderId/status', {'status': status});
