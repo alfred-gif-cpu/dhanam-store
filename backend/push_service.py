@@ -89,6 +89,49 @@ def send_to_topic(topic: str, title: str, body: str, data: dict | None = None) -
         return False
 
 
+def send_to_tokens(tokens: list[str], title: str, body: str,
+                   data: dict | None = None) -> list[str]:
+    """Push to specific devices. Returns the tokens FCM rejected.
+
+    A topic reaches everyone subscribed, which is right for staff and wrong for
+    a customer — "your order arrived" must go to one person. Rejected tokens
+    are handed back rather than deleted here, because this module has no
+    database and should not grow one.
+    """
+    _init()
+    if not _messaging or not tokens:
+        log.debug("(console) %d token(s) | %s - %s", len(tokens or []), title, body)
+        return []
+    dead = []
+    for token in tokens:
+        try:
+            _messaging.send(_messaging.Message(
+                notification=_messaging.Notification(title=title, body=body),
+                token=token,
+                data={k: str(v) for k, v in (data or {}).items()},
+                android=_messaging.AndroidConfig(priority="high"),
+            ))
+        except Exception as e:
+            # An uninstalled app or a rotated token; the caller prunes it.
+            name = type(e).__name__
+            if "Unregistered" in name or "NotFound" in name or "InvalidArgument" in name:
+                dead.append(token)
+            else:
+                log.warning("Push to a device failed: %s", e)
+    return dead
+
+
+def notify_order_delivered_owner(order: dict) -> bool:
+    order_id = order.get("order_id", "")
+    total = order.get("grand_total", order.get("total_amount", 0))
+    return send_to_topic(
+        "owner",
+        "✅ Order Delivered",
+        f"Order {order_id} - ₹{total:.0f} delivered",
+        {"type": "order_delivered", "order_id": order_id},
+    )
+
+
 def notify_new_order(order: dict) -> bool:
     order_id = order.get("order_id", "")
     total = order.get("grand_total", order.get("total_amount", 0))

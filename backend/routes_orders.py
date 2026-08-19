@@ -17,6 +17,7 @@ from rate_limit import limiter
 
 log = logging.getLogger(__name__)
 from inventory import release_stock, should_release
+from order_events import order_delivered
 from push_service import notify_new_order
 
 router = APIRouter()
@@ -366,6 +367,10 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
     # re-applying the same status must not credit the stock twice.
     if should_release(order, status):
         await release_stock(order.get("items", []))
+
+    # Same announcement as the other two routes that can set Delivered.
+    if status == "Delivered" and order.get("order_status") != "Delivered":
+        await order_delivered({**order, "order_status": status})
 
     now = _now()
     await orders_collection.update_one(

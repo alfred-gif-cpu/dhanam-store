@@ -1,0 +1,250 @@
+<!doctype html><meta charset="utf-8">
+<title>Name expansions &mdash; 31</title>
+<style>
+ body{font:14px/1.5 system-ui;margin:24px;background:#fafafa}
+ h1{font-size:19px;margin-bottom:2px}
+ .bar{position:sticky;top:0;background:#fafafa;padding:12px 0;border-bottom:1px solid #ddd;z-index:2}
+ button{padding:8px 14px;font-size:14px;cursor:pointer;margin-right:6px}
+ .note{background:#e8f5e9;border:1px solid #a5d6a7;padding:10px 12px;border-radius:8px;margin-top:10px;max-width:82ch}
+ .row{display:grid;grid-template-columns:24px 1fr 20px 1fr 150px;gap:10px;align-items:center;
+      background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:7px 10px;margin-top:6px;cursor:pointer}
+ .row:has(input:not(:checked)){opacity:.4}
+ .old{color:#777} .arrow{color:#bbb;text-align:center} .new{font-weight:500}
+ mark{background:#fff59d;padding:0 1px;border-radius:2px}
+ .cat{color:#999;font-size:12px;text-align:right}
+</style>
+<h1>31 names would change</h1>
+<div class="bar">
+  <button onclick="save()">Save approved list</button>
+  <button onclick="document.querySelectorAll('input').forEach(i=>i.checked=false)">Untick all</button>
+  <div class="note">Shorthand expanded into what a customer would recognise &mdash; the change is
+  highlighted on the right. Sizes are untouched. <b>Dds and Kr products are not here</b>, since
+  nobody outside the shop knows what those stand for. Untick anything where the expansion is wrong:
+  you know these products and I am reading abbreviations.</div>
+</div>
+
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890561">
+  <span class="old">Arun Ic 10</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Arun Ic<mark>e Cream</mark> 10</span>
+  <span class="cat">Beverages</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890562">
+  <span class="old">Arun Ic 100</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Arun Ic<mark>e Cream</mark> 100</span>
+  <span class="cat">Beverages</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890563">
+  <span class="old">Arun Ic 15</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Arun Ic<mark>e Cream</mark> 15</span>
+  <span class="cat">Beverages</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890564">
+  <span class="old">Arun Ic 18</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Arun Ic<mark>e Cream</mark> 18</span>
+  <span class="cat">Beverages</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890565">
+  <span class="old">Arun Ic 20</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Arun Ic<mark>e Cream</mark> 20</span>
+  <span class="cat">Beverages</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890566">
+  <span class="old">Arun Ic 25</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Arun Ic<mark>e Cream</mark> 25</span>
+  <span class="cat">Beverages</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc89050a">
+  <span class="old">Britannia Treat Van 10</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Britannia Treat Van<mark>illa</mark> 10</span>
+  <span class="cat">Bakery &amp; Snacks</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc8905ef">
+  <span class="old">Ensure Dia Van 375Ref</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Ensure Dia<mark>betes Care</mark> Van<mark>illa</mark> 375Ref</span>
+  <span class="cat">Health &amp; Wellness</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a3a863cb13c79f383c4f729">
+  <span class="old">Gillette Foam Reg 50g</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Gillette Foam Reg<mark>ular</mark> 50g</span>
+  <span class="cat">Personal Care</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890622">
+  <span class="old">Good Home Aroma Air Fr</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Good Home Aroma Air Fr<mark>eshener</mark></span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a3a863cb13c79f383c4fa2d">
+  <span class="old">Henko Matic Fl 1L</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Henko Matic F<mark>ront Load</mark> 1L</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc8906dc">
+  <span class="old">Himalaya Face Wash Nat Glow Rose 100ml</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Himalaya Face Wash Nat<mark>ural</mark> Glow Rose 100ml</span>
+  <span class="cat">Personal Care</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc8905f1">
+  <span class="old">Horlicks 500g Pkt</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Horlicks 500g P<mark>ac</mark>k<mark>e</mark>t</span>
+  <span class="cat">Health &amp; Wellness</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc8907c3">
+  <span class="old">Kissan Fr Tom Ket 15Rs</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Kissan Fr<mark>esh</mark> Tom<mark>ato</mark> Ket<mark>chup</mark> 15Rs</span>
+  <span class="cat">Salt &amp; Condiments</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890838">
+  <span class="old">Madhuram Jack Fr 105Rs</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Madhuram Jack Fr<mark>uit</mark> 105Rs</span>
+  <span class="cat">Sweeteners</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc8905aa">
+  <span class="old">Maharaja G Nut Oil 1L</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Maharaja G<mark>roundn</mark>ut Oil 1L</span>
+  <span class="cat">Cooking Oils</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc8905ab">
+  <span class="old">Maharaja G Nut Oil 500g Pouch</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Maharaja G<mark>roundn</mark>ut Oil 500g Pouch</span>
+  <span class="cat">Cooking Oils</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc8905c2">
+  <span class="old">Milky Mist Curd Pkt</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Milky Mist Curd P<mark>ac</mark>k<mark>e</mark>t</span>
+  <span class="cat">Dairy &amp; Fats</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890642">
+  <span class="old">Rin Adv Antibac 1kg</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Rin Adv<mark>anced</mark> Antibac 1kg</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a3a863cb13c79f383c4f68c">
+  <span class="old">Stayfree Reg Sec Dry 6</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Stayfree <mark>Secure </mark>Reg<mark>ular</mark> Dry 6</span>
+  <span class="cat">Personal Care</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a3a863cb13c79f383c4f5ee">
+  <span class="old">Stayfree Sec Reg 7 Pads</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Stayfree Sec<mark>ure</mark> Reg<mark>ular</mark> 7 Pads</span>
+  <span class="cat">Personal Care</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890552">
+  <span class="old">Sunfeast Hifi Cas But Co-5Rs</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Sunfeast Hifi Cas<mark>hew</mark> But Co-5Rs</span>
+  <span class="cat">Bakery &amp; Snacks</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890554">
+  <span class="old">Sunfeast Moms Magic Cas&amp;Almd-10</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Sunfeast Moms Magic Cas<mark>hew</mark>&amp;Almd-10</span>
+  <span class="cat">Bakery &amp; Snacks</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890658">
+  <span class="old">Surf Excel Mat Liquid Fl 1L Refill</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Surf Excel Mat<mark>ic</mark> Liquid F<mark>ront Load</mark> 1L Refill</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc890659">
+  <span class="old">Surf Excel Mat Liquid Fr L 4L</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Surf Excel Mat<mark>ic</mark> Liquid Fr<mark>ont</mark> L<mark>oad</mark> 4L</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc89065a">
+  <span class="old">Surf Excel Mat Liquid Tl 1L Ref</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Surf Excel Mat<mark>ic</mark> Liquid T<mark>op Load</mark> 1L Ref</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a3a863cb13c79f383c4f61e">
+  <span class="old">Surf Excel Matic Fl 10</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Surf Excel Matic F<mark>ront Load</mark> 10</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a3a863cb13c79f383c4f667">
+  <span class="old">Surf Excel Matic Tl 10</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Surf Excel Matic T<mark>op Load</mark> 10</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a3a863cb13c79f383c4fb32">
+  <span class="old">Tide Fl 10Rs</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Tide F<mark>ront Load</mark> 10Rs</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a3a863cb13c79f383c4f831">
+  <span class="old">Tide Tl 10Rs</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Tide T<mark>op Load</mark> 10Rs</span>
+  <span class="cat">Household</span>
+</label>
+<label class="row">
+  <input type="checkbox" checked value="6a378be4b55b0b17fc89065c">
+  <span class="old">Vim Anti Bac 250g</span>
+  <span class="arrow">&rarr;</span>
+  <span class="new">Vim Anti Bac<mark>terial</mark> 250g</span>
+  <span class="cat">Household</span>
+</label>
+<script>
+function save() {
+  const ids=[...document.querySelectorAll('input:checked')].map(i=>i.value).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ids],{type:'text/plain'}));
+  a.download='approved_expand.txt'; a.click();
+}
+</script>

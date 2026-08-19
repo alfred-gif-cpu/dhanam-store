@@ -1,0 +1,188 @@
+[
+ {
+  "id": "6a378be4b55b0b17fc890561",
+  "old": "Arun Ic 10",
+  "new": "Arun Ice Cream 10",
+  "category": "Beverages"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890562",
+  "old": "Arun Ic 100",
+  "new": "Arun Ice Cream 100",
+  "category": "Beverages"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890563",
+  "old": "Arun Ic 15",
+  "new": "Arun Ice Cream 15",
+  "category": "Beverages"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890564",
+  "old": "Arun Ic 18",
+  "new": "Arun Ice Cream 18",
+  "category": "Beverages"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890565",
+  "old": "Arun Ic 20",
+  "new": "Arun Ice Cream 20",
+  "category": "Beverages"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890566",
+  "old": "Arun Ic 25",
+  "new": "Arun Ice Cream 25",
+  "category": "Beverages"
+ },
+ {
+  "id": "6a378be4b55b0b17fc89050a",
+  "old": "Britannia Treat Van 10",
+  "new": "Britannia Treat Vanilla 10",
+  "category": "Bakery & Snacks"
+ },
+ {
+  "id": "6a378be4b55b0b17fc8905ef",
+  "old": "Ensure Dia Van 375Ref",
+  "new": "Ensure Diabetes Care Vanilla 375Ref",
+  "category": "Health & Wellness"
+ },
+ {
+  "id": "6a3a863cb13c79f383c4f729",
+  "old": "Gillette Foam Reg 50g",
+  "new": "Gillette Foam Regular 50g",
+  "category": "Personal Care"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890622",
+  "old": "Good Home Aroma Air Fr",
+  "new": "Good Home Aroma Air Freshener",
+  "category": "Household"
+ },
+ {
+  "id": "6a3a863cb13c79f383c4fa2d",
+  "old": "Henko Matic Fl 1L",
+  "new": "Henko Matic Front Load 1L",
+  "category": "Household"
+ },
+ {
+  "id": "6a378be4b55b0b17fc8906dc",
+  "old": "Himalaya Face Wash Nat Glow Rose 100ml",
+  "new": "Himalaya Face Wash Natural Glow Rose 100ml",
+  "category": "Personal Care"
+ },
+ {
+  "id": "6a378be4b55b0b17fc8905f1",
+  "old": "Horlicks 500g Pkt",
+  "new": "Horlicks 500g Packet",
+  "category": "Health & Wellness"
+ },
+ {
+  "id": "6a378be4b55b0b17fc8907c3",
+  "old": "Kissan Fr Tom Ket 15Rs",
+  "new": "Kissan Fresh Tomato Ketchup 15Rs",
+  "category": "Salt & Condiments"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890838",
+  "old": "Madhuram Jack Fr 105Rs",
+  "new": "Madhuram Jack Fruit 105Rs",
+  "category": "Sweeteners"
+ },
+ {
+  "id": "6a378be4b55b0b17fc8905aa",
+  "old": "Maharaja G Nut Oil 1L",
+  "new": "Maharaja Groundnut Oil 1L",
+  "category": "Cooking Oils"
+ },
+ {
+  "id": "6a378be4b55b0b17fc8905ab",
+  "old": "Maharaja G Nut Oil 500g Pouch",
+  "new": "Maharaja Groundnut Oil 500g Pouch",
+  "category": "Cooking Oils"
+ },
+ {
+  "id": "6a378be4b55b0b17fc8905c2",
+  "old": "Milky Mist Curd Pkt",
+  "new": "Milky Mist Curd Packet",
+  "category": "Dairy & Fats"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890642",
+  "old": "Rin Adv Antibac 1kg",
+  "new": "Rin Advanced Antibac 1kg",
+  "category": "Household"
+ },
+ {
+  "id": "6a3a863cb13c79f383c4f68c",
+  "old": "Stayfree Reg Sec Dry 6",
+  "new": "Stayfree Secure Regular Dry 6",
+  "category": "Personal Care"
+ },
+ {
+  "id": "6a3a863cb13c79f383c4f5ee",
+  "old": "Stayfree Sec Reg 7 Pads",
+  "new": "Stayfree Secure Regular 7 Pads",
+  "category": "Personal Care"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890552",
+  "old": "Sunfeast Hifi Cas But Co-5Rs",
+  "new": "Sunfeast Hifi Cashew But Co-5Rs",
+  "category": "Bakery & Snacks"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890554",
+  "old": "Sunfeast Moms Magic Cas&Almd-10",
+  "new": "Sunfeast Moms Magic Cashew&Almd-10",
+  "category": "Bakery & Snacks"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890658",
+  "old": "Surf Excel Mat Liquid Fl 1L Refill",
+  "new": "Surf Excel Matic Liquid Front Load 1L Refill",
+  "category": "Household"
+ },
+ {
+  "id": "6a378be4b55b0b17fc890659",
+  "old": "Surf Excel Mat Liquid Fr L 4L",
+  "new": "Surf Excel Matic Liquid Front Load 4L",
+  "category": "Household"
+ },
+ {
+  "id": "6a378be4b55b0b17fc89065a",
+  "old": "Surf Excel Mat Liquid Tl 1L Ref",
+  "new": "Surf Excel Matic Liquid Top Load 1L Ref",
+  "category": "Household"
+ },
+ {
+  "id": "6a3a863cb13c79f383c4f61e",
+  "old": "Surf Excel Matic Fl 10",
+  "new": "Surf Excel Matic Front Load 10",
+  "category": "Household"
+ },
+ {
+  "id": "6a3a863cb13c79f383c4f667",
+  "old": "Surf Excel Matic Tl 10",
+  "new": "Surf Excel Matic Top Load 10",
+  "category": "Household"
+ },
+ {
+  "id": "6a3a863cb13c79f383c4fb32",
+  "old": "Tide Fl 10Rs",
+  "new": "Tide Front Load 10Rs",
+  "category": "Household"
+ },
+ {
+  "id": "6a3a863cb13c79f383c4f831",
+  "old": "Tide Tl 10Rs",
+  "new": "Tide Top Load 10Rs",
+  "category": "Household"
+ },
+ {
+  "id": "6a378be4b55b0b17fc89065c",
+  "old": "Vim Anti Bac 250g",
+  "new": "Vim Anti Bacterial 250g",
+  "category": "Household"
+ }
+]

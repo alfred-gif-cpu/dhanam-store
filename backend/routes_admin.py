@@ -15,6 +15,7 @@ from admin_auth import (
     hash_password, verify_password, create_admin_token, get_current_admin,
 )
 from inventory import release_stock, should_release
+from order_events import order_delivered
 from push_service import notify_delivery_ready
 from storage import read_image_upload, save_image, resolve_image_url, slugify
 from search_utils import build_search_text, build_search_words
@@ -545,6 +546,13 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
     )
     await _log(admin["email"], "order_status_updated", f"Order {order_id} -> {status}")
 
+    # Delivered is announced to the owner and the customer alike. Every route
+    # that can set it calls the same helper — three of them can, and the last
+    # time three siblings each did their own thing, cancelling an order lost
+    # its stock for months.
+    if status == "Delivered" and existing.get("order_status") != "Delivered":
+        await order_delivered({**existing, "order_status": status})
+
     # When the owner marks an order Packed, alert delivery staff
     if status == "Packed":
         order = await orders_collection.find_one(match)
@@ -615,6 +623,10 @@ async def delivery_delivered(order_id: str, admin: dict = Depends(get_current_ad
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Order not found")
     await _log(admin["email"], "order_delivered", f"Delivered order {order_id}")
+
+    order = await orders_collection.find_one(_order_match(order_id))
+    if order:
+        await order_delivered(order)
     return {"status": "Delivered"}
 
 

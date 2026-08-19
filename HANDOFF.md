@@ -255,6 +255,33 @@ Indian SMS provider is several times cheaper per message but means rebuilding
 the OTP flow — which is where the auth-bypass bug lived before Firebase — plus
 DLT registration. Revisit only when the billing page is annoying.
 
+## Notifications
+
+Three kinds go out, all through `push_service.py`:
+
+| when | who | how |
+|---|---|---|
+| order placed | owner | topic `owner` |
+| order packed | delivery staff | topic `delivery` |
+| order delivered | owner **and** that customer | topic `owner` + the customer's device tokens |
+
+The delivered notice is the only one that reaches a customer, and that is why
+it does not use a topic: a topic would tell everyone subscribed that *their*
+order had arrived. It sends to the tokens registered against that order's
+`user_id` in `fcm_tokens`, capped at 10 devices, and prunes tokens FCM rejects.
+
+`order_events.order_delivered` holds the rule because **three handlers can set
+Delivered** — the panel's status update, the admin status route, and the
+driver's Delivered button. That is the shape that let cancellation lose stock
+for months, where two of three siblings did the right thing and nobody noticed
+the third, so all three call one function and the tests assert each route
+reaches it.
+
+It never raises. A delivery is complete whether or not a notification lands,
+and a driver tapping Delivered must not see an error because Firebase was slow.
+Both halves are asserted, including that another customer is *not* told, and
+that a repeat of the same status does not notify twice.
+
 ## Orders and delivery
 
 **Checkout.** Stock is reserved atomically on order and returned on cancel —
@@ -592,7 +619,7 @@ device set.
 
 ## Tests, dependencies, ops
 
-**222 tests** — 196 backend, 26 widget (1 skipped, known layout gap) — running in CI on every push alongside
+**234 tests** — 208 backend, 26 widget (1 skipped, known layout gap) — running in CI on every push alongside
 `flutter analyze`. They need no database and no network and finish in under a
 second, which is the point: a check that fails for reasons unrelated to the
 change stops being read. Run with `python -m pytest` in `backend/`, and
