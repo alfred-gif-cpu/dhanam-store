@@ -685,6 +685,25 @@ entries below are that same bug.
   on a newer Starlette it would have reported success while checking zero
   endpoints. Worse than no test. If a check loops before it asserts, assert on
   the count too.
+- **`--dart-define` does not reliably invalidate Flutter's build cache.** The
+  admin APK was built with the production URL on the command line and shipped
+  `https://x` — a placeholder from an earlier attempt of mine that had failed at
+  the Gradle step *after* compiling Dart. The next build reused that snapshot.
+  `flutter clean` was needed; deleting `.dart_tool/flutter_build` was not
+  enough, and the giveaway was a 10-second "successful" build.
+
+  This defeats the `API_URL` guard in `config.dart` entirely: the constant *is*
+  set, just to the wrong value, so nothing throws and the app simply talks to
+  the wrong host. It would have shipped an admin app that could not reach
+  anything, with no error message anywhere.
+
+  **Grep the built APK for the URL before handing it to anyone**, especially
+  after any failed build:
+
+      python -c "import zipfile,re; z=zipfile.ZipFile(APK); print([n for n in z.namelist() if n.endswith('libapp.so')])"
+
+  and search `libapp.so` for the expected host. Same lesson as `minSdk`, one
+  layer deeper: the command you typed is not the artifact either.
 - **The config is not the artifact.** `build.gradle.kts` said `minSdk = 23`,
   the comment above it explained why, and this file repeated the claim for
   months. Every APK shipped 24, because Flutter rewrites that line on every
