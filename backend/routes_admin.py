@@ -560,9 +560,17 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
 
 @router.get("/delivery/orders")
 async def delivery_orders(admin: dict = Depends(get_current_admin)):
-    # Orders that are packed, out for delivery, or assigned to this staff
+    # Orders that are packed, out for delivery, or assigned to this staff.
+    #
+    # Newest first. It used to be oldest first, which put the order a driver had
+    # just been notified about at the bottom of the list, below ones already
+    # seen — they had to scroll to find the thing the notification was about.
+    # The trade is that a strict queue would deliver the longest-waiting order
+    # first; at this shop's volume the driver can see the whole list, so
+    # matching the notification matters more than the ordering being a queue.
+    # `orders.updated_at` is indexed, and the index serves either direction.
     query = {"order_status": {"$in": ["Packed", "Out For Delivery"]}}
-    cursor = orders_collection.find(query).sort("updated_at", 1)
+    cursor = orders_collection.find(query).sort("updated_at", -1)
     orders = [serialize(o) async for o in cursor]
     return {"orders": orders, "total": len(orders)}
 
