@@ -276,6 +276,26 @@ async def create_order(
         log.exception("Order insert failed for %s; stock released", order_id)
         raise HTTPException(status_code=500, detail="Could not place order. Please try again.")
 
+    # A customer who signed in with Google has no verified phone, but the shop
+    # still has to ring somebody to deliver. The address form already requires
+    # a number, so record it here rather than asking twice.
+    #
+    # It goes in `contact_phone`, never in `phone`. `phone` is what OTP login
+    # matches an account by (`users_collection.find_one({"phone": ...})`), so an
+    # unverified number written there would hand this account to whoever
+    # actually owns that number the next time they signed in with an OTP.
+    # Verified and claimed are different things and must live in different
+    # fields.
+    try:
+        address_phone = (data.address.model_dump().get("phone") or "").strip()
+        if address_phone:
+            await users_collection.update_one(
+                {"_id": ObjectId(data.user_id), "phone": {"$in": [None, ""]}},
+                {"$set": {"contact_phone": address_phone}},
+            )
+    except Exception:
+        log.warning("Could not record a contact number for %s", data.user_id)
+
     # Notify the shop owner of the new order
     try:
         notify_new_order(order)

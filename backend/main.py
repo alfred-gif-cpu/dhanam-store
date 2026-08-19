@@ -319,6 +319,11 @@ async def get_me(user: dict = Depends(get_current_user)):
     return {
         "id": user["id"],
         "phone": user.get("phone", ""),
+        # The number a Google customer gave for delivery. Reported separately
+        # because it is claimed, not verified — `phone` is what OTP login
+        # matches an account by and must only ever hold a number Firebase
+        # attested to.
+        "contact_phone": user.get("contact_phone", ""),
         "name": user.get("name", ""),
         "email": user.get("email", ""),
     }
