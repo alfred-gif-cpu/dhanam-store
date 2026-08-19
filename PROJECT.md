@@ -123,7 +123,7 @@ machine that built it, so every screen times out on a real phone. Release
 builds now throw on startup rather than doing that quietly, but the way not to
 meet either is to pass it:
 
-There are two apps from this one codebase, so **every build needs `--flavor`**.
+There are three apps from this one codebase, so **every build needs `--flavor`**.
 
 **Customer app** — `com.dhanamstore.app`, the Play Store listing:
 

@@ -91,3 +91,6 @@ backend/backups/
 
 # Admin token scratch file (recompress_uploads.py) — a live credential.
 backend/.admin_token
+
+# Gradle build output
+android/build/
