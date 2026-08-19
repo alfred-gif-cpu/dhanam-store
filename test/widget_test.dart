@@ -1,6 +1,8 @@
 // Widget tests for the customer login flow:
 //   - phone-number validation gating the "Get OTP" button
-//   - the new "Login as Staff / Owner" entry and its navigation
+//   - that the screen offers no staff entrance: staff have their own apps, and
+//     a customer login screen advertising a staff door is what those apps
+//     exist to remove
 //   - OTP screen rendering (boxes, masked phone, dev-OTP hint)
 
 import 'package:flutter/material.dart';
@@ -17,14 +19,17 @@ ElevatedButton _getOtpButton(WidgetTester tester) {
 
 void main() {
   group('LoginScreen', () {
-    testWidgets('renders header, phone field and staff-login entry', (tester) async {
+    testWidgets('renders header and phone field, and no staff entrance', (tester) async {
       await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
       await tester.pump();
 
       expect(find.text('Dhanam Stores'), findsOneWidget);
       expect(find.text('Mobile Number'), findsOneWidget);
       expect(find.text('Get OTP'), findsOneWidget);
-      expect(find.text('Login as Staff / Owner'), findsOneWidget);
+      // Staff use Dhanam Admin and Dhanam Delivery. If this ever comes back,
+      // every customer is again shown a door that is not theirs — and the
+      // admin screens come back into the customer build with it.
+      expect(find.text('Login as Staff / Owner'), findsNothing);
     });
 
     testWidgets('Get OTP is disabled until exactly 10 digits are entered', (tester) async {
@@ -57,20 +62,6 @@ void main() {
       final text = widget.controller!.text;
       expect(text, '12345678'); // letters stripped, digits kept
       expect(text.length <= 10, isTrue);
-    });
-
-    testWidgets('tapping "Login as Staff / Owner" navigates to the admin login', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
-      await tester.pump();
-
-      await tester.tap(find.text('Login as Staff / Owner'));
-      await tester.pumpAndSettle();
-
-      // The header follows which app the login belongs to. This entrance is
-      // the customer app's, which serves owner and delivery alike, so it is
-      // neither "Admin Panel" nor "Staff Panel". The standalone apps assert
-      // their own titles by being built from their own entrypoints.
-      expect(find.text('Staff Login'), findsOneWidget);
     });
   });
 

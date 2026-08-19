@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../theme.dart';
 import 'otp_screen.dart';
-import 'admin/admin_login_screen.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -185,19 +184,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                   const Spacer(),
 
-                  // Staff / Owner login entry
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.push(
-                        context, MaterialPageRoute(builder: (_) => const AdminLoginScreen())),
-                    icon: const Icon(Icons.badge_outlined, size: 20),
-                    label: const Text('Login as Staff / Owner'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      minimumSize: const Size.fromHeight(50),
-                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
 
                   const SizedBox(height: 16),
 

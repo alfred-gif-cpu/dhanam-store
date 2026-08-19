@@ -2,11 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
-import 'screens/admin/admin_orders_screen.dart';
-import 'screens/admin/delivery_dashboard_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-import 'services/admin_auth_service.dart';
 import 'services/auth_service.dart';
 import 'services/cart_service.dart';
 import 'services/customer_service.dart';
@@ -23,7 +20,6 @@ void main() async {
   } else {
     await Firebase.initializeApp();
   }
-  await AdminAuthService().load();
   await AuthService().load();
   await CartService().load();
   WishlistService().load();
@@ -32,18 +28,10 @@ void main() async {
   CustomerService().load();
   await NotificationService().init();
 
-  // Tapping an order notification opens the right screen for the logged-in role
-  NotificationService().onMessageTapped = (message) {
-    final nav = NotificationService.navigatorKey.currentState;
-    if (nav == null) return;
-    final type = message.data['type'] ?? '';
-    if (!AdminAuthService().isLoggedIn) return;
-    if (type == 'delivery_ready' || AdminAuthService().isDelivery) {
-      nav.push(MaterialPageRoute(builder: (_) => const DeliveryDashboardScreen()));
-    } else if (type == 'new_order') {
-      nav.push(MaterialPageRoute(builder: (_) => const AdminOrdersScreen()));
-    }
-  };
+  // Staff notifications are handled by the Dhanam Admin and Dhanam Delivery
+  // apps, which have their own entrypoints. This one carries no staff login,
+  // so nothing here could ever be signed in as one — and dropping the routing
+  // lets the admin screens fall out of the customer build entirely.
 
   runApp(const DhanamStoreApp());
 }
