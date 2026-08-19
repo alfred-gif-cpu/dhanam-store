@@ -57,10 +57,12 @@ android {
         versionName = "1.0.0"
     }
 
-    // Two apps from one codebase. The customer flavor keeps the applicationId
-    // exactly as it was — the Play Store listing is tied to it — and staff gets
-    // a suffix so both install side by side. A delivery driver is also somebody
-    // who buys groceries, and a Play update to one must never touch the other.
+    // Three apps from one codebase: the shop, the owner, the driver. The
+    // customer flavor keeps the applicationId exactly as it was — the Play
+    // Store listing is tied to it — and the other two take suffixes so all
+    // three install side by side. A delivery driver also buys groceries, the
+    // owner needs both their app and the shop's, and a Play update to the
+    // customer app must never touch either of the others.
     //
     // Adding flavors means Gradle no longer has a default: every build now needs
     // --flavor. The Play Store command in PROJECT.md and HANDOFF.md was updated
@@ -77,10 +79,15 @@ android {
             dimension = "app"
             resValue("string", "app_label", "Dhanam Stores")
         }
+        create("admin") {
+            dimension = "app"
+            applicationIdSuffix = ".admin"
+            resValue("string", "app_label", "Dhanam Admin")
+        }
         create("staff") {
             dimension = "app"
             applicationIdSuffix = ".staff"
-            resValue("string", "app_label", "Dhanam Staff")
+            resValue("string", "app_label", "Dhanam Delivery")
         }
     }
 

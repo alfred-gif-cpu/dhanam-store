@@ -6,8 +6,28 @@ import 'secure_admin_dashboard.dart';
 import 'admin_change_password_screen.dart';
 import 'delivery_dashboard_screen.dart';
 
+/// Which app this login belongs to.
+///
+/// The owner and delivery apps are separate installs sharing this one screen.
+/// Without a gate, a driver who typed their details into the owner app would
+/// be signed in and shown an owner dashboard the server would then refuse
+/// every request from — a confusing dead end that reads as "the app is
+/// broken". Rejecting the wrong role at the door says what is actually wrong.
+enum StaffApp {
+  /// Owner and manager screens.
+  admin,
+
+  /// The delivery run sheet.
+  delivery,
+
+  /// No restriction — the customer app's staff entrance, which serves both.
+  any,
+}
+
 class AdminLoginScreen extends StatefulWidget {
-  const AdminLoginScreen({super.key});
+  const AdminLoginScreen({super.key, this.app = StaffApp.any});
+
+  final StaffApp app;
 
   @override
   State<AdminLoginScreen> createState() => _State();
@@ -45,6 +65,23 @@ class _State extends State<AdminLoginScreen> {
       } else {
         ns.subscribeToTopic('delivery');
         ns.unsubscribeFromTopic('owner');
+      }
+
+      // Wrong app for this account: sign back out rather than leaving a live
+      // session behind a screen that cannot work.
+      final wrongApp = (widget.app == StaffApp.admin && !auth.isOwner) ||
+          (widget.app == StaffApp.delivery && !auth.isDelivery);
+      if (wrongApp) {
+        final wanted = widget.app == StaffApp.admin ? 'Dhanam Admin' : 'Dhanam Delivery';
+        final other = widget.app == StaffApp.admin ? 'Dhanam Delivery' : 'Dhanam Admin';
+        await auth.logout();
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _error = 'This account is not for $wanted. Use $other instead.';
+          });
+        }
+        return;
       }
 
       if (mounted) {

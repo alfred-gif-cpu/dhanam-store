@@ -135,15 +135,22 @@ flutter build appbundle --release --flavor customer --dart-define=API_URL=https:
 flutter build apk --release --flavor customer --dart-define=API_URL=https://dhanam-store-production.up.railway.app
 ```
 
-**Staff app** — `com.dhanamstore.app.staff`, handed out as an APK, never listed:
+**Admin app** — `com.dhanamstore.app.admin`, handed out as an APK, never listed:
+
+```bash
+flutter build apk --release --flavor admin --target lib/main_admin.dart --dart-define=API_URL=https://dhanam-store-production.up.railway.app
+```
+
+**Delivery app** — `com.dhanamstore.app.staff`, handed out as an APK:
 
 ```bash
 flutter build apk --release --flavor staff --target lib/main_staff.dart --dart-define=API_URL=https://dhanam-store-production.up.railway.app
 ```
 
 The appbundle is what the Play Store takes; the apk is for installing on a
-phone directly. The staff flavor needs its package registered in Firebase or
-the build fails on `processStaffReleaseGoogleServices` — see HANDOFF.md.
+phone directly. Each non-customer flavor needs its package registered in
+Firebase or the build fails on `process<Flavor>ReleaseGoogleServices` — see
+HANDOFF.md.
 
 ## Environment Variables
 
