@@ -440,6 +440,9 @@ async def list_customers(
         query["$or"] = [
             {"name": {"$regex": re.escape(q), "$options": "i"}},
             {"phone": {"$regex": re.escape(q), "$options": "i"}},
+            # A Google customer's number lives here, not in `phone`. Searching
+            # only `phone` would hide the customer the shop just rang.
+            {"contact_phone": {"$regex": re.escape(q), "$options": "i"}},
             {"email": {"$regex": re.escape(q), "$options": "i"}},
         ]
     if status == "active":

@@ -430,6 +430,14 @@ const stockPill = n => n > 0
 // replaced. That is right for the app and wrong here: after uploading, the
 // person who did it wants to see it. A per-render token sidesteps the cache
 // for the panel only, leaving the customer's caching alone.
+// A customer who signed in with Google has no verified number; what they gave
+// for delivery is in contact_phone. Show it — the shop needs somebody to ring —
+// but say which it is, because only one of the two is proof of anything.
+const phoneCell = c => c.phone
+  ? esc(c.phone)
+  : (c.contact_phone
+      ? esc(c.contact_phone) + ' <span class="sb muted">(unverified)</span>'
+      : '—');
 const fresh = url => url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
 
 // Clears the photograph, not the product. Used when the picture is wrong and
@@ -612,7 +620,7 @@ async function vCustomers(p){
       const active = c.is_active !== false;
       const joined = (c.created_at || '').slice(0, 10);
       return '<tr><td><b>' + esc(c.name || '—') + '</b>' + (joined ? '<div class="sb muted">joined ' + esc(joined) + '</div>' : '') + '</td>' +
-        '<td>' + esc(c.phone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
+        '<td>' + phoneCell(c) + '</td><td>' + esc(c.email || '—') + '</td>' +
         '<td><span class="pill ' + (active?'g':'r') + '">' + (active?'Active':'Blocked') + '</span></td>' +
         '<td class="right"><button class="btn btn-sm ' + (active?'btn-danger':'btn-ghost') + '" onclick="toggleBlock(\'' + esc(c.id) + '\',' + active + ')">' + (active?'Block':'Unblock') + '</button> ' +
         '<button class="btn btn-sm btn-ghost" onclick="deleteCustomer(\'' + esc(c.id) + '\',\'' + esc(c.name || c.phone || '') + '\')">Delete</button></td></tr>';

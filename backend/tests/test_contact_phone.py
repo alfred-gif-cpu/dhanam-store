@@ -94,3 +94,37 @@ class TestContactPhone:
             "this customer already has a verified number; a second one only "
             "creates a question about which to ring"
         )
+
+
+@pytest.mark.asyncio
+class TestTheShopCanFindThem:
+    """Searching by the number the shop rang has to find the customer.
+
+    The number a Google customer gave is in contact_phone, so a search that
+    only looked at `phone` would report "no such customer" for someone whose
+    order the shop is holding.
+    """
+
+    async def test_searching_by_the_contact_number_finds_them(self, client, monkeypatch):
+        import routes_admin
+        from admin_auth import get_current_admin
+
+        db = AsyncMongoMockClient()["dhanam_store_test"]
+        monkeypatch.setattr(routes_admin, "users_collection", db["users"])
+        app.dependency_overrides[get_current_admin] = lambda: {
+            "id": "a1", "email": "owner@dhanamstore.com", "role": "owner"}
+        try:
+            await db["users"].insert_one({
+                "name": "Felcia", "phone": "", "email": "f@g.com",
+                "contact_phone": "9489630602",
+            })
+
+            body = client.get("/admin/customers?q=9489630602").json()
+
+            assert body["total"] == 1, (
+                "the shop searched the number it just rang and was told there "
+                "is no such customer"
+            )
+            assert body["customers"][0]["contact_phone"] == "9489630602"
+        finally:
+            app.dependency_overrides.clear()

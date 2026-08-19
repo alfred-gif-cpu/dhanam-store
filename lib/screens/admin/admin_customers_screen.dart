@@ -62,6 +62,16 @@ class _State extends State<AdminCustomersScreen> {
     });
   }
 
+  /// The number to ring. A Google customer has no verified phone, so fall back
+  /// to what they gave for delivery — and say so, because only one of the two
+  /// proves anything.
+  static String _phoneOf(Map c) {
+    final verified = (c['phone'] ?? '').toString();
+    if (verified.isNotEmpty) return verified;
+    final contact = (c['contact_phone'] ?? '').toString();
+    return contact.isEmpty ? '—' : '$contact (unverified)';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,7 +119,7 @@ class _State extends State<AdminCustomersScreen> {
                               child: Text(active ? 'Active' : 'Blocked', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: active ? Colors.blue : Colors.red))),
                           ]),
                           subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text('${c['phone'] ?? ''} • ${c['customer_id'] ?? ''}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                            Text('${_phoneOf(c)} • ${c['customer_id'] ?? ''}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                             Row(children: [
                               Text('Wallet: ₹${(c['wallet_balance'] ?? 0).toStringAsFixed(0)}', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                               const SizedBox(width: 8),
