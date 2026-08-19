@@ -66,8 +66,11 @@ void main() {
       await tester.tap(find.text('Login as Staff / Owner'));
       await tester.pumpAndSettle();
 
-      // AdminLoginScreen shows this header
-      expect(find.text('Admin Panel'), findsOneWidget);
+      // The header follows which app the login belongs to. This entrance is
+      // the customer app's, which serves owner and delivery alike, so it is
+      // neither "Admin Panel" nor "Staff Panel". The standalone apps assert
+      // their own titles by being built from their own entrypoints.
+      expect(find.text('Staff Login'), findsOneWidget);
     });
   });
 
