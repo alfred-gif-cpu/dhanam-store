@@ -18,13 +18,36 @@ _ready = False
 
 
 def _init():
+    """Make FCM available, reusing the default Firebase app if one exists.
+
+    Latches on *success*, not on the attempt. It used to set _ready before
+    trying, so the first call decided forever: a process whose first push
+    happened before any login — when nothing had built the default app yet —
+    stayed in console mode even after a login built it a second later.
+    Retrying a failed init costs an environment lookup.
+    """
     global _app, _messaging, _ready
-    if _ready:
+    if _messaging is not None:
         return
-    _ready = True
     try:
         import firebase_admin
         from firebase_admin import credentials, messaging
+
+        # Reuse the default app if something already made it — auth.py does, on
+        # every customer login, to verify phone tokens. Without this check
+        # initialize_app() below raises "The default Firebase app already
+        # exists", the bare except swallows it, and _ready latches: push is then
+        # silently dead for the life of the process while login keeps working.
+        # Whichever ran first won, and login runs far more often than a push, so
+        # in production this was effectively always off. auth.py has the same
+        # guard and its docstring calls this a shared credential source; only
+        # this half was missing it.
+        if firebase_admin._apps:
+            _app = firebase_admin.get_app()
+            _messaging = messaging
+            log.info("Firebase Admin already initialized — reusing it for FCM")
+            _ready = True
+            return
 
         cred = None
         raw = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
@@ -41,6 +64,7 @@ def _init():
 
         _app = firebase_admin.initialize_app(cred)
         _messaging = messaging
+        _ready = True
         log.info("Firebase Admin initialized")
     except Exception as e:
         log.warning("Firebase init failed, console mode: %s", e)

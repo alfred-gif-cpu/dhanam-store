@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+
+import '../../services/notification_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/admin_auth_service.dart';
 import '../../theme.dart';
@@ -12,16 +15,55 @@ class DeliveryDashboardScreen extends StatefulWidget {
       _DeliveryDashboardScreenState();
 }
 
-class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
+class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen>
+    with WidgetsBindingObserver {
   final _auth = AdminAuthService();
   List<dynamic> _orders = [];
   bool _loading = true;
   String? _busyId;
+  Timer? _poll;
+
+  // A driver leaves this screen open and waits. It used to load once and then
+  // only on a pull-to-refresh, so a newly packed order simply did not appear —
+  // the shop packs an order and the driver, staring at the screen, sees
+  // nothing. Three things now bring it up to date: a timer while it is open, a
+  // push arriving, and coming back to the app.
+  static const _pollInterval = Duration(seconds: 30);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+    _poll = Timer.periodic(_pollInterval, (_) => _refreshQuietly());
+    NotificationService().onForegroundMessage = (_) => _refreshQuietly();
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    NotificationService().onForegroundMessage = null;
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Phones stop timers in the background, so the list is stale on return.
+    if (state == AppLifecycleState.resumed) _refreshQuietly();
+  }
+
+  /// Reload without the full-screen spinner, so a background refresh does not
+  /// blank out a list the driver is reading.
+  Future<void> _refreshQuietly() async {
+    if (!mounted || _busyId != null) return;
+    try {
+      final data = await _auth.getDeliveryOrders();
+      if (mounted) setState(() => _orders = data['orders'] ?? []);
+    } catch (_) {
+      // A failed background poll is not worth interrupting anyone for; the
+      // next tick tries again and pull-to-refresh still reports properly.
+    }
   }
 
   Future<void> _load() async {

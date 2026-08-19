@@ -28,6 +28,12 @@ class NotificationService {
 
   Function(RemoteMessage)? onMessageTapped;
 
+  /// Called when a push arrives while the app is in the foreground, in addition
+  /// to showing it. A screen that lists live data — the delivery dashboard —
+  /// uses it to reload, so the notification and the list agree instead of the
+  /// driver being told about an order that is not on screen yet.
+  Function(RemoteMessage)? onForegroundMessage;
+
   static const _androidChannel = AndroidNotificationChannel(
     'dhanam_orders',
     'Order Updates',
@@ -82,6 +88,7 @@ class NotificationService {
 
   void _handleForeground(RemoteMessage message) {
     showNotification(message);
+    onForegroundMessage?.call(message);
   }
 
   void _handleMessageTap(RemoteMessage message) {
