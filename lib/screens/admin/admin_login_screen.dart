@@ -171,9 +171,15 @@ class _State extends State<AdminLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Admin Panel',
-                  style: TextStyle(
+                Text(
+                  // The delivery app used to say "Admin Panel" here, because
+                  // this screen was written when there was one staff app.
+                  switch (widget.app) {
+                    StaffApp.admin => 'Admin Panel',
+                    StaffApp.delivery => 'Staff Panel',
+                    StaffApp.any => 'Staff Login',
+                  },
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
