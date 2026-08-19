@@ -15,7 +15,7 @@ from database import (
     addresses_collection, wishlists_collection, users_collection,
     otp_collection, search_misses_collection, ensure_indexes,
 )
-from auth import generate_otp, verify_otp, create_token, get_current_user, verify_firebase_phone_token
+from auth import generate_otp, verify_otp, create_token, get_current_user, verify_firebase_phone_token, verify_firebase_google_token
 from admin_auth import get_current_admin
 from storage import UPLOAD_DIR, UPLOAD_PREFIX, resolve_image_url
 from search_utils import (
@@ -253,6 +253,65 @@ async def firebase_login(request: Request, id_token: str = Body(..., embed=True)
 
     token = create_token(user_id, phone)
     return {"token": token, "user_id": user_id, "is_new_user": is_new}
+
+
+@app.post("/auth/google-login")
+@limiter.limit("10/minute")
+async def google_login(request: Request, id_token: str = Body(..., embed=True)):
+    """Sign in with a Google account.
+
+    Free and unlimited, unlike the OTP path, which bills per SMS — but it
+    proves an email, not a phone. The shop is cash on delivery, so a phone
+    number is still needed to hand goods over; it is collected at checkout and
+    is *not* verified. Anything that needs to trust a phone number must use the
+    OTP path.
+
+    A customer is keyed by their Firebase uid here, and matched on email if
+    they already exist from the phone path, so signing in either way reaches
+    the same account rather than silently making a second one.
+    """
+    info = verify_firebase_google_token(id_token)
+
+    user = await users_collection.find_one({"google_uid": info["uid"]})
+    if user is None and info["email"]:
+        user = await users_collection.find_one({"email": info["email"]})
+
+    if user and user.get("is_active") is False:
+        raise HTTPException(status_code=403, detail="Your account has been blocked. Please contact the store.")
+
+    is_new = user is None
+    if is_new:
+        result = await users_collection.insert_one({
+            "phone": "",
+            "name": info["name"],
+            "email": info["email"],
+            "google_uid": info["uid"],
+            "created_at": datetime.utcnow().isoformat(),
+        })
+        user_id = str(result.inserted_id)
+        phone = ""
+    else:
+        user_id = str(user["_id"])
+        phone = user.get("phone", "")
+        # Link the Google account to a customer who first arrived by phone, so
+        # the next sign-in matches on uid without depending on the email.
+        if not user.get("google_uid"):
+            await users_collection.update_one(
+                {"_id": user["_id"]},
+                {"$set": {"google_uid": info["uid"],
+                          "email": user.get("email") or info["email"],
+                          "name": user.get("name") or info["name"]}},
+            )
+
+    token = create_token(user_id, phone)
+    return {
+        "token": token,
+        "user_id": user_id,
+        "is_new_user": is_new,
+        # The app asks for a phone number when this is empty; it is needed
+        # before an order can be delivered.
+        "needs_phone": not phone,
+    }
 
 
 @app.get("/auth/me")

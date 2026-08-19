@@ -15,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final _phoneController = TextEditingController();
   bool _sending = false;
+  bool _googleBusy = false;
   String? _error;
   late AnimationController _animCtrl;
   late Animation<double> _fadeAnim;
@@ -68,6 +69,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         );
       },
     );
+  }
+
+  Future<void> _googleSignIn() async {
+    setState(() { _googleBusy = true; _error = null; });
+    try {
+      await AuthService().signInWithGoogle();
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().replaceFirst('Exception: ', '');
+      setState(() {
+        // Cancelling is a choice, not a failure; saying "error" would be a lie.
+        _error = message == 'Sign-in cancelled' ? null : message;
+        _googleBusy = false;
+      });
+    }
   }
 
   @override
@@ -179,6 +201,40 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       child: _sending
                           ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Text('Get OTP'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // Or sign in with Google.
+                  //
+                  // Free and unlimited, where every OTP is a billed SMS — and
+                  // it does not depend on Play Integrity, which cannot vouch
+                  // for a sideloaded build. It proves an email, not a phone,
+                  // so checkout still asks for a number to deliver to.
+                  Row(children: [
+                    Expanded(child: Divider(color: Colors.grey[300])),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('or', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey[300])),
+                  ]),
+                  const SizedBox(height: 18),
+                  OutlinedButton.icon(
+                    onPressed: _googleBusy || _sending ? null : _googleSignIn,
+                    icon: _googleBusy
+                        ? const SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.account_circle_outlined, size: 22),
+                    label: Text(_googleBusy ? 'Signing in...' : 'Continue with Google',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      minimumSize: const Size.fromHeight(54),
+                      side: BorderSide(color: Colors.grey[300]!),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
 

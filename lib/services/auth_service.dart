@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
 
@@ -189,6 +190,70 @@ class AuthService extends ChangeNotifier {
     return _loginWithFirebasePhone(phone);
   }
 
+  /// Sign in with a Google account.
+  ///
+  /// Free and unlimited, where the OTP path bills per SMS and leans on Play
+  /// Integrity — which cannot vouch for an app the Play Store has never seen,
+  /// so a sideloaded build falls back to reCAPTCHA and gets rate-limited.
+  /// Nothing here needs an SMS, a captcha or an app attestation.
+  ///
+  /// What it proves is an email, not a phone number. The shop is cash on
+  /// delivery, so a phone is still needed to hand goods over — the backend
+  /// returns needsPhone and checkout asks for it.
+  ///
+  /// Returns true if this created a new customer.
+  Future<bool> signInWithGoogle() async {
+    await GoogleSignIn.instance.initialize();
+
+    final GoogleSignInAccount account;
+    try {
+      account = await GoogleSignIn.instance.authenticate();
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw Exception('Sign-in cancelled');
+      }
+      rethrow;
+    }
+
+    final googleIdToken = account.authentication.idToken;
+    if (googleIdToken == null) {
+      throw Exception('Google did not return a sign-in token. Please try again.');
+    }
+
+    // Exchange Google's token for a Firebase one, so the backend verifies a
+    // single kind of token however the customer signed in.
+    final credential = fb.GoogleAuthProvider.credential(idToken: googleIdToken);
+    await _fbAuth.signInWithCredential(credential);
+
+    final idToken = await _fbAuth.currentUser?.getIdToken();
+    if (idToken == null) {
+      throw Exception('Sign-in failed. Please try again.');
+    }
+
+    final result = await _post('/auth/google-login', {'id_token': idToken});
+    _token = result['token'];
+    _user = {
+      'id': result['user_id'],
+      'phone': '',
+      'name': account.displayName ?? '',
+      'email': account.email,
+    };
+    needsPhone = result['needs_phone'] == true;
+
+    await _writeToken(_token!);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userKey, jsonEncode(_user));
+
+    notifyListeners();
+    onUserSwitch?.call();
+    _fetchProfile();
+    return result['is_new_user'] == true;
+  }
+
+  /// True when the signed-in customer has no phone number on file. They can
+  /// browse, but an order cannot be delivered without one.
+  bool needsPhone = false;
+
   /// After Firebase verifies the phone, call our backend to get a JWT.
   /// Sends the Firebase ID token — the backend derives the phone number from
   /// it, so a client can never claim to be an arbitrary number.
@@ -290,6 +355,10 @@ class AuthService extends ChangeNotifier {
     _verificationId = null;
     _resendToken = null;
     try { await _fbAuth.signOut(); } catch (_) {}
+    // Without this the chooser never appears again and the same
+    // account is reused, which looks like sign-out failing.
+    try { await GoogleSignIn.instance.signOut(); } catch (_) {}
+    needsPhone = false;
     await _clearToken();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);

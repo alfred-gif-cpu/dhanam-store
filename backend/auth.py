@@ -91,6 +91,48 @@ def verify_firebase_phone_token(id_token: str) -> str:
     return phone
 
 
+def verify_firebase_google_token(id_token: str) -> dict:
+    """Verify a Firebase ID token from Google Sign-In.
+
+    Same verification as the phone path — the token is the only proof of
+    anything, and a client-supplied email is worth nothing. The difference is
+    what it attests to: an email identity, not a phone number. A customer
+    signed in this way has no verified phone, so the shop still has to collect
+    one for delivery, and that number is *not* proof of anything.
+
+    Returns the Firebase uid, email and display name.
+    """
+    try:
+        ready = _ensure_firebase_app()
+    except Exception:
+        log.exception("Firebase credentials could not be loaded")
+        ready = False
+    if not ready:
+        raise HTTPException(status_code=503, detail="Sign-in unavailable")
+
+    try:
+        from firebase_admin import auth as firebase_auth
+    except Exception:
+        log.exception("firebase_admin.auth import failed")
+        raise HTTPException(status_code=503, detail="Sign-in unavailable")
+
+    try:
+        decoded = firebase_auth.verify_id_token(id_token)
+    except Exception as e:
+        log.info("Rejected Firebase ID token: %s", type(e).__name__)
+        raise HTTPException(status_code=401, detail="Invalid or expired sign-in token")
+
+    uid = decoded.get("uid") or decoded.get("sub")
+    email = (decoded.get("email") or "").strip().lower()
+    if not uid:
+        raise HTTPException(status_code=401, detail="Token carries no account id")
+    # An unverified email would let someone claim another person's address by
+    # signing up to a provider that does not check. Google verifies its own.
+    if email and decoded.get("email_verified") is False:
+        raise HTTPException(status_code=401, detail="Email is not verified")
+    return {"uid": uid, "email": email, "name": decoded.get("name") or ""}
+
+
 async def generate_otp(phone: str) -> str:
     otp = f"{random.randint(1000, 9999)}"
     await otp_collection.update_one(
